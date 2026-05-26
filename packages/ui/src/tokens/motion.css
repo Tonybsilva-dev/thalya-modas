@@ -1,14 +1,24 @@
 :root {
-  --duration-instant: 80ms;
-  --duration-fast: 120ms;
-  --duration-base: 180ms;
-  --duration-enter: 220ms;
-  --duration-overlay: 260ms;
-  --duration-progress: 300ms;
-  --delay-stagger: 40ms;
-  --ease-nitro: cubic-bezier(0.2, 0, 0, 1);
-  --ease-nitro-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --ease-nitro-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-duration-instant: 80ms;
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 180ms;
+  --motion-duration-enter: 220ms;
+  --motion-duration-overlay: 260ms;
+  --motion-duration-progress: 300ms;
+  --motion-delay-stagger: 40ms;
+  --motion-ease-nitro: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-nitro-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --motion-ease-nitro-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-instant: var(--motion-duration-instant);
+  --duration-fast: var(--motion-duration-fast);
+  --duration-base: var(--motion-duration-base);
+  --duration-enter: var(--motion-duration-enter);
+  --duration-overlay: var(--motion-duration-overlay);
+  --duration-progress: var(--motion-duration-progress);
+  --delay-stagger: var(--motion-delay-stagger);
+  --ease-nitro: var(--motion-ease-nitro);
+  --ease-nitro-in: var(--motion-ease-nitro-in);
+  --ease-nitro-out: var(--motion-ease-nitro-out);
 }
 
 @keyframes nitro-fade-in {
@@ -92,6 +102,78 @@
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@keyframes nitro-drawer-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes nitro-drawer-out-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes nitro-drawer-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes nitro-drawer-out-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes nitro-drawer-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes nitro-drawer-out-bottom {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes nitro-drawer-in-top {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes nitro-drawer-out-top {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
   }
 }
 

@@ -25,16 +25,16 @@ const DrawerOverlay = React.forwardRef<
 DrawerOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const drawerContentVariants = cva(
-  "fixed z-50 flex flex-col border-border bg-card text-card-foreground shadow-lg outline-none transition-transform duration-overlay ease-nitro-out data-[state=closed]:ease-nitro-in",
+  "fixed z-50 flex flex-col border-border bg-card text-card-foreground shadow-lg outline-none",
   {
     variants: {
       side: {
         bottom:
-          "inset-x-0 bottom-0 max-h-[85vh] w-full rounded-none border-t data-[state=closed]:translate-y-full data-[state=open]:translate-y-0",
-        left: "inset-y-0 left-0 h-full w-[340px] max-w-[calc(100vw-2rem)] border-r data-[state=closed]:-translate-x-full data-[state=open]:translate-x-0",
+          "inset-x-0 bottom-0 max-h-[85vh] w-full rounded-none border-t data-[state=closed]:animate-nitro-drawer-out-bottom data-[state=open]:animate-nitro-drawer-in-bottom",
+        left: "inset-y-0 left-0 h-full w-[340px] max-w-[calc(100vw-2rem)] border-r data-[state=closed]:animate-nitro-drawer-out-left data-[state=open]:animate-nitro-drawer-in-left",
         right:
-          "inset-y-0 right-0 h-full w-[340px] max-w-[calc(100vw-2rem)] border-l data-[state=closed]:translate-x-full data-[state=open]:translate-x-0",
-        top: "inset-x-0 top-0 max-h-[85vh] w-full rounded-none border-b data-[state=closed]:-translate-y-full data-[state=open]:translate-y-0",
+          "inset-y-0 right-0 h-full w-[340px] max-w-[calc(100vw-2rem)] border-l data-[state=closed]:animate-nitro-drawer-out-right data-[state=open]:animate-nitro-drawer-in-right",
+        top: "inset-x-0 top-0 max-h-[85vh] w-full rounded-none border-b data-[state=closed]:animate-nitro-drawer-out-top data-[state=open]:animate-nitro-drawer-in-top",
       },
     },
     defaultVariants: {

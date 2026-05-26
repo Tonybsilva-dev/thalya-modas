@@ -48,19 +48,33 @@
   --radius-xl: calc(var(--radius) + 4px);
   --font-sans: var(--font-primary);
   --font-mono: var(--font-secondary);
-  --ease-nitro: var(--ease-nitro);
-  --ease-nitro-in: var(--ease-nitro-in);
-  --ease-nitro-out: var(--ease-nitro-out);
-  --animate-nitro-fade-in: nitro-fade-in var(--duration-base) var(--ease-nitro-out);
-  --animate-nitro-fade-out: nitro-fade-out var(--duration-fast) var(--ease-nitro-in);
-  --animate-nitro-scale-in: nitro-scale-in var(--duration-enter) var(--ease-nitro-out);
-  --animate-nitro-scale-out: nitro-scale-out var(--duration-fast) var(--ease-nitro-in);
-  --animate-nitro-slide-up: nitro-slide-up var(--duration-enter) var(--ease-nitro-out);
-  --animate-nitro-slide-down: nitro-slide-down var(--duration-enter) var(--ease-nitro-out);
-  --animate-nitro-slide-left: nitro-slide-left var(--duration-enter) var(--ease-nitro-out);
-  --animate-nitro-slide-right: nitro-slide-right var(--duration-enter) var(--ease-nitro-out);
-  --animate-accordion-down: nitro-accordion-down var(--duration-enter) var(--ease-nitro-out);
-  --animate-accordion-up: nitro-accordion-up var(--duration-enter) var(--ease-nitro-in);
+  --duration-instant: var(--motion-duration-instant);
+  --duration-fast: var(--motion-duration-fast);
+  --duration-base: var(--motion-duration-base);
+  --duration-enter: var(--motion-duration-enter);
+  --duration-overlay: var(--motion-duration-overlay);
+  --duration-progress: var(--motion-duration-progress);
+  --ease-nitro: var(--motion-ease-nitro);
+  --ease-nitro-in: var(--motion-ease-nitro-in);
+  --ease-nitro-out: var(--motion-ease-nitro-out);
+  --animate-nitro-fade-in: nitro-fade-in var(--motion-duration-base) var(--motion-ease-nitro-out);
+  --animate-nitro-fade-out: nitro-fade-out var(--motion-duration-fast) var(--motion-ease-nitro-in);
+  --animate-nitro-scale-in: nitro-scale-in var(--motion-duration-enter) var(--motion-ease-nitro-out);
+  --animate-nitro-scale-out: nitro-scale-out var(--motion-duration-fast) var(--motion-ease-nitro-in);
+  --animate-nitro-slide-up: nitro-slide-up var(--motion-duration-enter) var(--motion-ease-nitro-out);
+  --animate-nitro-slide-down: nitro-slide-down var(--motion-duration-enter) var(--motion-ease-nitro-out);
+  --animate-nitro-slide-left: nitro-slide-left var(--motion-duration-enter) var(--motion-ease-nitro-out);
+  --animate-nitro-slide-right: nitro-slide-right var(--motion-duration-enter) var(--motion-ease-nitro-out);
+  --animate-nitro-drawer-in-right: nitro-drawer-in-right var(--motion-duration-overlay) var(--motion-ease-nitro-out);
+  --animate-nitro-drawer-out-right: nitro-drawer-out-right var(--motion-duration-overlay) var(--motion-ease-nitro-in);
+  --animate-nitro-drawer-in-left: nitro-drawer-in-left var(--motion-duration-overlay) var(--motion-ease-nitro-out);
+  --animate-nitro-drawer-out-left: nitro-drawer-out-left var(--motion-duration-overlay) var(--motion-ease-nitro-in);
+  --animate-nitro-drawer-in-bottom: nitro-drawer-in-bottom var(--motion-duration-overlay) var(--motion-ease-nitro-out);
+  --animate-nitro-drawer-out-bottom: nitro-drawer-out-bottom var(--motion-duration-overlay) var(--motion-ease-nitro-in);
+  --animate-nitro-drawer-in-top: nitro-drawer-in-top var(--motion-duration-overlay) var(--motion-ease-nitro-out);
+  --animate-nitro-drawer-out-top: nitro-drawer-out-top var(--motion-duration-overlay) var(--motion-ease-nitro-in);
+  --animate-accordion-down: nitro-accordion-down var(--motion-duration-enter) var(--motion-ease-nitro-out);
+  --animate-accordion-up: nitro-accordion-up var(--motion-duration-enter) var(--motion-ease-nitro-in);
 }
 
 * {
