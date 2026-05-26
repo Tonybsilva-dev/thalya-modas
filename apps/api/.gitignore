@@ -1,0 +1,38 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+
+# Dependency directories
+node_modules/
+
+# Environment variables
+.env
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS specific
+.DS_Store
+
+# Coverage
+coverage/
+
+.taskmaster
+
+# Build output
+dist/
+
+# OpenAPI specs (gerados automaticamente)
+openapi-spec.json
+openapi-spec.previous.json
+src/docs/route-changes-report.mddist/

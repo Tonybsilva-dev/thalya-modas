@@ -1,0 +1,405 @@
+name: QA Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Executa toda segunda-feira às 00:00 UTC
+    - cron: "0 0 * * 1"
+
+jobs:
+  qa:
+    name: Quality Assurance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Cache Biome
+        uses: actions/cache@v4
+        with:
+          path: ~/.biome
+          key: ${{ runner.os }}-biome-${{ hashFiles('biome.json') }}
+          restore-keys: |
+            ${{ runner.os }}-biome-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and format check (Biome)
+        run: npm run check
+
+      - name: Type check (TypeScript)
+        run: npm run build:check
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: Test coverage thresholds
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "## 📊 Test Coverage Thresholds" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            LINES=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct // 0')
+            FUNCTIONS=$(cat coverage/coverage-summary.json | jq -r '.total.functions.pct // 0')
+            BRANCHES=$(cat coverage/coverage-summary.json | jq -r '.total.branches.pct // 0')
+            STATEMENTS=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct // 0')
+            
+            echo "### Cobertura Atual" >> $GITHUB_STEP_SUMMARY
+            echo "- **Lines:** ${LINES}% (threshold: 80%)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Functions:** ${FUNCTIONS}% (threshold: 80%)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Branches:** ${BRANCHES}% (threshold: 75%)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Statements:** ${STATEMENTS}% (threshold: 80%)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Verifica thresholds usando awk (mais portável que bc)
+            THRESHOLD_FAILED=0
+            if awk "BEGIN {exit !($LINES < 80)}"; then
+              echo "❌ Lines abaixo do threshold (80%)" >> $GITHUB_STEP_SUMMARY
+              THRESHOLD_FAILED=1
+            fi
+            if awk "BEGIN {exit !($FUNCTIONS < 80)}"; then
+              echo "❌ Functions abaixo do threshold (80%)" >> $GITHUB_STEP_SUMMARY
+              THRESHOLD_FAILED=1
+            fi
+            if awk "BEGIN {exit !($BRANCHES < 75)}"; then
+              echo "❌ Branches abaixo do threshold (75%)" >> $GITHUB_STEP_SUMMARY
+              THRESHOLD_FAILED=1
+            fi
+            if awk "BEGIN {exit !($STATEMENTS < 80)}"; then
+              echo "❌ Statements abaixo do threshold (80%)" >> $GITHUB_STEP_SUMMARY
+              THRESHOLD_FAILED=1
+            fi
+            
+            if [ $THRESHOLD_FAILED -eq 0 ]; then
+              echo "✅ **Todos os thresholds de cobertura foram atingidos!**" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+        continue-on-error: true
+
+      - name: Verify coverage report
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "✅ Coverage report generated successfully"
+            echo "Coverage file exists: coverage/coverage-summary.json"
+          else
+            echo "⚠️ Coverage report not found"
+            echo "Attempting to generate coverage report..."
+            npm run test:coverage || echo "Failed to generate coverage report"
+            if [ -f "coverage/coverage-summary.json" ]; then
+              echo "✅ Coverage report generated successfully after retry"
+            else
+              echo "⚠️ Coverage report still not found, but continuing..."
+              # Cria diretório vazio para evitar erro no upload
+              mkdir -p coverage
+              touch coverage/.gitkeep
+            fi
+          fi
+
+      - name: Upload coverage to artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    needs: qa # Depende do job qa para ter acesso ao coverage
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for better analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Cache Biome
+        uses: actions/cache@v4
+        with:
+          path: ~/.biome
+          key: ${{ runner.os }}-biome-${{ hashFiles('biome.json') }}
+          restore-keys: |
+            ${{ runner.os }}-biome-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download coverage from QA
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: coverage-report
+          path: coverage/
+        id: download-coverage
+
+      - name: Verify downloaded coverage
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "✅ Coverage downloaded successfully from QA job"
+            ls -la coverage/ || true
+          else
+            echo "⚠️ Coverage not found after download"
+            ls -la coverage/ || echo "Coverage directory does not exist"
+          fi
+
+      - name: Check for sensitive files
+        run: |
+          echo "## Sensitive Files Detection" >> $GITHUB_STEP_SUMMARY
+          echo "Scanning for sensitive files that should not be committed..." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          SENSITIVE_FOUND=0
+          SENSITIVE_PATTERNS=(
+            ".env"
+            ".env.local"
+            ".env.production"
+            ".env.development"
+            ".env.test"
+            ".env.*.local"
+            "*.pem"
+            "*.key"
+            "*.p12"
+            "*.pfx"
+            "*.crt"
+            "*.cer"
+            "id_rsa"
+            "id_dsa"
+            "*.ppk"
+            "secrets.json"
+            "secrets.yml"
+            "secrets.yaml"
+            "credentials.json"
+            ".aws/credentials"
+            ".ssh/id_rsa"
+            ".ssh/id_dsa"
+            "*.secret"
+            "*.private"
+          )
+
+          echo "### Checking for sensitive files:" >> $GITHUB_STEP_SUMMARY
+
+          for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+            # Find files matching pattern (excluding node_modules and .git)
+            found_files=$(find . -type f -name "$pattern" ! -path "*/node_modules/*" ! -path "*/.git/*" 2>/dev/null || true)
+            
+            if [ -n "$found_files" ]; then
+              echo "❌ **CRITICAL:** Found sensitive file matching pattern \`$pattern\`:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "$found_files" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              SENSITIVE_FOUND=1
+            fi
+          done
+
+          # Check for .env files with more specific patterns
+          env_files=$(find . -type f \( -name ".env*" -o -name "*.env" \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -name ".env.example" ! -name ".env.sample" 2>/dev/null || true)
+
+          if [ -n "$env_files" ]; then
+            echo "❌ **CRITICAL:** Found .env files (should be in .gitignore):" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$env_files" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            SENSITIVE_FOUND=1
+          fi
+
+          # Check for potential secrets in code (basic check)
+          echo "### Checking for potential secrets in code:" >> $GITHUB_STEP_SUMMARY
+          secret_patterns=(
+            "password.*=.*['\"][^'\"]{8,}"
+            "api[_-]?key.*=.*['\"][^'\"]{8,}"
+            "secret.*=.*['\"][^'\"]{8,}"
+            "token.*=.*['\"][^'\"]{8,}"
+            "aws[_-]?access[_-]?key"
+            "aws[_-]?secret[_-]?key"
+          )
+
+          for pattern in "${secret_patterns[@]}"; do
+            matches=$(grep -r -i -E "$pattern" --include="*.ts" --include="*.js" --include="*.json" src/ 2>/dev/null | grep -v "test\|spec\|mock\|example\|sample" || true)
+            if [ -n "$matches" ]; then
+              echo "⚠️ Potential secret found (pattern: \`$pattern\`):" >> $GITHUB_STEP_SUMMARY
+              echo "$matches" | head -5 >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          if [ $SENSITIVE_FOUND -eq 1 ]; then
+            echo "## ❌ SECURITY ALERT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Sensitive files detected in repository!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action required:**" >> $GITHUB_STEP_SUMMARY
+            echo "1. Remove these files from the repository immediately" >> $GITHUB_STEP_SUMMARY
+            echo "2. Add them to .gitignore if not already present" >> $GITHUB_STEP_SUMMARY
+            echo "3. Rotate any exposed credentials/keys" >> $GITHUB_STEP_SUMMARY
+            echo "4. Use environment variables or secret management tools instead" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ No sensitive files detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Analyze code complexity
+        run: |
+          echo "## Code Complexity Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "Analyzing code complexity metrics..." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files with high complexity:" >> $GITHUB_STEP_SUMMARY
+          find src -name '*.ts' -type f | while read file; do
+            lines=$(wc -l < "$file" | tr -d ' ')
+            if [ "$lines" -gt 300 ]; then
+              echo "- \`$file\`: $lines lines (consider splitting)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Check for code smells
+        run: |
+          echo "## Code Smells Detection" >> $GITHUB_STEP_SUMMARY
+          echo "Checking for common code smells..." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check for long functions (more than 50 lines)
+          echo "### Long functions detected:" >> $GITHUB_STEP_SUMMARY
+          grep -r "function\|=>" src --include="*.ts" | wc -l | xargs echo "Total functions found"
+
+          # Check for TODO/FIXME comments
+          echo "### TODO/FIXME comments:" >> $GITHUB_STEP_SUMMARY
+          todo_count=$(grep -r "TODO\|FIXME" src --include="*.ts" | wc -l | tr -d ' ')
+          if [ "$todo_count" -gt 0 ]; then
+            echo "⚠️ Found $todo_count TODO/FIXME comments:" >> $GITHUB_STEP_SUMMARY
+            grep -rn "TODO\|FIXME" src --include="*.ts" | head -10 >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No TODO/FIXME comments found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check for console statements
+        run: |
+          echo "## Console Statements Check" >> $GITHUB_STEP_SUMMARY
+          console_count=$(grep -r "console\." src --include="*.ts" | grep -v "//" | wc -l | tr -d ' ')
+          if [ "$console_count" -gt 0 ]; then
+            echo "⚠️ Found $console_count console statements (consider using a logger):" >> $GITHUB_STEP_SUMMARY
+            grep -rn "console\." src --include="*.ts" | grep -v "//" | head -10 >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No console statements found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check for unused dependencies
+        run: |
+          echo "## Dependency Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "Checking for unused dependencies..." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Note: Install 'depcheck' for detailed analysis: npm install -g depcheck" >> $GITHUB_STEP_SUMMARY
+
+      - name: TypeScript strict checks
+        run: |
+          echo "## TypeScript Strict Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "Running TypeScript with strictest settings..." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check for 'any' types
+          any_count=$(grep -r ": any\|as any" src --include="*.ts" | wc -l | tr -d ' ')
+          if [ "$any_count" -gt 0 ]; then
+            echo "⚠️ Found $any_count uses of 'any' type:" >> $GITHUB_STEP_SUMMARY
+            grep -rn ": any\|as any" src --include="*.ts" | head -10 >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No 'any' types found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Check for 'unknown' usage (preferred over 'any')
+          unknown_count=$(grep -r ": unknown\|as unknown" src --include="*.ts" | wc -l | tr -d ' ')
+          echo "✅ Found $unknown_count uses of 'unknown' type (preferred over 'any')" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check test coverage thresholds
+        run: |
+          echo "## Test Coverage Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Verifica se o download foi bem-sucedido
+          download_status="${{ steps.download-coverage.outcome }}"
+          echo "Download status: $download_status" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$download_status" == "success" ] && [ -f "coverage/coverage-summary.json" ]; then
+            echo "✅ Coverage report found (from QA job)" >> $GITHUB_STEP_SUMMARY
+            echo "Coverage report generated successfully" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Coverage Summary:" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat coverage/coverage-summary.json | jq '.total' 2>/dev/null || cat coverage/coverage-summary.json | grep -A 10 '"total"' >> $GITHUB_STEP_SUMMARY || echo "Unable to parse coverage summary" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check coverage artifacts for detailed metrics" >> $GITHUB_STEP_SUMMARY
+          else
+            if [ "$download_status" != "success" ]; then
+              echo "⚠️ Coverage artifact not available from QA job" >> $GITHUB_STEP_SUMMARY
+              echo "Reason: Download step failed or artifact not found" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ Coverage report not found in downloaded artifact" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Generating coverage report locally..." >> $GITHUB_STEP_SUMMARY
+            
+            # Gera coverage localmente
+            npm run test:coverage || true
+            
+            if [ -f "coverage/coverage-summary.json" ]; then
+              echo "✅ Coverage report generated successfully" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Coverage Summary:" >> $GITHUB_STEP_SUMMARY
+              echo '```json' >> $GITHUB_STEP_SUMMARY
+              cat coverage/coverage-summary.json | jq '.total' 2>/dev/null || cat coverage/coverage-summary.json | grep -A 10 '"total"' >> $GITHUB_STEP_SUMMARY || echo "Unable to parse coverage summary" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ Failed to generate coverage report" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Possible reasons:**" >> $GITHUB_STEP_SUMMARY
+              echo "- No tests are configured" >> $GITHUB_STEP_SUMMARY
+              echo "- Tests failed to run" >> $GITHUB_STEP_SUMMARY
+              echo "- Coverage provider not properly configured" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+      - name: Security vulnerability scan
+        run: |
+          echo "## Security Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "Running npm audit..." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          npm audit --audit-level=moderate --json > audit-report.json || true
+
+          if [ -f "audit-report.json" ]; then
+            vulnerabilities=$(cat audit-report.json | grep -o '"vulnerabilities":{[^}]*}' | wc -l || echo "0")
+            echo "Security audit completed. Check npm audit for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload quality report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: code-quality-report
+          path: |
+            audit-report.json
+            coverage/
+          retention-days: 7

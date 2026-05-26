@@ -1,0 +1,208 @@
+name: Docker Build & Test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Dockerfile"
+      - "docker-compose*.yml"
+      - ".dockerignore"
+      - "package.json"
+      - "package-lock.json"
+      - "src/**"
+      - ".github/workflows/docker-build.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Dockerfile"
+      - "docker-compose*.yml"
+      - ".dockerignore"
+      - "package.json"
+      - "package-lock.json"
+      - "src/**"
+      - ".github/workflows/docker-build.yml"
+  workflow_dispatch: # Permite execução manual
+
+jobs:
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: fastify-boilerplate:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+
+      - name: Inspect Docker image
+        run: |
+          echo "## 🐳 Docker Image Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Verifica tamanho da imagem
+          IMAGE_SIZE=$(docker images fastify-boilerplate:test --format "{{.Size}}")
+          echo "### Tamanho da Imagem" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **$IMAGE_SIZE**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Verifica se o usuário não-root está configurado
+          echo "### Verificação de Segurança" >> $GITHUB_STEP_SUMMARY
+          USER=$(docker run --rm fastify-boilerplate:test whoami)
+          if [ "$USER" = "appuser" ]; then
+            echo "✅ **Usuário não-root configurado:** $USER" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Atenção:** Container rodando como $USER (deveria ser appuser)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Lista arquivos na imagem
+          echo "### Estrutura da Imagem" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          docker run --rm fastify-boilerplate:test ls -la /usr/src/app/ | head -20 >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+
+      - name: Test Docker container
+        run: |
+          echo "## 🧪 Testes do Container Docker" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Inicia container em background
+          CONTAINER_ID=$(docker run -d \
+            -e NODE_ENV=production \
+            -e PORT=3000 \
+            -e HOST=0.0.0.0 \
+            -e JWT_SECRET=test-secret-key-must-be-at-least-32-characters-long \
+            -p 3000:3000 \
+            fastify-boilerplate:test)
+
+          echo "Container ID: $CONTAINER_ID" >> $GITHUB_STEP_SUMMARY
+
+          # Função para limpar container em caso de erro
+          cleanup() {
+            echo "🧹 Limpando container..." >> $GITHUB_STEP_SUMMARY
+            docker stop $CONTAINER_ID 2>/dev/null || true
+            docker rm $CONTAINER_ID 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          # Aguarda o container iniciar e verifica logs
+          echo "⏳ Aguardando container iniciar..." >> $GITHUB_STEP_SUMMARY
+          for i in {1..30}; do
+            if docker ps --format '{{.ID}}' | grep -q "^${CONTAINER_ID:0:12}"; then
+              # Verifica se o servidor está respondendo
+              if docker logs $CONTAINER_ID 2>&1 | grep -q "Server listening"; then
+                echo "✅ Container iniciado e servidor está ouvindo" >> $GITHUB_STEP_SUMMARY
+                break
+              fi
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ Timeout: Container não iniciou em 30 segundos" >> $GITHUB_STEP_SUMMARY
+              echo "### Logs do Container:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              docker logs $CONTAINER_ID 2>&1 >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # Aguarda mais um pouco para garantir que está pronto
+          sleep 3
+
+          # Verifica se o container está rodando
+          if ! docker ps --format '{{.ID}}' | grep -q "^${CONTAINER_ID:0:12}"; then
+            echo "❌ Container não está rodando" >> $GITHUB_STEP_SUMMARY
+            echo "### Logs do Container:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            docker logs $CONTAINER_ID 2>&1 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          # Testa health check
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Health Check" >> $GITHUB_STEP_SUMMARY
+          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:3000/health 2>/dev/null || echo "000")
+          if [ "$HEALTH_STATUS" = "200" ]; then
+            echo "✅ Health check retornou 200" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Health check falhou (status: $HEALTH_STATUS)" >> $GITHUB_STEP_SUMMARY
+            echo "### Logs do Container:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            docker logs $CONTAINER_ID 2>&1 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Todos os testes do container passaram!" >> $GITHUB_STEP_SUMMARY
+
+      - name: Scan Docker image for vulnerabilities
+        id: trivy-scan
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: fastify-boilerplate:test
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && steps.trivy-scan.outcome == 'success'
+        continue-on-error: true
+        with:
+          sarif_file: "trivy-results.sarif"
+          wait-for-processing: false
+
+  docker-compose-test:
+    name: Test Docker Compose
+    runs-on: ubuntu-latest
+    needs: docker-build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file for testing
+        run: |
+          cat > .env << EOF
+          NODE_ENV=test
+          PORT=3000
+          HOST=0.0.0.0
+          API_VERSION=1.0.0
+          JWT_SECRET=test-secret-key-must-be-at-least-32-characters-long-for-testing
+          JWT_EXPIRES_IN=7d
+          EOF
+
+      - name: Test docker-compose.yml (development)
+        run: |
+          echo "## 🧪 Teste Docker Compose - Desenvolvimento" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Valida sintaxe do docker-compose
+          docker compose -f docker-compose.yml config > /dev/null
+          echo "✅ docker-compose.yml válido" >> $GITHUB_STEP_SUMMARY
+
+      - name: Test docker-compose.prod.yml (production)
+        run: |
+          echo "## 🧪 Teste Docker Compose - Produção" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Valida sintaxe do docker-compose
+          docker compose -f docker-compose.prod.yml config > /dev/null
+          echo "✅ docker-compose.prod.yml válido" >> $GITHUB_STEP_SUMMARY

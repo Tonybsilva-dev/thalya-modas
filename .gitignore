@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store/
+.DS_Store
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build and coverage outputs
+dist/
+coverage/
+storybook-static/

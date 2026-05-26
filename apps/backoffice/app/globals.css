@@ -1,0 +1,19 @@
+@import "@thalya-modas/ui/styles.css";
+
+@source "../app/**/*.{ts,tsx}";
+@source "../src/**/*.{ts,tsx}";
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
+
+:root {
+  --font-primary: var(--font-space-grotesk), sans-serif;
+  --font-secondary: var(--font-space-grotesk), sans-serif;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}

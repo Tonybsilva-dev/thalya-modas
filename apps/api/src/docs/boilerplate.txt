@@ -1,0 +1,708 @@
+<overview>
+
+## Problem Statement
+As equipes da agência precisam criar backends Node/TypeScript para diferentes clientes (produtos, microsserviços, APIs internas) e perdem tempo recriando sempre a mesma infraestrutura básica: configuração de Fastify, DDD, autenticação, RBAC, testes, lint, documentação e CI. Isso gera inconsistência entre projetos, maior risco de bugs em produção e dificuldade de manutenção/rotação entre times.
+
+## Target Users
+- **Desenvolvedores backend da agência**: querem iniciar rapidamente um novo serviço com decisões de arquitetura e stack já padronizadas.
+- **Tech leads / arquitetos**: querem garantir consistência entre projetos, boas práticas (DDD, testes, RBAC, observabilidade) e facilidade de governança.
+- **Equipe de QA / DevOps**: querem pipelines previsíveis, padronizados, com scripts repetíveis para lint, testes, build e atualização de dependências.
+
+## Success Metrics
+- **Tempo de bootstrap** de um novo backend reduzido para \< 30 minutos até a primeira rota de domínio funcional em produção.
+- **Adoção do template**: \> 80% dos novos backends da agência iniciados a partir deste boilerplate.
+- **Qualidade**: \> 90% dos projetos derivados com pipeline de CI verde (lint, testes, build) de forma consistente.
+- **Consistência**: Estrutura de pastas e padrões de erros/paginação/RBAC idênticos em \> 90% dos serviços criados com o boilerplate.
+
+</overview>
+
+---
+
+<functional-decomposition>
+
+## Capability Tree
+
+### Capability: Project Bootstrap
+[Fornecer um ponto de partida completo para novos backends Node com Fastify e TypeScript.]
+
+#### Feature: Projeto base TypeScript/Node
+- **Description**: Entregar configuração inicial de TypeScript, `tsconfig`, scripts de build e start.
+- **Inputs**: Node.js, npm, ambiente de desenvolvimento.
+- **Outputs**: Estrutura `src/` + `dist/`, scripts `dev`, `build`, `start`.
+- **Behavior**: Permite rodar o servidor em modo desenvolvimento (watch) e produção (build + start).
+
+#### Feature: Estrutura DDD simplificada
+- **Description**: Organizar o código em camadas `domain`, `application`, `infra` e `app/http`.
+- **Inputs**: Regras de negócio do domínio do projeto que irá usar o template.
+- **Outputs**: Folders e contratos base entre camadas (entidades, use-cases, serviços de infra).
+- **Behavior**: Impõe separação entre regras de negócio puras e detalhes de infraestrutura (Fastify, DB, etc.).
+
+#### Feature: Scripts de automação
+- **Description**: Disponibilizar scripts padronizados para desenvolvimento, testes, lint, format, build e atualização de dependências.
+- **Inputs**: `package.json`, ferramentas instaladas (Vitest, Biome, npm-check-updates, Husky, lint-staged).
+- **Outputs**: Conjunto de scripts npm reutilizáveis.
+- **Behavior**: Facilita a execução de rotinas de qualidade e manutenção em todos os projetos derivados.
+
+---
+
+### Capability: HTTP API with Fastify
+[Servir APIs HTTP com Fastify, incluindo documentação, health-check e middlewares padrão.]
+
+#### Feature: Servidor Fastify configurado
+- **Description**: Criar e configurar instância Fastify com plugins essenciais e registro de rotas.
+- **Inputs**: Configurações de servidor (porta, env), módulos de rotas, middlewares.
+- **Outputs**: Servidor HTTP inicializável via script `dev`/`start`.
+- **Behavior**: Registra rotas, middlewares, tratadores de erro e inicializa o servidor escutando em uma porta configurável.
+
+#### Feature: Documentação de API com Swagger
+- **Description**: Expor documentação interativa da API usando `@fastify/swagger` e `@fastify/swagger-ui`.
+- **Inputs**: Metadados da API (título, descrição, versão), esquemas dos endpoints.
+- **Outputs**: Endpoints `/docs` ou `/swagger` acessíveis via browser.
+- **Behavior**: Gera e serve especificação OpenAPI com schemas, rotas, exemplos e padrões de erro/paginação.
+
+#### Feature: Health-check detalhado
+- **Description**: Fornecer rotas de health-check (`/health`, `/health/deep`) indicando o status do serviço e dependências.
+- **Inputs**: Versão do serviço, uptime, status de conexões externas (quando configuradas).
+- **Outputs**: Respostas JSON com `status`, `version`, `uptime` e `checks`.
+- **Behavior**: Permite a monitorização do serviço por ferramentas externas e readiness/liveness probes.
+
+---
+
+### Capability: Error Handling & Observability
+[Padronizar o tratamento de erros e a visibilidade operacional da API.]
+
+#### Feature: Hierarquia de erros
+- **Description**: Definir classes de erro (ex.: `AppError`, `DomainError`, `ValidationError`, `AuthError`) com metadados HTTP.
+- **Inputs**: Exceções lançadas em camadas de domínio, aplicação ou infra.
+- **Outputs**: Objetos de erro conhecidos com `statusCode`, `name`, `message`, `details`.
+- **Behavior**: Permite ao middleware global transformar erros em respostas HTTP padronizadas.
+
+#### Feature: Middleware global de erros
+- **Description**: Capturar erros não tratados nas rotas e convertê-los para um formato de resposta consistente.
+- **Inputs**: Erros lançados durante o processamento de requests Fastify.
+- **Outputs**: Respostas JSON com estrutura padronizada (incluindo `traceId`).
+- **Behavior**: Evita vazamento de stack trace em produção, loga erros inesperados e mantém contrato estável com clientes.
+
+#### Feature: Logger e Trace ID
+- **Description**: Configurar logging estruturado e atribuir um identificador único por requisição.
+- **Inputs**: Requests HTTP, contexto Fastify.
+- **Outputs**: Logs com `traceId` correlacionável entre serviços.
+- **Behavior**: Facilita troubleshooting e correlação de logs em produção.
+
+---
+
+### Capability: Pagination & Shared Utilities
+[Fornecer padrões reutilizáveis para paginação e utilidades comuns.]
+
+#### Feature: Padrões de paginação
+- **Description**: Encapsular DTOs, tipos e helpers para paginação de listas.
+- **Inputs**: Query string (`page`, `perPage`, `sort`, `filter`), limites padrão.
+- **Outputs**: Objetos `PageRequest` e `Page<T>` padronizados.
+- **Behavior**: Garante consistência de paginação entre diferentes rotas e serviços.
+
+#### Feature: Shared utilities
+- **Description**: Consolidar configs, env, helpers e utilidades transversais.
+- **Inputs**: Necessidades gerais de múltiplos módulos (config, validações genéricas, helpers).
+- **Outputs**: Módulos `config`, `env`, `utils` reutilizáveis.
+- **Behavior**: Reduz duplicação de código entre domínios e camadas.
+
+---
+
+### Capability: Validation with Zod
+[Padronizar validações usando Zod, respeitando princípios SOLID e reaproveitamento máximo de schemas.]
+
+#### Feature: Schemas de domínio reutilizáveis
+- **Description**: Definir schemas Zod para entidades e DTOs de domínio, reutilizando-os entre camadas.
+- **Inputs**: Regras de validação de dados (email, senha, IDs, payloads de casos de uso).
+- **Outputs**: Schemas `z.object()`, `z.union()`, `z.intersection()`, `schema.merge(...)` reutilizáveis.
+- **Behavior**: Garante validação consistente de dados em toda a aplicação, evitando duplicação e violações de SRP.
+
+#### Feature: Validação de HTTP (body/query/params/headers)
+- **Description**: Reutilizar schemas Zod nas rotas Fastify para validar dados de entrada HTTP.
+- **Inputs**: Payloads HTTP (`body`, `querystring`, `params`, `headers`), schemas Zod de domínio/DTO.
+- **Outputs**: Requests validados ou erros de validação padronizados.
+- **Behavior**: O middleware/handler de validação converte erros Zod em `ValidationError` rico em detalhes, aproveitado pelo middleware global de erros.
+
+#### Feature: Composição e reaproveitamento de schemas
+- **Description**: Utilizar composição Zod (`merge`, `pick`, `omit`, `partial`, `union`, `intersection`) para evitar repetição de regras.
+- **Inputs**: Schemas base (ex.: `baseUserSchema`, `basePaginationSchema`).
+- **Outputs**: Schemas especializados para cenários específicos (create, update, filter, etc.).
+- **Behavior**: Mantém um único ponto de verdade para validações, facilitando evolução e refatorações.
+
+---
+
+### Capability: Authentication & RBAC
+[Oferecer autenticação pronta (JWT) e controle de acesso baseado em roles usando CASL.]
+
+#### Feature: Autenticação com JWT
+- **Description**: Disponibilizar rotas básicas de auth (`/auth/register`, `/auth/login`, `/auth/me`) com JWT.
+- **Inputs**: Dados de usuário (email/senha), segredo JWT, tempo de expiração, fonte de persistência (mock ou plugável).
+- **Outputs**: Tokens JWT assinados, payload de usuário autenticado.
+- **Behavior**: Garante login seguro, hashing de senhas com `bcrypt`, e extração do usuário autenticado nas rotas.
+
+#### Feature: RBAC com CASL
+- **Description**: Implementar controle de acesso baseado em roles (`ROLE_USER`, `ROLE_ADMIN`) usando CASL.
+- **Inputs**: Usuário autenticado (id, role, claims), definição de abilities.
+- **Outputs**: Objeto `Ability` usado pelos middlewares de autorização.
+- **Behavior**: Restringe acesso às rotas/ações conforme papel do usuário, retornando 403/401 quando necessário.
+
+#### Feature: Middlewares de Auth & RBAC
+- **Description**: Extrair token, validar usuário, injetar `currentUser` e checar permissões em cada rota.
+- **Inputs**: Cabeçalhos HTTP (`Authorization`), abilities definidas.
+- **Outputs**: Requests enriquecidos com contexto de usuário e autorização aplicada.
+- **Behavior**: Centraliza autenticação/autorização, evitando lógica duplicada nos handlers.
+
+---
+
+### Capability: Testing & QA Automation
+[Garantir qualidade via testes e automação de checks em commits e CI.]
+
+#### Feature: Testes unitários e de integração
+- **Description**: Configurar Vitest para testes unitários e de integração.
+- **Inputs**: Casos de teste, factories de dados, servidor Fastify (para integração).
+- **Outputs**: Suites de teste com feedback rápido sobre regressões.
+- **Behavior**: Permite rodar `npm test`, `npm run test:unit`, `npm run test:integration` com ambiente consistente.
+
+#### Feature: Factory pattern para testes
+- **Description**: Criar fábricas para entidades e objetos comuns de teste.
+- **Inputs**: Definições de entidades e DTOs do domínio.
+- **Outputs**: Funções `makeUser`, `makeAuthToken`, `makePaginationRequest`, etc.
+- **Behavior**: Reduz duplicação, deixando os testes mais legíveis e fáceis de manter.
+
+#### Feature: Repository pattern para testes
+- **Description**: Implementar mocks de repositórios seguindo o padrão Repository para isolar testes de casos de uso e serviços de domínio.
+- **Inputs**: Interfaces de repositório definidas no domínio (ex.: `UserRepository`).
+- **Outputs**: Classes mock como `MockUserRepository` que implementam as interfaces e permitem controle total sobre dados de teste.
+- **Behavior**: Facilita testes unitários de casos de uso sem dependência de infraestrutura real (DB, APIs externas), permitindo simular cenários específicos (usuário não encontrado, duplicação de email, etc.) de forma determinística e rápida.
+
+#### Feature: Pipeline de QA (lint, format, tests)
+- **Description**: Unificar scripts de lint, format e testes (incluindo testes em arquivos alterados) em um comando de QA.
+- **Inputs**: Biome, Vitest, Husky, lint-staged.
+- **Outputs**: Scripts como `lint`, `format`, `check`, `test:changed`, `qa`.
+- **Behavior**: Garante que commits e pipelines executem validações mínimas de qualidade automaticamente.
+
+</functional-decomposition>
+
+---
+
+<structural-decomposition>
+
+## Repository Structure
+
+```text
+project-root/
+├── src/
+│   ├── app/
+│   │   └── http/
+│   │       ├── routes/
+│   │       ├── middlewares/
+│   │       ├── controllers/
+│   │       ├── errors/
+│   │       └── healthcheck/
+│   ├── core/
+│   │   ├── domain/
+│   │   │   ├── entities/
+│   │   │   ├── value-objects/
+│   │   │   ├── services/
+│   │   │   └── events/
+│   │   ├── application/
+│   │   │   ├── use-cases/
+│   │   │   └── dto/
+│   │   └── infra/
+│   │       ├── http/
+│   │       ├── persistence/
+│   │       ├── auth/
+│   │       └── logging/
+│   └── shared/
+│       ├── config/
+│       ├── env/
+│       ├── utils/
+│       ├── pagination/
+│       └── rbac/
+└── tests/
+    ├── unit/
+    ├── integration/
+    └── factories/
+```
+
+## Module Definitions
+
+### Module: `src/app/http`
+- **Maps to capability**: HTTP API with Fastify, Error Handling & Observability, Health-check.
+- **Responsibility**: Expor a API HTTP, registrar rotas, middlewares, documentação e tratamentos de erro.
+- **File structure**:
+  ```text
+  app/http/
+  ├── server.ts
+  ├── routes/
+  ├── controllers/
+  ├── middlewares/
+  ├── errors/
+  └── healthcheck/
+  ```
+- **Exports**:
+  - Função de bootstrap do servidor Fastify.
+  - Registradores de rotas e plugins (Swagger, health-check, middlewares).
+
+### Module: `src/core/domain`
+- **Maps to capability**: Project Bootstrap, Business Rules dos projetos derivados.
+- **Responsibility**: Conter entidades, value objects, eventos e serviços de domínio puros.
+- **File structure**:
+  ```text
+  core/domain/
+  ├── entities/
+  ├── value-objects/
+  ├── services/
+  └── events/
+  ```
+- **Exports**:
+  - Entidades de domínio (ex.: `User`).
+  - Value objects (ex.: `Email`, `PasswordHash`).
+  - Serviços de domínio (regras complexas).
+
+### Module: `src/core/application`
+- **Maps to capability**: Orquestração de casos de uso (Authentication & RBAC, Pagination & Shared Utilities).
+- **Responsibility**: Implementar casos de uso e DTOs, orquestrando domínio e infraestrutura.
+- **File structure**:
+  ```text
+  core/application/
+  ├── use-cases/
+  └── dto/
+  ```
+- **Exports**:
+  - Casos de uso (ex.: `RegisterUserUseCase`, `LoginUseCase`).
+  - DTOs de entrada/saída.
+
+### Module: `src/core/infra`
+- **Maps to capability**: HTTP API with Fastify, Authentication & RBAC, Logging, Persistence.
+- **Responsibility**: Implementações técnicas concretas (adapters de DB, clients HTTP, auth providers).
+- **File structure**:
+  ```text
+  core/infra/
+  ├── http/
+  ├── persistence/
+  ├── auth/
+  └── logging/
+  ```
+- **Exports**:
+  - Adaptadores de repositórios.
+  - Implementações de autenticação e logging.
+
+### Module: `src/shared`
+- **Maps to capability**: Pagination & Shared Utilities, Environment Management.
+- **Responsibility**: Configuração, carregamento de env, utils diversos, paginação e RBAC.
+- **File structure**:
+  ```text
+  shared/
+  ├── config/
+  ├── env/
+  ├── utils/
+  ├── pagination/
+  └── rbac/
+  ```
+- **Exports**:
+  - Helpers de configuração e env.
+  - Tipos/DTOs e helpers de paginação.
+  - Fábricas de abilities CASL.
+
+### Module: `tests`
+- **Maps to capability**: Testing & QA Automation.
+- **Responsibility**: Conter testes unitários, de integração e fábricas de teste.
+- **File structure**:
+  ```text
+  tests/
+  ├── unit/
+  ├── integration/
+  └── factories/
+  ```
+- **Exports**:
+  - Suites de testes automatizados.
+  - Fábricas de dados de teste reutilizáveis.
+
+</structural-decomposition>
+
+---
+
+<dependency-graph>
+
+## Dependency Chain
+
+### Foundation Layer (Phase 0)
+No dependencies - módulos base construídos primeiro.
+
+- **shared/env**: Carrega e valida variáveis de ambiente necessárias ao servidor e autenticação.
+- **shared/config**: Fornece configurações derivadas de `env` para outros módulos.
+- **shared/utils**: Helpers genéricos sem dependência de domínio.
+
+### Domain & Shared Capabilities (Phase 1)
+- **shared/pagination**: Depends on [[shared/utils]] — utiliza helpers genéricos para converter query em `PageRequest`.
+- **shared/rbac**: Depends on [[shared/config]] — usa configurações padrão de roles/permissões.
+- **core/domain**: Depends on [[shared/utils]] — pode usar utilidades básicas (ex.: validações simples).
+
+### Application & Infrastructure (Phase 2)
+- **core/application**: Depends on [[core/domain, shared/pagination, shared/rbac]] — orquestra casos de uso de autenticação, listagens paginadas, etc.
+- **core/infra/auth**: Depends on [[shared/env, shared/config, core/domain]] — implementa persistência e autenticação usando configs e entidades de domínio.
+- **core/infra/logging**: Depends on [[shared/config]] — configura logger conforme ambiente.
+- **core/infra/persistence**: Depends on [[shared/env, shared/config, core/domain]] — implementa repositórios persistentes.
+
+### HTTP Layer (Phase 3)
+- **app/http/server**: Depends on [[shared/env, shared/config, core/application, core/infra/http, core/infra/logging]] — inicializa Fastify e integra rotas, middlewares e logging.
+- **app/http/middlewares**: Depends on [[core/infra/auth, shared/rbac, shared/utils, core/infra/logging]] — implementa autenticação, autorização, logger, trace ID.
+- **app/http/routes & controllers**: Depends on [[core/application, shared/pagination, shared/rbac]] — expõe endpoints HTTP chamando casos de uso.
+- **app/http/errors**: Depends on [[shared/utils, core/infra/logging]] — converte erros em respostas HTTP padronizadas.
+- **app/http/healthcheck**: Depends on [[shared/env, shared/config, core/infra/persistence]] — expõe status do sistema e dependências.
+
+### Testing & QA (Phase 4)
+- **tests/factories**: Depends on [[core/domain, core/application]] — cria instâncias para uso em testes.
+- **tests/unit**: Depends on [[core/domain, core/application, shared/utils]] — testa regras de negócio e casos de uso de forma isolada.
+- **tests/integration**: Depends on [[app/http/server, core/infra/*]] — testa o fluxo end-to-end via HTTP.
+
+</dependency-graph>
+
+---
+
+<implementation-roadmap>
+
+## Development Phases
+
+### Phase 0: Foundation & Environment
+**Goal**: Estabelecer base de configuração, env e utilidades genéricas para todo o boilerplate.
+
+**Entry Criteria**: Repositório inicializado com Node/TypeScript, `package.json` criado.
+
+**Tasks**:
+- [ ] Configurar `tsconfig.json` e estrutura básica `src/` e `dist/` (depends on: [none])  
+  - Acceptance criteria: Projeto compila com `npm run build`, gerando saída em `dist/`.
+  - Test strategy: Teste manual inicial de build + execução simples.
+
+- [ ] Implementar módulos `shared/env` e `shared/config` (depends on: [tsconfig configurado])  
+  - Acceptance criteria: Serviço não inicia em produção sem env obrigatórias; configs centralizadas.
+  - Test strategy: Testes unitários simples para diferentes combinações de env.
+
+- [ ] Criar `shared/utils` com helpers genéricos (depends on: [tsconfig configurado])  
+  - Acceptance criteria: Helpers utilizados em pelo menos um módulo posterior.
+  - Test strategy: Testes unitários de funções utilitárias.
+
+**Exit Criteria**: Projeto compila, carrega env/config corretamente e possui utilidades básicas prontas.
+
+**Delivers**: Base para demais módulos (domínio, infra, HTTP, testes).
+
+---
+
+### Phase 1: Domain, Pagination & RBAC Base
+**Goal**: Definir núcleo de domínio, paginação e estrutura base de RBAC.
+
+**Entry Criteria**: Phase 0 completa.
+
+**Tasks**:
+- [ ] Implementar `core/domain` com ao menos entidade `User` e value objects de exemplo (depends on: [shared/utils])  
+  - Acceptance criteria: Entidades livres de dependências de frameworks.
+  - Test strategy: Testes unitários de regras de domínio.
+
+- [ ] Implementar `shared/pagination` (PageRequest, Page<T>, helpers) (depends on: [shared/utils])  
+  - Acceptance criteria: Conversão de query string para `PageRequest` com validação de limites.
+  - Test strategy: Testes unitários cobrindo limites, defaults e edge cases.
+
+- [ ] Implementar estrutura base de `shared/rbac` com roles (`ROLE_USER`, `ROLE_ADMIN`) e `AbilityFactory` (depends on: [shared/config, core/domain])  
+  - Acceptance criteria: Geração de abilities com pelo menos 2 papéis distintos.
+  - Test strategy: Testes unitários de permissões concedidas/negadas.
+
+**Exit Criteria**: Domínio, paginação e RBAC prontos para serem consumidos pelos casos de uso.
+
+**Delivers**: Núcleo de regras pronto para integração com camada de aplicação e HTTP.
+
+---
+
+### Phase 2: Application & Infrastructure
+**Goal**: Implementar casos de uso principais e infraestrutura de auth/persistência/logging.
+
+**Entry Criteria**: Phase 1 completa.
+
+**Tasks**:
+- [ ] Criar casos de uso básicos de autenticação (`RegisterUser`, `Login`, `GetCurrentUser`) em `core/application` (depends on: [core/domain, shared/rbac])  
+  - Acceptance criteria: Casos de uso isolados, sem dependência direta de Fastify.
+  - Test strategy: Testes unitários cobrindo fluxos de sucesso/erro.
+
+- [ ] Implementar `core/infra/auth` com hashing `bcrypt` e emissão/validação de JWT (depends on: [shared/env, shared/config, core/domain])  
+  - Acceptance criteria: Tokens válidos, expiração configurável, senhas nunca armazenadas em texto plano.
+  - Test strategy: Testes unitários de geração/validação de JWT e hashing de senha.
+
+- [ ] Implementar `core/infra/logging` (logger estruturado) (depends on: [shared/config])  
+  - Acceptance criteria: Logs com contexto mínimo (nível, mensagem, timestamp, env).
+  - Test strategy: Testes unitários simples ou verificação manual de logs em dev.
+
+- [ ] Implementar esqueleto de `core/infra/persistence` (mesmo que com implementação fake/in-memory) (depends on: [core/domain, shared/env])  
+  - Acceptance criteria: Repositórios de usuário funcionando em memória para uso pelos casos de uso.
+  - Test strategy: Testes unitários de repositórios.
+
+**Exit Criteria**: Casos de uso e infraestrutura básica prontos para serem conectados ao HTTP.
+
+**Delivers**: Back-end de regras preparado para ser exposto via Fastify.
+
+---
+
+### Phase 3: HTTP Layer, Middlewares & Swagger
+**Goal**: Expor a API HTTP via Fastify com documentação, health-check e middlewares padrão.
+
+**Entry Criteria**: Phases 0–2 completas.
+
+**Tasks**:
+- [ ] Implementar `app/http/server.ts` com registro de plugins, rotas e Swagger (depends on: [shared/env, core/application, core/infra/logging])  
+  - Acceptance criteria: Servidor sobe com `npm run dev`, Swagger acessível em `/docs` ou `/swagger`.
+  - Test strategy: Testes de integração básicos e verificação manual da UI do Swagger.
+
+- [ ] Implementar rotas de auth (`/auth/register`, `/auth/login`, `/auth/me`) e health-check (`/health`, `/health/deep`) (depends on: [core/application, app/http/server])  
+  - Acceptance criteria: Fluxos de registro/login/me funcionam end-to-end com JWT.
+  - Test strategy: Testes de integração com supertest/Vitest.
+
+- [ ] Implementar middlewares (`logger`, `requestId`, `auth`, `rbac`, `validation`) (depends on: [core/infra/auth, shared/rbac, core/infra/logging])  
+  - Acceptance criteria: Cada request recebe `traceId`; rotas protegidas rejeitam acessos não autorizados.
+  - Test strategy: Testes de integração verificando headers, códigos de status e logs.
+
+- [ ] Implementar middleware global de erros em `app/http/errors` (depends on: [core/infra/logging])  
+  - Acceptance criteria: Erros conhecidos convertidos em resposta padronizada, sem stack trace em produção.
+  - Test strategy: Testes de integração simulando erros de validação/autorização/erro inesperado.
+
+**Exit Criteria**: API HTTP funcional, documentada e com observabilidade básica.
+
+**Delivers**: Boilerplate pronto para ser customizado com domínios específicos.
+
+---
+
+### Phase 4: Testing, QA & Tooling
+**Goal**: Garantir qualidade contínua com testes, lint, format e hooks de commit.
+
+**Entry Criteria**: Phases anteriores completas.
+
+**Tasks**:
+- [ ] Configurar Vitest (`vitest.config.ts`) e scripts de teste no `package.json` (depends on: [estrutura de código estável])  
+  - Acceptance criteria: `npm test`, `npm run test:unit`, `npm run test:integration` executam sem erros.
+  - Test strategy: Execução automática em CI.
+
+- [ ] Criar `tests/factories` para entidades comuns (depends on: [core/domain, core/application])  
+  - Acceptance criteria: Testes utilizando factories ao invés de dados in-line repetitivos.
+  - Test strategy: Refatorar alguns testes para usar factories e garantir legibilidade.
+
+- [ ] Configurar Biome (lint, format, check) e scripts de QA no `package.json` (depends on: [ferramentas instaladas])  
+  - Acceptance criteria: `npm run lint`, `npm run format`, `npm run check`, `npm run qa` executam com sucesso em estado saudável.
+  - Test strategy: Execução local e em CI.
+
+- [ ] Configurar Husky + lint-staged para rodar checks em pre-commit (depends on: [scripts de QA])  
+  - Acceptance criteria: Commits falham quando lint/tests quebram.
+  - Test strategy: Commits de teste com código quebrado para validar bloqueio.
+
+**Exit Criteria**: Pipeline de qualidade automatizado em desenvolvimento e CI.
+
+**Delivers**: Conjunto de ferramentas pronto para manter qualidade ao longo de todo o ciclo de vida.
+
+</implementation-roadmap>
+
+---
+
+<test-strategy>
+
+## Test Pyramid
+
+```text
+        /\
+       /E2E\       ← 10–15% (end-to-end HTTP, mais lentos)
+      /------\
+     /Integration\ ← 25–35% (API + camada de aplicação/infra)
+    /------------\
+   /  Unit Tests  \ ← 50–65% (rápidos, isolados, determinísticos)
+  /----------------\
+```
+
+## Coverage Requirements
+- Line coverage: 80% mínimo.
+- Branch coverage: 75% mínimo.
+- Function coverage: 80% mínimo.
+- Statement coverage: 80% mínimo.
+
+## Critical Test Scenarios
+
+### Authentication & RBAC
+**Happy path**:
+- Usuário se registra, faz login e acessa rota protegida compatível com seu role.
+- Expected: Recebe token válido, acessa endpoints permitidos, 403 em recursos não permitidos.
+
+**Edge cases**:
+- Token expirado, token ausente, token malformado.
+- Expected: 401 Unauthorized com mensagem padronizada de erro de autenticação.
+
+**Error cases**:
+- Login com credenciais inválidas, usuário inexistente, senha incorreta.
+- Expected: 400/401 com mensagem clara e sem vazamento de detalhes sensíveis.
+
+**Integration points**:
+- Auth + RBAC + middlewares de rota.
+- Expected: Rotas só acessíveis conforme abilities definidas.
+
+---
+
+### Pagination
+**Happy path**:
+- Listagem de recursos com `page` e `perPage` válidos.
+- Expected: `Page<T>` com `items`, `total`, `page`, `perPage`.
+
+**Edge cases**:
+- `page` \< 1, `perPage` \> limite máximo.
+- Expected: Valores normalizados ou erros de validação claros.
+
+**Error cases**:
+- Valores não numéricos ou tipos inválidos em query string.
+- Expected: 400 com detalhes de validação.
+
+**Integration points**:
+- Uso do helper de paginação nas rotas de domínio.
+- Expected: Todas as rotas de listagem compartilham o mesmo comportamento.
+
+---
+
+### Error Handling & Health-check
+**Happy path**:
+- Erros de domínio/validação mapeados corretamente para HTTP.
+- Expected: Corpo de erro padronizado, com `error`, `message`, `details`, `traceId`.
+
+**Edge cases**:
+- Erros inesperados (exceções não mapeadas).
+- Expected: 500 genérico sem stack trace, log detalhado interno.
+
+**Integration points**:
+- Rota `/health` e `/health/deep` com dependências configuradas.
+- Expected: Status correto de cada dependência, usado em monitoramento.
+
+## Test Generation Guidelines
+- Priorizar testes que validem contratos públicos (formatos de resposta, códigos HTTP, schemas Swagger).
+- Em testes de unidade, evitar dependências externas; usar factories para criar dados de domínio.
+- Em testes de integração, sempre passar pelo servidor Fastify real (instância configurada em modo teste).
+- Para novos módulos, sempre criar:
+  - Pelo menos 1 teste happy path.
+  - Pelo menos 1 teste de edge case.
+  - Pelo menos 1 teste de error case relevante.
+
+</test-strategy>
+
+---
+
+<architecture>
+
+## System Components
+- **Fastify HTTP Server**: Responsável por receber requisições, aplicar middlewares, encaminhar para controladores e expor documentação Swagger.
+- **Domain Layer (DDD)**: Abriga entidades, value objects e regras de negócio independentes de infraestrutura.
+- **Application Layer**: Implementa casos de uso que orquestram domínio e infraestrutura.
+- **Infrastructure Layer**: Fornece implementações concretas para persistência, autenticação, logging e integração com outros serviços.
+- **Shared Layer**: Centraliza configuração, env, utilidades, paginação e RBAC.
+- **Testing & QA Stack**: Vitest, Biome, Husky, lint-staged e scripts de QA.
+
+## Data Models
+- **User**:
+  - Campos: `id`, `email`, `passwordHash`, `role`, `createdAt`, `updatedAt`.
+  - Regras: `email` válido, `passwordHash` nunca exposto, `role` ∈ {`ROLE_USER`, `ROLE_ADMIN`}.
+- **Auth Token (JWT)**:
+  - Campos de payload: `sub` (user id), `role`, `iat`, `exp`.
+  - Regras: expiração configurável, segredo vindo de `env`.
+- **Pagination**:
+  - `PageRequest`: `page`, `perPage`, `sort`, `filter`.
+  - `Page<T>`: `items`, `total`, `page`, `perPage`.
+
+## Technology Stack
+- **Languages**: TypeScript (Node.js).
+- **Frameworks**: Fastify (HTTP), CASL (RBAC), Zod (validação).
+- **Auth**: JWT (`jsonwebtoken`), `bcryptjs` para hashing de senha.
+- **Testing**: Vitest (+ supertest opcional para HTTP).
+- **Lint/Format**: Biome.
+- **Tooling**: Husky, lint-staged, npm-check-updates.
+
+**Decision: Uso de Fastify + DDD simplificado**
+- **Rationale**: Fastify é performático e possui boa integração com TypeScript; DDD simplificado facilita evoluções sem acoplamento excessivo à infra.
+- **Trade-offs**: Curva de aprendizado maior que uma estrutura ad-hoc; overhead inicial de camadas.
+- **Alternatives considered**: Express, NestJS. Rejeitados por serem menos performático (Express) ou mais pesados/opinativos (Nest) para um boilerplate reusável e minimalista.
+
+**Decision: JWT para autenticação**
+- **Rationale**: Padrão amplamente suportado, simples de integrar com outros serviços.
+- **Trade-offs**: Exige cuidado com expiração/refresh, revogação e armazenamento seguro de tokens.
+- **Alternatives considered**: Sessions no servidor, OAuth providers. Podem ser adicionados como evolução futura.
+
+</architecture>
+
+---
+
+<risks>
+
+## Technical Risks
+**Risk**: Complexidade de DDD para times menos experientes.
+- **Impact**: Médio — pode levar a uso incorreto de camadas e acoplamentos indevidos.
+- **Likelihood**: Médio.
+- **Mitigation**: Documentação clara, exemplos de domínio simples e guidelines na pasta `docs`.
+- **Fallback**: Simplificar algumas camadas em projetos menores (por exemplo, unir `application` e `infra` em módulos menores) mantendo interface estável.
+
+**Risk**: Manutenção de atualizações de dependências.
+- **Impact**: Alto — libs desatualizadas podem introduzir vulnerabilidades.
+- **Likelihood**: Médio.
+- **Mitigation**: Scripts `deps:check` e `deps:update`, política periódica de atualização, CI robusto.
+- **Fallback**: Congelar versões em caso de quebra e planejar atualização coordenada.
+
+## Dependency Risks
+- Dependência de libs específicas (Fastify, CASL, Vitest, Biome) pode dificultar migração futura.
+  - **Mitigation**: Encapsular o máximo possível em módulos (`infra/http`, `shared/rbac`, etc.) para isolar trocas futuras.
+
+## Scope Risks
+- Escopo do boilerplate crescer demais (incluir muitos recursos específicos de clientes).
+  - **Mitigation**: Manter foco em capacidades genéricas (auth, RBAC, paginação, errors, health-check).
+  - **Fallback**: Criar extensões específicas em repositórios separados em vez de inflar o boilerplate base.
+
+</risks>
+
+---
+
+<appendix>
+
+## References
+- Documentação Fastify.
+- Documentação CASL.
+- Documentação Vitest.
+- Documentação Biome.
+- Boas práticas de DDD em Node/TypeScript.
+
+## Glossary
+- **DDD**: Domain-Driven Design — abordagem de modelagem focada no domínio de negócio.
+- **RBAC**: Role-Based Access Control — controle de permissão baseado em papéis.
+- **JWT**: JSON Web Token — padrão de token assinado para autenticação.
+- **Health-check**: Endpoint para verificação de saúde e disponibilidade do serviço.
+
+## Open Questions
+- Quais bancos de dados serão oficialmente suportados pelo template base (PostgreSQL, MongoDB, etc.)?
+- Haverá integrações padrão com observabilidade (Prometheus, OpenTelemetry)?
+- O boilerplate incluirá exemplos de domínios (ex.: módulo `users`) ou ficará totalmente agnóstico?
+
+</appendix>
+
+---
+
+<task-master-integration>
+
+# How Task Master Uses This PRD
+
+Quando o `task-master parse-prd src/docs/boilerplate.txt` for executado, o parser:
+
+1. **Extrai capabilities** → tarefas principais
+   - Cada `### Capability:` na seção de functional decomposition torna-se uma tarefa de alto nível.
+
+2. **Extrai features** → subtarefas
+   - Cada `#### Feature:` torna-se uma subtarefa ligada à capability correspondente.
+
+3. **Parseia dependencies** → dependências de tarefa
+   - As seções de dependency-graph (`Depends on: [...]`) definem ordem e bloqueios entre tarefas.
+
+4. **Ordena por phases** → prioridades
+   - Fases definidas no implementation-roadmap são usadas para atribuir prioridade/topologia.
+
+5. **Usa test-strategy** → contexto de geração de testes
+   - Cenários críticos de teste guiam a criação de testes durante o RED do TDD.
+
+**Result**: Um grafo de tarefas dependente do contexto do boilerplate Fastify/DDD/RBAC, pronto para ser executado em ordem lógica.
+
+</task-master-integration>
+
+

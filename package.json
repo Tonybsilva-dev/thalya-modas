@@ -1,0 +1,26 @@
+{
+  "name": "thalya-modas",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "pnpm --filter @thalya-modas/api dev",
+    "dev:api": "pnpm --filter @thalya-modas/api dev",
+    "dev:backoffice": "pnpm --filter @thalya-modas/backoffice dev",
+    "dev:docs": "pnpm --filter @thalya-modas/docs dev",
+    "storybook": "pnpm --filter @thalya-modas/docs storybook",
+    "build": "pnpm -r build",
+    "build:api": "pnpm --filter @thalya-modas/api build",
+    "build:backoffice": "pnpm --filter @thalya-modas/backoffice build",
+    "build:docs": "pnpm --filter @thalya-modas/docs build",
+    "typecheck": "pnpm -r --if-present typecheck && pnpm -r --if-present build:check",
+    "test": "pnpm -r test",
+    "test:coverage": "pnpm -r test:coverage",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "check": "pnpm -r check",
+    "qa": "pnpm -r qa",
+    "openapi:generate": "pnpm --filter @thalya-modas/api openapi:generate",
+    "openapi:changes": "pnpm --filter @thalya-modas/api openapi:changes"
+  }
+}
