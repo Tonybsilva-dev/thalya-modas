@@ -18,6 +18,7 @@ import { BrandMark } from "@/src/shared/ui/brand-mark";
 
 import {
   BoxIcon,
+  InfoIcon,
   ChartIcon,
   ClockIcon,
   GearIcon,
@@ -29,7 +30,16 @@ import {
   type DashboardNavigationLabel,
 } from "../domain/dashboard-navigation";
 
-const navIcons = [ChartIcon, BoxIcon, BoxIcon, UsersIcon, ClockIcon, BoxIcon, ChartIcon];
+const navIcons = [
+  ChartIcon,
+  BoxIcon,
+  BoxIcon,
+  UsersIcon,
+  ClockIcon,
+  BoxIcon,
+  ChartIcon,
+  InfoIcon,
+];
 
 type DashboardShellProps = {
   activeItem?: DashboardNavigationLabel;

@@ -33,6 +33,8 @@ export {
   CardHeader,
   CardTitle,
 } from "./components/card";
+export { Calendar } from "./components/calendar";
+export type { CalendarProps } from "./components/calendar";
 export { Checkbox } from "./components/checkbox";
 export {
   DataTable,
@@ -52,6 +54,22 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "./components/dialog";
+export {
+  Drawer,
+  DrawerBody,
+  DrawerClose,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerPortal,
+  DrawerTitle,
+  DrawerTrigger,
+  drawerContentVariants,
+} from "./components/drawer";
+export type { DrawerContentProps } from "./components/drawer";
 export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -146,4 +164,10 @@ export {
   TooltipProvider,
   TooltipTrigger,
 } from "./components/tooltip";
+export {
+  ToggleButton,
+  ToggleButtonGroup,
+  toggleButtonVariants,
+} from "./components/toggle-button";
+export type { ToggleButtonProps } from "./components/toggle-button";
 export { cn } from "./lib/utils";
