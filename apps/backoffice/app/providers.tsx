@@ -5,6 +5,8 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
+import { ThemeController } from "@/src/shared/theme/theme-controller";
+
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -21,7 +23,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NuqsAdapter>{children}</NuqsAdapter>
+      <NuqsAdapter>
+        <ThemeController />
+        {children}
+      </NuqsAdapter>
     </QueryClientProvider>
   );
 }

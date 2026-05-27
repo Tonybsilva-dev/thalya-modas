@@ -85,7 +85,7 @@ export function LoginForm() {
             </Label>
             <Link
               className="text-sm font-semibold text-primary underline-offset-4 transition-colors duration-fast ease-nitro hover:text-primary/80 hover:underline"
-              href="/auth/login"
+              href="/recover-password"
             >
               {form.forgotPasswordLabel}
             </Link>

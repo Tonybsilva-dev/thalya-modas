@@ -5,6 +5,8 @@ export {
   Briefcase as BriefcaseIcon,
   CalendarBlank as CalendarIcon,
   EnvelopeSimple as MailIcon,
+  DownloadSimple as DownloadIcon,
+  FileText as FileTextIcon,
   GearSix as GearIcon,
   Info as InfoIcon,
   List as MenuIcon,
@@ -12,6 +14,8 @@ export {
   Package as BoxIcon,
   Plus as PlusIcon,
   ShieldCheck as ShieldCheckIcon,
+  SlidersHorizontal as SlidersIcon,
   Sparkle as SparkIcon,
+  Storefront as StoreIcon,
   Users as UsersIcon,
 } from "@phosphor-icons/react";

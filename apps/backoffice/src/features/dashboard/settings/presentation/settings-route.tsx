@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardContent, Switch, cn } from "@thalya-modas/ui";
 import { CheckIcon, PlusIcon } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { settingsContent, type SettingsSection } from "../domain/settings-content";
+import { ThemeSwitcher } from "@/src/shared/ui/theme-switcher";
 
 type SettingsRouteProps = {
   section: SettingsSection;
@@ -74,6 +75,8 @@ function SettingsPanel({ section }: { section: SettingsSection }) {
           <h2 className="text-xl font-semibold text-foreground">{content.title}</h2>
           <p className="text-sm text-muted-foreground">{content.description}</p>
         </div>
+
+        {section === "general" ? <ThemeSwitcher /> : null}
 
         {content.rows.map(([title, description, action]) => (
           <div

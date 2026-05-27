@@ -90,7 +90,7 @@ function ScopeCard() {
       <h2 className="text-lg font-bold text-foreground">Escopo do sistema</h2>
       {aboutContent.scope.map(([title, description]) => (
         <Card key={title}>
-          <CardContent className="flex gap-2.5 p-3.5">
+          <CardContent className="flex min-h-24 gap-2.5 p-3.5">
             <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
             <div className="grid gap-1">
               <h3 className="text-sm font-bold text-foreground">{title}</h3>
@@ -112,7 +112,7 @@ function SupportCard() {
 
         return (
           <Card key={title}>
-            <CardContent className="flex items-center gap-2.5 px-3.5 py-3">
+            <CardContent className="flex min-h-24 items-center gap-2.5 px-3.5 py-3">
               <Icon className="size-[18px] shrink-0 text-foreground" />
               <div className="grid min-w-0 gap-0.5">
                 <h3 className="text-[13px] font-bold text-foreground">{title}</h3>
