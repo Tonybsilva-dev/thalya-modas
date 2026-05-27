@@ -35,6 +35,30 @@ export {
 } from "./components/card";
 export { Calendar } from "./components/calendar";
 export type { CalendarProps } from "./components/calendar";
+export {
+  AreaChart,
+  BarColumnChart,
+  DataBrushChart,
+  HistogramChart,
+  LineChart,
+  PieChart,
+  RadarChart,
+  ScatterChart,
+} from "./components/charts";
+export type {
+  AreaChartProps,
+  BarChartDatum,
+  BarColumnChartProps,
+  ChartDatum,
+  ChartSeries,
+  DataBrushChartProps,
+  HistogramChartProps,
+  LineChartProps,
+  PieChartProps,
+  RadarChartProps,
+  ScatterChartProps,
+  ScatterDatum,
+} from "./components/charts";
 export { Checkbox } from "./components/checkbox";
 export {
   DataTable,

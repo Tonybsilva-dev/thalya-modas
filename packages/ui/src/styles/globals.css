@@ -54,9 +54,13 @@
   --duration-enter: var(--motion-duration-enter);
   --duration-overlay: var(--motion-duration-overlay);
   --duration-progress: var(--motion-duration-progress);
+  --duration-chart-axis: var(--motion-duration-chart-axis);
+  --duration-chart-series: var(--motion-duration-chart-series);
+  --duration-chart-emphasis: var(--motion-duration-chart-emphasis);
   --ease-nitro: var(--motion-ease-nitro);
   --ease-nitro-in: var(--motion-ease-nitro-in);
   --ease-nitro-out: var(--motion-ease-nitro-out);
+  --ease-chart-draw: var(--motion-ease-chart-draw);
   --animate-nitro-fade-in: nitro-fade-in var(--motion-duration-base) var(--motion-ease-nitro-out);
   --animate-nitro-fade-out: nitro-fade-out var(--motion-duration-fast) var(--motion-ease-nitro-in);
   --animate-nitro-scale-in: nitro-scale-in var(--motion-duration-enter) var(--motion-ease-nitro-out);

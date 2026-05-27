@@ -5,20 +5,32 @@
   --motion-duration-enter: 220ms;
   --motion-duration-overlay: 260ms;
   --motion-duration-progress: 300ms;
+  --motion-duration-chart-axis: 180ms;
+  --motion-duration-chart-series: 560ms;
+  --motion-duration-chart-emphasis: 720ms;
   --motion-delay-stagger: 40ms;
+  --motion-delay-chart-series: 80ms;
+  --motion-delay-chart-point: 28ms;
   --motion-ease-nitro: cubic-bezier(0.2, 0, 0, 1);
   --motion-ease-nitro-in: cubic-bezier(0.7, 0, 0.84, 0);
   --motion-ease-nitro-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-chart-draw: cubic-bezier(0.22, 1, 0.36, 1);
   --duration-instant: var(--motion-duration-instant);
   --duration-fast: var(--motion-duration-fast);
   --duration-base: var(--motion-duration-base);
   --duration-enter: var(--motion-duration-enter);
   --duration-overlay: var(--motion-duration-overlay);
   --duration-progress: var(--motion-duration-progress);
+  --duration-chart-axis: var(--motion-duration-chart-axis);
+  --duration-chart-series: var(--motion-duration-chart-series);
+  --duration-chart-emphasis: var(--motion-duration-chart-emphasis);
   --delay-stagger: var(--motion-delay-stagger);
+  --delay-chart-series: var(--motion-delay-chart-series);
+  --delay-chart-point: var(--motion-delay-chart-point);
   --ease-nitro: var(--motion-ease-nitro);
   --ease-nitro-in: var(--motion-ease-nitro-in);
   --ease-nitro-out: var(--motion-ease-nitro-out);
+  --ease-chart-draw: var(--motion-ease-chart-draw);
 }
 
 @keyframes nitro-fade-in {
@@ -196,6 +208,93 @@
   to {
     height: 0;
     opacity: 0;
+  }
+}
+
+@keyframes nitro-chart-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nitro-chart-scale-y {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes nitro-chart-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.84);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.nitro-chart-surface {
+  animation: nitro-chart-fade-up var(--motion-duration-chart-axis)
+    var(--motion-ease-nitro-out) both;
+}
+
+.nitro-chart-axis {
+  animation: nitro-fade-in var(--motion-duration-chart-axis) var(--motion-ease-nitro-out)
+    both;
+}
+
+.nitro-chart-line {
+  stroke-dasharray: var(--chart-path-length, 900);
+  stroke-dashoffset: var(--chart-path-length, 900);
+  animation: nitro-chart-line-draw var(--motion-duration-chart-series)
+    var(--motion-ease-chart-draw) var(--chart-delay, 0ms) both;
+}
+
+.nitro-chart-area {
+  opacity: 0;
+  animation: nitro-fade-in var(--motion-duration-chart-emphasis) var(--motion-ease-nitro-out)
+    var(--chart-delay, 0ms) both;
+}
+
+.nitro-chart-bar {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: nitro-chart-scale-y var(--motion-duration-chart-series)
+    var(--motion-ease-chart-draw) var(--chart-delay, 0ms) both;
+}
+
+.nitro-chart-point,
+.nitro-chart-slice,
+.nitro-chart-handle {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nitro-chart-scale-in var(--motion-duration-chart-axis)
+    var(--motion-ease-nitro-out) var(--chart-delay, 0ms) both;
+}
+
+.nitro-chart-brush {
+  transition:
+    x var(--motion-duration-fast) var(--motion-ease-nitro-out),
+    width var(--motion-duration-fast) var(--motion-ease-nitro-out),
+    fill var(--motion-duration-fast) var(--motion-ease-nitro);
+}
+
+@keyframes nitro-chart-line-draw {
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
