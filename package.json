@@ -20,6 +20,13 @@
     "format": "pnpm -r format",
     "check": "pnpm -r check",
     "qa": "pnpm -r qa",
+    "docker:postgres:up": "docker compose -f docker/compose.yml up -d postgres",
+    "docker:postgres:down": "docker compose -f docker/compose.yml down",
+    "docker:postgres:logs": "docker compose -f docker/compose.yml logs -f postgres",
+    "db:generate": "pnpm --filter @thalya-modas/api db:generate",
+    "db:migrate": "pnpm --filter @thalya-modas/api db:migrate",
+    "db:deploy": "pnpm --filter @thalya-modas/api db:deploy",
+    "db:studio": "pnpm --filter @thalya-modas/api db:studio",
     "openapi:generate": "pnpm --filter @thalya-modas/api openapi:generate",
     "openapi:changes": "pnpm --filter @thalya-modas/api openapi:changes"
   }

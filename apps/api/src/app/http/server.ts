@@ -4,7 +4,17 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 import fastify from 'fastify';
-import { InMemoryUserRepository } from '../../core/infra/persistence';
+import {
+	InMemoryOnboardingRepository,
+	InMemoryPasswordRecoveryRepository,
+	InMemoryStoreRepository,
+	InMemoryUserRepository,
+	PrismaOnboardingRepository,
+	PrismaPasswordRecoveryRepository,
+	PrismaStoreRepository,
+	PrismaUserRepository,
+	prisma,
+} from '../../core/infra/persistence';
 import { env } from '../../shared/env';
 import { getSwaggerConfig } from './config/swagger.config';
 import { getSwaggerUIConfig } from './config/swagger-ui.config';
@@ -14,6 +24,9 @@ import { errorHandler } from './middlewares/error-handler';
 import performancePlugin from './middlewares/performance';
 import traceIdPlugin from './middlewares/trace-id';
 import { authRoutes } from './routes/auth.routes';
+import { errorExampleRoutes } from './routes/error-example.routes';
+import { internalMetricsRoutes } from './routes/internal-metrics.routes';
+import { onboardingRoutes } from './routes/onboarding.routes';
 import { userRoutes } from './routes/user.routes';
 
 // biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos, necessário type assertion
@@ -97,18 +110,29 @@ async function build() {
 	await server.register(healthcheckRoutes);
 
 	const container = new AppContainer();
-	container.setUserRepository(new InMemoryUserRepository());
+
+	if (env.PERSISTENCE_DRIVER === 'postgres') {
+		container.setUserRepository(new PrismaUserRepository(prisma));
+		container.setPasswordRecoveryRepository(
+			new PrismaPasswordRecoveryRepository(prisma),
+		);
+		container.setStoreRepository(new PrismaStoreRepository(prisma));
+		container.setOnboardingRepository(new PrismaOnboardingRepository(prisma));
+	} else {
+		container.setUserRepository(new InMemoryUserRepository());
+		container.setPasswordRecoveryRepository(
+			new InMemoryPasswordRecoveryRepository(),
+		);
+		container.setStoreRepository(new InMemoryStoreRepository());
+		container.setOnboardingRepository(new InMemoryOnboardingRepository());
+	}
+
 	await server.register(authRoutes, { container });
+	await server.register(onboardingRoutes, { container });
 	await server.register(userRoutes, { container });
 
 	// Rotas de exemplo de erros (apenas para desenvolvimento/documentação)
 	if (env.NODE_ENV !== 'production') {
-		const { errorExampleRoutes } = await import(
-			'./routes/error-example.routes'
-		);
-		const { internalMetricsRoutes } = await import(
-			'./routes/internal-metrics.routes'
-		);
 		await server.register(errorExampleRoutes);
 		await server.register(internalMetricsRoutes);
 	}
@@ -161,6 +185,16 @@ async function start() {
 		process.exit(1);
 	}
 }
+
+process.on('SIGINT', async () => {
+	await prisma.$disconnect();
+	process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+	await prisma.$disconnect();
+	process.exit(0);
+});
 
 // Inicia o servidor se este arquivo for executado diretamente
 if (require.main === module) {

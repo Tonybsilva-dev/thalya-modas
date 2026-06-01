@@ -1,20 +1,29 @@
+import type { OnboardingRepository } from '../../core/domain/repositories/onboarding-repository';
+import type { PasswordRecoveryRepository } from '../../core/domain/repositories/password-recovery-repository';
+import type { StoreRepository } from '../../core/domain/repositories/store-repository';
 import type { UserRepository } from '../../core/domain/repositories/user-repository';
 import { JWTService } from '../../core/infra/auth/jwt-service';
-import { BcryptPasswordHasher } from '../../core/infra/auth/password-hasher';
+import { Argon2PasswordHasher } from '../../core/infra/auth/password-hasher';
 import { env } from '../../shared/env';
+import { FeatureFlagService } from '../../shared/features';
 
 /**
  * Container simples de dependências para a camada HTTP
  * Em produção, considere usar um container DI mais robusto (ex: tsyringe, inversify)
  */
 export class AppContainer {
+	public readonly featureFlags: FeatureFlagService;
 	public readonly jwtService: JWTService;
-	public readonly passwordHasher: BcryptPasswordHasher;
+	public readonly passwordHasher: Argon2PasswordHasher;
+	public onboardingRepository?: OnboardingRepository;
+	public passwordRecoveryRepository?: PasswordRecoveryRepository;
+	public storeRepository?: StoreRepository;
 	public userRepository?: UserRepository;
 
-	constructor() {
+	constructor(options: { featureFlags?: FeatureFlagService } = {}) {
+		this.featureFlags = options.featureFlags ?? new FeatureFlagService();
 		this.jwtService = new JWTService(env.JWT_SECRET, env.JWT_EXPIRES_IN);
-		this.passwordHasher = new BcryptPasswordHasher();
+		this.passwordHasher = new Argon2PasswordHasher();
 	}
 
 	/**
@@ -23,5 +32,17 @@ export class AppContainer {
 	 */
 	setUserRepository(repository: UserRepository): void {
 		this.userRepository = repository;
+	}
+
+	setPasswordRecoveryRepository(repository: PasswordRecoveryRepository): void {
+		this.passwordRecoveryRepository = repository;
+	}
+
+	setStoreRepository(repository: StoreRepository): void {
+		this.storeRepository = repository;
+	}
+
+	setOnboardingRepository(repository: OnboardingRepository): void {
+		this.onboardingRepository = repository;
 	}
 }

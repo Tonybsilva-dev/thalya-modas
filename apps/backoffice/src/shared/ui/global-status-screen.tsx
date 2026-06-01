@@ -78,15 +78,23 @@ export function GlobalLoadingScreen({ progress }: GlobalLoadingScreenProps) {
 }
 
 type GlobalErrorScreenProps = {
+  description?: string;
+  errorCode?: string;
   incidentId?: string;
+  level?: "critical" | "error" | "info" | "warning";
   onReport?: () => void;
   onRetry?: () => void;
+  title?: string;
 };
 
 export function GlobalErrorScreen({
+  description = "Não foi possível carregar esta área. Tente novamente ou envie um relatório para o suporte.",
+  errorCode,
   incidentId = "INC-20260526-0942",
+  level = "error",
   onReport,
   onRetry,
+  title = "Algo deu errado",
 }: GlobalErrorScreenProps) {
   return (
     <StatusBackdrop>
@@ -98,10 +106,9 @@ export function GlobalErrorScreen({
         </div>
 
         <div className="grid gap-2">
-          <h1 className="text-[34px] font-bold leading-tight">Algo deu errado</h1>
+          <h1 className="text-[34px] font-bold leading-tight">{title}</h1>
           <p className="max-w-[560px] text-[15px] leading-7 text-muted-foreground">
-            Não foi possível carregar esta área. Tente novamente ou envie um relatório
-            para o suporte.
+            {description}
           </p>
         </div>
 
@@ -112,9 +119,11 @@ export function GlobalErrorScreen({
           </Button>
         </div>
 
-        <p className="text-xs font-semibold text-muted-foreground">
-          ID do incidente: {incidentId}
-        </p>
+        <div className="grid gap-1 text-xs font-semibold text-muted-foreground">
+          {errorCode ? <p>Código: {errorCode}</p> : null}
+          <p>Nível: {level}</p>
+          <p>ID do incidente: {incidentId}</p>
+        </div>
       </section>
     </StatusBackdrop>
   );

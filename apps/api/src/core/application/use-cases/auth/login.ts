@@ -13,6 +13,7 @@ import type { JWTService } from '../../../infra/auth/jwt-service';
 export interface LoginInput {
 	email: string;
 	password: string;
+	rememberMe?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export interface LoginOutput {
 		accountStatus: AccountStatus;
 	};
 	token: string;
+	expiresIn: number;
 }
 
 /**
@@ -41,8 +43,11 @@ export class LoginUseCase {
 	) {}
 
 	async execute(input: LoginInput): Promise<LoginOutput> {
+		const email = input.email.trim().toLowerCase();
+		const expiresIn = input.rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+
 		// Busca usuário por email
-		const user = await this.userRepository.findByEmail(input.email);
+		const user = await this.userRepository.findByEmail(email);
 		if (!user) {
 			throw new AuthError('Credenciais inválidas');
 		}
@@ -73,11 +78,16 @@ export class LoginUseCase {
 		}
 
 		// Gera token JWT
-		const token = this.jwtService.generate({
-			userId: user.id,
-			email: user.email,
-			role: user.role,
-		});
+		const token = this.jwtService.generate(
+			{
+				userId: user.id,
+				email: user.email,
+				role: user.role,
+			},
+			{
+				expiresIn,
+			},
+		);
 
 		return {
 			user: {
@@ -88,6 +98,7 @@ export class LoginUseCase {
 				accountStatus: user.accountStatus,
 			},
 			token,
+			expiresIn,
 		};
 	}
 

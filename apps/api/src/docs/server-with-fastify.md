@@ -57,7 +57,7 @@ Criar um backend Node pronto para produção, com uma estrutura padrão que poss
 
 ```bash
 npm install fastify @fastify/swagger @fastify/swagger-ui
-npm install jsonwebtoken bcryptjs
+npm install jsonwebtoken argon2
 npm install @casl/ability
 npm install zod
 ```
@@ -288,7 +288,7 @@ Sugestão mínima:
 
 Checklist:
 
-- Armazenar senhas com `bcrypt` (hash + salt).
+- Armazenar senhas com `argon2id` (hash + salt).
 - Configurar segredo JWT via env.
 - Ter tempo de expiração configurável.
 - Possível refresh token como evolução futura.

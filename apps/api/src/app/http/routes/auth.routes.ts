@@ -4,8 +4,18 @@ import {
 	GetCurrentUserUseCase,
 	LoginUseCase,
 	RegisterUserUseCase,
+	RequestPasswordRecoveryUseCase,
+	ResendPasswordRecoveryCodeUseCase,
+	ResetPasswordUseCase,
+	VerifyPasswordRecoveryCodeUseCase,
 } from '../../../core/application/use-cases/auth';
-import { AccountStatus, UserRole } from '../../../core/domain';
+import {
+	AccountStatus,
+	OnboardingStatus,
+	OnboardingStep,
+	UserRole,
+} from '../../../core/domain';
+import { env } from '../../../shared/env';
 import {
 	createRequestSchema,
 	createResponseSchema,
@@ -23,9 +33,36 @@ const registerRequestSchema = z.object({
 });
 
 const loginRequestSchema = z.object({
-	email: z.string().email('Email inválido'),
+	email: z.string().trim().email('Email inválido'),
 	password: z.string().min(1, 'Senha é obrigatória'),
+	rememberMe: z.boolean().optional(),
 });
+
+const passwordRecoveryEmailRequestSchema = z.object({
+	email: z.string().trim().email('Email inválido'),
+});
+
+const passwordRecoveryVerifyCodeRequestSchema = z.object({
+	email: z.string().trim().email('Email inválido'),
+	code: z.string().regex(/^\d{6}$/, 'Código deve conter 6 dígitos'),
+});
+
+const passwordRecoveryResetRequestSchema = z
+	.object({
+		resetToken: z.string().min(32, 'Token de recuperação inválido'),
+		password: z
+			.string()
+			.min(8, 'Senha deve ter pelo menos 8 caracteres')
+			.regex(/[A-Z]/, 'Senha deve conter uma letra maiúscula')
+			.regex(/[0-9]/, 'Senha deve conter um número'),
+		passwordConfirmation: z
+			.string()
+			.min(1, 'Confirmação de senha é obrigatória'),
+	})
+	.refine((data) => data.password === data.passwordConfirmation, {
+		message: 'As senhas não conferem',
+		path: ['passwordConfirmation'],
+	});
 
 // Schemas para respostas
 const registerResponseSchema = z.object({
@@ -39,6 +76,13 @@ const registerResponseSchema = z.object({
 		updatedAt: z.string().datetime(),
 	}),
 	token: z.string(),
+	onboarding: z
+		.object({
+			status: z.nativeEnum(OnboardingStatus),
+			nextStep: z.nativeEnum(OnboardingStep),
+			completedSteps: z.array(z.nativeEnum(OnboardingStep)),
+		})
+		.optional(),
 });
 
 const loginResponseSchema = z.object({
@@ -50,6 +94,23 @@ const loginResponseSchema = z.object({
 		accountStatus: z.string(),
 	}),
 	token: z.string(),
+	expiresIn: z.number(),
+});
+
+const passwordRecoveryRequestResponseSchema = z.object({
+	accepted: z.literal(true),
+	expiresIn: z.number(),
+	resendAvailableIn: z.number(),
+	debugCode: z.string().optional(),
+});
+
+const passwordRecoveryVerifyCodeResponseSchema = z.object({
+	resetToken: z.string(),
+	expiresIn: z.number(),
+});
+
+const passwordRecoveryResetResponseSchema = z.object({
+	success: z.literal(true),
 });
 
 const currentUserResponseSchema = z.object({
@@ -87,6 +148,38 @@ const forbiddenErrorSchema = z.object({
 	message: z.string(),
 	traceId: z.string().optional(),
 });
+
+const registerSuccessExample = {
+	user: {
+		id: '123e4567-e89b-12d3-a456-426614174000',
+		name: 'Ana Ribeiro',
+		email: 'ana@thalyamodas.com',
+		role: 'ROLE_COMPANY',
+		accountStatus: 'ACTIVE',
+		createdAt: '2026-06-01T00:00:00.000Z',
+		updatedAt: '2026-06-01T00:00:00.000Z',
+	},
+	token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.preview-register-token',
+	onboarding: {
+		status: 'PENDING',
+		nextStep: 'STORE_PROFILE',
+		completedSteps: [],
+	},
+};
+
+const loginSuccessExample = {
+	user: {
+		id: '123e4567-e89b-12d3-a456-426614174000',
+		name: 'Ana Ribeiro',
+		email: 'ana@thalyamodas.com',
+		role: 'ROLE_COMPANY',
+		accountStatus: 'ACTIVE',
+	},
+	token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.preview-login-token',
+	expiresIn: 604800,
+};
+
+const authSessionCookieName = 'thalya_modas_session';
 
 /**
  * Rotas de autenticação
@@ -133,19 +226,7 @@ export async function authRoutes(
 						201: createResponseSchema(
 							registerResponseSchema,
 							'Usuário registrado com sucesso',
-							{
-								user: {
-									id: '123e4567-e89b-12d3-a456-426614174000',
-									name: 'João Silva',
-									email: 'joao.silva@example.com',
-									role: 'ROLE_CUSTOMER',
-									accountStatus: 'ACTIVE',
-									createdAt: '2024-01-01T00:00:00.000Z',
-									updatedAt: '2024-01-01T00:00:00.000Z',
-								},
-								token:
-									'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjNlNDU2Ny1lODliLTEyZDMtYTQ1Ni00MjY2MTQxNzQwMDAiLCJlbWFpbCI6ImpvYW8uc2lsdmFAZXhhbXBsZS5jb20iLCJyb2xlIjoiUk9MRV9VU0VSIiwiaWF0IjoxNzA0MDY3MjAwLCJleHAiOjE3MDQwNzA4MDB9.example',
-							},
+							registerSuccessExample,
 						),
 						400: createResponseSchema(
 							validationErrorSchema,
@@ -180,17 +261,7 @@ export async function authRoutes(
 						200: createResponseSchema(
 							loginResponseSchema,
 							'Login realizado com sucesso',
-							{
-								user: {
-									id: '123e4567-e89b-12d3-a456-426614174000',
-									name: 'João Silva',
-									email: 'joao.silva@example.com',
-									role: 'ROLE_CUSTOMER',
-									accountStatus: 'ACTIVE',
-								},
-								token:
-									'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjNlNDU2Ny1lODliLTEyZDMtYTQ1Ni00MjY2MTQxNzQwMDAiLCJlbWFpbCI6ImpvYW8uc2lsdmFAZXhhbXBsZS5jb20iLCJyb2xlIjoiUk9MRV9VU0VSIiwiaWF0IjoxNzA0MDY3MjAwLCJleHAiOjE3MDQwNzA4MDB9.example',
-							},
+							loginSuccessExample,
 						),
 						400: createResponseSchema(
 							validationErrorSchema,
@@ -287,6 +358,32 @@ export async function authRoutes(
 		container.userRepository,
 	);
 
+	if (!container.passwordRecoveryRepository) {
+		throw new Error(
+			'PasswordRecoveryRepository não está configurado. Configure via container.setPasswordRecoveryRepository()',
+		);
+	}
+
+	const requestPasswordRecoveryUseCase = new RequestPasswordRecoveryUseCase(
+		container.userRepository,
+		container.passwordRecoveryRepository,
+	);
+
+	const verifyPasswordRecoveryCodeUseCase =
+		new VerifyPasswordRecoveryCodeUseCase(container.passwordRecoveryRepository);
+
+	const resendPasswordRecoveryCodeUseCase =
+		new ResendPasswordRecoveryCodeUseCase(
+			container.userRepository,
+			container.passwordRecoveryRepository,
+		);
+
+	const resetPasswordUseCase = new ResetPasswordUseCase(
+		container.userRepository,
+		container.passwordRecoveryRepository,
+		container.passwordHasher,
+	);
+
 	// POST /auth/register
 	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
 	(fastify as any).post(
@@ -307,28 +404,16 @@ export async function authRoutes(
 					// Adiciona exemplo para documentação Swagger
 					// O Fastify está configurado para ignorar propriedades desconhecidas
 					example: {
-						name: 'João Silva',
-						email: 'joao.silva@example.com',
-						password: 'senhaSegura123',
+						name: 'Ana Ribeiro',
+						email: 'ana@thalyamodas.com',
+						password: 'SenhaSegura123',
 					},
 				},
 				response: {
 					201: createResponseSchema(
 						registerResponseSchema,
 						'Usuário registrado com sucesso',
-						{
-							user: {
-								id: '123e4567-e89b-12d3-a456-426614174000',
-								name: 'João Silva',
-								email: 'joao.silva@example.com',
-								role: 'ROLE_CUSTOMER',
-								accountStatus: 'ACTIVE',
-								createdAt: '2024-01-01T00:00:00.000Z',
-								updatedAt: '2024-01-01T00:00:00.000Z',
-							},
-							token:
-								'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjNlNDU2Ny1lODliLTEyZDMtYTQ1Ni00MjY2MTQxNzQwMDAiLCJlbWFpbCI6ImpvYW8uc2lsdmFAZXhhbXBsZS5jb20iLCJyb2xlIjoiUk9MRV9VU0VSIiwiaWF0IjoxNzA0MDY3MjAwLCJleHAiOjE3MDQwNzA4MDB9.example',
-						},
+						registerSuccessExample,
 					),
 					400: createResponseSchema(
 						validationErrorSchema,
@@ -347,11 +432,11 @@ export async function authRoutes(
 					),
 					403: createResponseSchema(
 						forbiddenErrorSchema,
-						'Sem permissão para cadastrar este tipo de usuário',
+						'Sem permissão ou funcionalidade desabilitada',
 						{
-							error: 'ForbiddenError',
-							message:
-								'Apenas Super Admin pode cadastrar Company. Apenas Company pode cadastrar empregados e entregadores.',
+							error: 'FeatureDisabledError',
+							message: 'Funcionalidade temporariamente indisponível.',
+							details: { feature: 'auth.register' },
 							traceId: '123e4567-e89b-12d3-a456-426614174000',
 						},
 					),
@@ -360,13 +445,14 @@ export async function authRoutes(
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
 		async (request: any, reply: any) => {
-			const body = request.body as {
-				name: string;
-				email: string;
-				password: string;
-				role?: UserRole;
-				accountStatus?: AccountStatus;
-			};
+			container.featureFlags.assertEnabled('auth.register');
+
+			const validationResult = registerRequestSchema.safeParse(request.body);
+			if (!validationResult.success) {
+				throw validationResult.error;
+			}
+
+			const body = validationResult.data;
 			let actor: { id: string; role: UserRole } | undefined;
 			const authHeader = request.headers?.authorization;
 			if (authHeader && typeof authHeader === 'string') {
@@ -381,15 +467,23 @@ export async function authRoutes(
 					}
 				}
 			}
-			const role = body.role ?? UserRole.CUSTOMER;
 			const result = await registerUseCase.execute({
 				name: body.name,
 				email: body.email,
 				password: body.password,
-				role,
+				role: body.role,
 				accountStatus: body.accountStatus,
 				actor,
 			});
+			const onboarding =
+				!actor && container.onboardingRepository
+					? await container.onboardingRepository.create({
+							userId: result.user.id,
+							status: OnboardingStatus.PENDING,
+							nextStep: OnboardingStep.STORE_PROFILE,
+							completedSteps: [],
+						})
+					: undefined;
 
 			return reply.code(201).send({
 				user: {
@@ -398,6 +492,13 @@ export async function authRoutes(
 					updatedAt: result.user.updatedAt.toISOString(),
 				},
 				token: result.token,
+				onboarding: onboarding
+					? {
+							status: onboarding.status,
+							nextStep: onboarding.nextStep,
+							completedSteps: onboarding.completedSteps,
+						}
+					: undefined,
 			});
 		},
 	);
@@ -424,25 +525,16 @@ export async function authRoutes(
 					// Adiciona exemplo para documentação Swagger
 					// O Fastify está configurado para ignorar propriedades desconhecidas
 					example: {
-						email: 'joao.silva@example.com',
-						password: 'senhaSegura123',
+						email: 'ana@thalyamodas.com',
+						password: 'SenhaSegura123',
+						rememberMe: false,
 					},
 				},
 				response: {
 					200: createResponseSchema(
 						loginResponseSchema,
 						'Login realizado com sucesso',
-						{
-							user: {
-								id: '123e4567-e89b-12d3-a456-426614174000',
-								name: 'João Silva',
-								email: 'joao.silva@example.com',
-								role: 'ROLE_CUSTOMER',
-								accountStatus: 'ACTIVE',
-							},
-							token:
-								'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjNlNDU2Ny1lODliLTEyZDMtYTQ1Ni00MjY2MTQxNzQwMDAiLCJlbWFpbCI6ImpvYW8uc2lsdmFAZXhhbXBsZS5jb20iLCJyb2xlIjoiUk9MRV9VU0VSIiwiaWF0IjoxNzA0MDY3MjAwLCJleHAiOjE3MDQwNzA4MDB9.example',
-						},
+						loginSuccessExample,
 					),
 					400: createResponseSchema(
 						validationErrorSchema,
@@ -468,11 +560,23 @@ export async function authRoutes(
 							traceId: '123e4567-e89b-12d3-a456-426614174000',
 						},
 					),
+					403: createResponseSchema(
+						forbiddenErrorSchema,
+						'Funcionalidade desabilitada',
+						{
+							error: 'FeatureDisabledError',
+							message: 'Funcionalidade temporariamente indisponível.',
+							details: { feature: 'auth.login' },
+							traceId: '123e4567-e89b-12d3-a456-426614174000',
+						},
+					),
 				},
 			},
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
-		async (request: any) => {
+		async (request: any, reply: any) => {
+			container.featureFlags.assertEnabled('auth.login');
+
 			// Valida o body manualmente para garantir que erros de validação retornem 400
 			const validationResult = loginRequestSchema.safeParse(request.body);
 			if (!validationResult.success) {
@@ -482,10 +586,253 @@ export async function authRoutes(
 
 			const result = await loginUseCase.execute(validationResult.data);
 
-			return {
-				user: result.user,
-				token: result.token,
-			};
+			return reply
+				.header(
+					'Set-Cookie',
+					createAuthSessionCookie(result.token, result.expiresIn),
+				)
+				.send({
+					user: result.user,
+					token: result.token,
+					expiresIn: result.expiresIn,
+				});
+		},
+	);
+
+	// POST /auth/password-recovery/request
+	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+	(fastify as any).post(
+		'/auth/password-recovery/request',
+		{
+			config: {
+				rateLimit: {
+					max: 5,
+					timeWindow: '1 minute',
+				},
+			},
+			schema: {
+				description: 'Solicita código temporário para recuperação de senha',
+				tags: ['auth'],
+				body: {
+					...(createRequestSchema({
+						body: passwordRecoveryEmailRequestSchema,
+					}).body as Record<string, unknown>),
+					example: {
+						email: 'ana@thalyamodas.com',
+					},
+				},
+				response: {
+					202: createResponseSchema(
+						passwordRecoveryRequestResponseSchema,
+						'Solicitação aceita',
+						{
+							accepted: true,
+							expiresIn: 600,
+							resendAvailableIn: 30,
+							debugCode: '123456',
+						},
+					),
+					400: createResponseSchema(validationErrorSchema, 'Erro de validação'),
+					403: createResponseSchema(
+						forbiddenErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+		},
+		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+		async (request: any, reply: any) => {
+			container.featureFlags.assertEnabled('passwordRecovery');
+			container.featureFlags.assertEnabled('passwordRecovery.request');
+
+			const validationResult = passwordRecoveryEmailRequestSchema.safeParse(
+				request.body,
+			);
+			if (!validationResult.success) {
+				throw validationResult.error;
+			}
+
+			const result = await requestPasswordRecoveryUseCase.execute({
+				email: validationResult.data.email,
+				includeDebugCode: env.NODE_ENV !== 'production',
+			});
+
+			return reply.code(202).send(result);
+		},
+	);
+
+	// POST /auth/password-recovery/verify-code
+	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+	(fastify as any).post(
+		'/auth/password-recovery/verify-code',
+		{
+			config: {
+				rateLimit: {
+					max: 10,
+					timeWindow: '1 minute',
+				},
+			},
+			schema: {
+				description: 'Valida código temporário e emite token de redefinição',
+				tags: ['auth'],
+				body: {
+					...(createRequestSchema({
+						body: passwordRecoveryVerifyCodeRequestSchema,
+					}).body as Record<string, unknown>),
+					example: {
+						email: 'ana@thalyamodas.com',
+						code: '123456',
+					},
+				},
+				response: {
+					200: createResponseSchema(
+						passwordRecoveryVerifyCodeResponseSchema,
+						'Código validado',
+						{
+							resetToken:
+								'7e3ac5b1d7a8db8a6b18d70a813f928c5e6ed9d31f5e96d0a765c6f9078b77a1',
+							expiresIn: 600,
+						},
+					),
+					400: createResponseSchema(validationErrorSchema, 'Erro de validação'),
+					401: createResponseSchema(unauthorizedErrorSchema, 'Código inválido'),
+					403: createResponseSchema(
+						forbiddenErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+		},
+		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+		async (request: any) => {
+			container.featureFlags.assertEnabled('passwordRecovery');
+			container.featureFlags.assertEnabled('passwordRecovery.verifyCode');
+
+			const validationResult =
+				passwordRecoveryVerifyCodeRequestSchema.safeParse(request.body);
+			if (!validationResult.success) {
+				throw validationResult.error;
+			}
+
+			return verifyPasswordRecoveryCodeUseCase.execute(validationResult.data);
+		},
+	);
+
+	// POST /auth/password-recovery/resend-code
+	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+	(fastify as any).post(
+		'/auth/password-recovery/resend-code',
+		{
+			config: {
+				rateLimit: {
+					max: 5,
+					timeWindow: '1 minute',
+				},
+			},
+			schema: {
+				description: 'Reenvia código temporário de recuperação de senha',
+				tags: ['auth'],
+				body: {
+					...(createRequestSchema({
+						body: passwordRecoveryEmailRequestSchema,
+					}).body as Record<string, unknown>),
+					example: {
+						email: 'ana@thalyamodas.com',
+					},
+				},
+				response: {
+					202: createResponseSchema(
+						passwordRecoveryRequestResponseSchema,
+						'Reenvio aceito',
+						{
+							accepted: true,
+							expiresIn: 600,
+							resendAvailableIn: 30,
+							debugCode: '654321',
+						},
+					),
+					400: createResponseSchema(validationErrorSchema, 'Erro de validação'),
+					403: createResponseSchema(
+						forbiddenErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+		},
+		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+		async (request: any, reply: any) => {
+			container.featureFlags.assertEnabled('passwordRecovery');
+			container.featureFlags.assertEnabled('passwordRecovery.resendCode');
+
+			const validationResult = passwordRecoveryEmailRequestSchema.safeParse(
+				request.body,
+			);
+			if (!validationResult.success) {
+				throw validationResult.error;
+			}
+
+			const result = await resendPasswordRecoveryCodeUseCase.execute({
+				email: validationResult.data.email,
+				includeDebugCode: env.NODE_ENV !== 'production',
+			});
+
+			return reply.code(202).send(result);
+		},
+	);
+
+	// POST /auth/password-recovery/reset
+	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+	(fastify as any).post(
+		'/auth/password-recovery/reset',
+		{
+			config: {
+				rateLimit: {
+					max: 5,
+					timeWindow: '1 minute',
+				},
+			},
+			schema: {
+				description: 'Redefine a senha usando token temporário',
+				tags: ['auth'],
+				body: {
+					...(createRequestSchema({
+						body: passwordRecoveryResetRequestSchema,
+					}).body as Record<string, unknown>),
+					example: {
+						resetToken:
+							'7e3ac5b1d7a8db8a6b18d70a813f928c5e6ed9d31f5e96d0a765c6f9078b77a1',
+						password: 'NovaSenha123',
+						passwordConfirmation: 'NovaSenha123',
+					},
+				},
+				response: {
+					200: createResponseSchema(
+						passwordRecoveryResetResponseSchema,
+						'Senha redefinida',
+						{ success: true },
+					),
+					400: createResponseSchema(validationErrorSchema, 'Erro de validação'),
+					401: createResponseSchema(unauthorizedErrorSchema, 'Token inválido'),
+					403: createResponseSchema(
+						forbiddenErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+		},
+		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+		async (request: any) => {
+			container.featureFlags.assertEnabled('passwordRecovery');
+			container.featureFlags.assertEnabled('passwordRecovery.reset');
+
+			const validationResult = passwordRecoveryResetRequestSchema.safeParse(
+				request.body,
+			);
+			if (!validationResult.success) {
+				throw validationResult.error;
+			}
+
+			return resetPasswordUseCase.execute(validationResult.data);
 		},
 	);
 
@@ -554,4 +901,20 @@ export async function authRoutes(
 			};
 		},
 	);
+}
+
+function createAuthSessionCookie(token: string, maxAge: number): string {
+	const attributes = [
+		`${authSessionCookieName}=${encodeURIComponent(token)}`,
+		'Path=/',
+		`Max-Age=${maxAge}`,
+		'HttpOnly',
+		'SameSite=Lax',
+	];
+
+	if (env.NODE_ENV === 'production') {
+		attributes.push('Secure');
+	}
+
+	return attributes.join('; ');
 }

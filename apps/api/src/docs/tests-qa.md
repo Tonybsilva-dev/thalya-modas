@@ -544,7 +544,7 @@ Testes de integração foram adicionados para validar o comportamento completo d
 - **IT-REGISTER-009 – Hash de senha**
   - **Tipo**: Integração
   - **Cenário**: Registrar usuário e verificar se senha foi hasheada
-  - **Critério de aceitação**: Senha armazenada como hash bcrypt, não em texto plano
+  - **Critério de aceitação**: Senha armazenada como hash Argon2id, não em texto plano
 
 ### 7.3 Testes de Login (`POST /auth/login`)
 

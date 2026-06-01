@@ -138,7 +138,7 @@ As equipes da agência precisam criar backends Node/TypeScript para diferentes c
 - **Description**: Disponibilizar rotas básicas de auth (`/auth/register`, `/auth/login`, `/auth/me`) com JWT.
 - **Inputs**: Dados de usuário (email/senha), segredo JWT, tempo de expiração, fonte de persistência (mock ou plugável).
 - **Outputs**: Tokens JWT assinados, payload de usuário autenticado.
-- **Behavior**: Garante login seguro, hashing de senhas com `bcrypt`, e extração do usuário autenticado nas rotas.
+- **Behavior**: Garante login seguro, hashing de senhas com `argon2id`, e extração do usuário autenticado nas rotas.
 
 #### Feature: RBAC com CASL
 - **Description**: Implementar controle de acesso baseado em roles (`ROLE_USER`, `ROLE_ADMIN`) usando CASL.
@@ -423,7 +423,7 @@ No dependencies - módulos base construídos primeiro.
   - Acceptance criteria: Casos de uso isolados, sem dependência direta de Fastify.
   - Test strategy: Testes unitários cobrindo fluxos de sucesso/erro.
 
-- [ ] Implementar `core/infra/auth` com hashing `bcrypt` e emissão/validação de JWT (depends on: [shared/env, shared/config, core/domain])  
+- [ ] Implementar `core/infra/auth` com hashing `argon2id` e emissão/validação de JWT (depends on: [shared/env, shared/config, core/domain])  
   - Acceptance criteria: Tokens válidos, expiração configurável, senhas nunca armazenadas em texto plano.
   - Test strategy: Testes unitários de geração/validação de JWT e hashing de senha.
 
@@ -609,7 +609,7 @@ No dependencies - módulos base construídos primeiro.
 ## Technology Stack
 - **Languages**: TypeScript (Node.js).
 - **Frameworks**: Fastify (HTTP), CASL (RBAC), Zod (validação).
-- **Auth**: JWT (`jsonwebtoken`), `bcryptjs` para hashing de senha.
+- **Auth**: JWT (`jsonwebtoken`), `argon2` para hashing de senha.
 - **Testing**: Vitest (+ supertest opcional para HTTP).
 - **Lint/Format**: Biome.
 - **Tooling**: Husky, lint-staged, npm-check-updates.
@@ -704,5 +704,4 @@ Quando o `task-master parse-prd src/docs/boilerplate.txt` for executado, o parse
 **Result**: Um grafo de tarefas dependente do contexto do boilerplate Fastify/DDD/RBAC, pronto para ser executado em ordem lógica.
 
 </task-master-integration>
-
 

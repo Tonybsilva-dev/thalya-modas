@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AccountStatus, UserRole } from '../../../src/core/domain/index.ts';
-import { BcryptPasswordHasher } from '../../../src/core/infra/auth/password-hasher';
+import { Argon2PasswordHasher } from '../../../src/core/infra/auth/password-hasher';
 import { UserFactory } from '../../factories';
 import { MockUserRepository } from '../../unit/core/domain/repositories/mock-user-repository';
 import { createTestServer, makeRequest } from '../helpers';
@@ -9,11 +9,11 @@ import { createTestServer, makeRequest } from '../helpers';
 describe('POST /auth/register - Integração', () => {
 	let server: FastifyInstance;
 	let userRepository: MockUserRepository;
-	let passwordHasher: BcryptPasswordHasher;
+	let passwordHasher: Argon2PasswordHasher;
 
 	beforeEach(async () => {
 		userRepository = new MockUserRepository();
-		passwordHasher = new BcryptPasswordHasher();
+		passwordHasher = new Argon2PasswordHasher();
 		server = await createTestServer(userRepository);
 	});
 
@@ -42,9 +42,10 @@ describe('POST /auth/register - Integração', () => {
 			expect((response.body as { user: unknown }).user).toMatchObject({
 				name: 'Jane Doe',
 				email: 'jane.doe@example.com',
-				role: UserRole.CUSTOMER,
+				role: UserRole.COMPANY,
 				accountStatus: AccountStatus.ACTIVE,
 			});
+			expect(response.body).toHaveProperty('onboarding');
 			expect((response.body as { user: { id: string } }).user.id).toBeDefined();
 			expect((response.body as { token: string }).token).toBeTypeOf('string');
 			expect((response.body as { token: string }).token.length).toBeGreaterThan(
@@ -52,7 +53,7 @@ describe('POST /auth/register - Integração', () => {
 			);
 		});
 
-		it('deve definir role CUSTOMER e status ACTIVE por padrão', async () => {
+		it('deve definir role COMPANY e status ACTIVE por padrão no cadastro público', async () => {
 			const registerData = UserFactory.createRegisterData({
 				name: 'Default User',
 				email: 'default@example.com',
@@ -70,11 +71,11 @@ describe('POST /auth/register - Integração', () => {
 				role: string;
 				accountStatus: string;
 			};
-			expect(user.role).toBe(UserRole.CUSTOMER);
+			expect(user.role).toBe(UserRole.COMPANY);
 			expect(user.accountStatus).toBe(AccountStatus.ACTIVE);
 		});
 
-		it('deve permitir registrar com accountStatus customizado', async () => {
+		it('deve rejeitar accountStatus customizado no cadastro público', async () => {
 			const registerData = UserFactory.createRegisterData({
 				name: 'Custom User',
 				email: 'custom@example.com',
@@ -88,13 +89,7 @@ describe('POST /auth/register - Integração', () => {
 				body: registerData,
 			});
 
-			expect(response.statusCode).toBe(201);
-			const user = (response.body as { user: unknown }).user as {
-				role: string;
-				accountStatus: string;
-			};
-			expect(user.role).toBe(UserRole.CUSTOMER);
-			expect(user.accountStatus).toBe(AccountStatus.PENDING_VERIFICATION);
+			expect(response.statusCode).toBe(403);
 		});
 	});
 
@@ -328,8 +323,7 @@ describe('POST /auth/register - Integração', () => {
 
 			expect(storedUser).not.toBeNull();
 			expect(storedUser?.passwordHash).not.toBe('plainPassword123');
-			// Bcrypt pode gerar hashes com prefixo $2a$ ou $2b$ dependendo da versão
-			expect(storedUser?.passwordHash).toMatch(/^\$2[ab]\$/);
+			expect(storedUser?.passwordHash).toMatch(/^\$argon2id\$/);
 		});
 	});
 });

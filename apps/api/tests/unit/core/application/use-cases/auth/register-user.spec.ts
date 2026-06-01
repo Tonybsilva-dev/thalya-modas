@@ -4,13 +4,13 @@ import { ForbiddenError } from '../../../../../../src/app/http/errors/forbidden-
 import { RegisterUserUseCase } from '../../../../../../src/core/application/use-cases/auth/register-user';
 import { AccountStatus, UserRole } from '../../../../../../src/core/domain';
 import { JWTService } from '../../../../../../src/core/infra/auth/jwt-service';
-import { BcryptPasswordHasher } from '../../../../../../src/core/infra/auth/password-hasher';
+import { Argon2PasswordHasher } from '../../../../../../src/core/infra/auth/password-hasher';
 import { MockUserRepository } from '../../../domain/repositories/mock-user-repository';
 
 describe('RegisterUserUseCase', () => {
 	const jwtSecret = 'test-secret-key-that-is-at-least-32-characters-long';
 	const jwtService = new JWTService(jwtSecret);
-	const passwordHasher = new BcryptPasswordHasher();
+	const passwordHasher = new Argon2PasswordHasher();
 
 	it('deve registrar um novo usuário com sucesso', async () => {
 		const repository = new MockUserRepository();
@@ -32,13 +32,13 @@ describe('RegisterUserUseCase', () => {
 		expect(result.user.id).toBeDefined();
 		expect(result.user.name).toBe(input.name);
 		expect(result.user.email).toBe(input.email);
-		expect(result.user.role).toBe(UserRole.CUSTOMER); // Padrão
+		expect(result.user.role).toBe(UserRole.COMPANY); // Padrão público
 		expect(result.user.accountStatus).toBe(AccountStatus.ACTIVE); // Padrão
 		expect(result.token).toBeDefined();
 		expect(typeof result.token).toBe('string');
 	});
 
-	it('deve usar role CUSTOMER como padrão quando não fornecido', async () => {
+	it('deve usar role COMPANY como padrão do cadastro público quando não fornecido', async () => {
 		const repository = new MockUserRepository();
 		const useCase = new RegisterUserUseCase(
 			repository,
@@ -52,7 +52,25 @@ describe('RegisterUserUseCase', () => {
 			password: 'securePassword123',
 		});
 
-		expect(result.user.role).toBe(UserRole.CUSTOMER);
+		expect(result.user.role).toBe(UserRole.COMPANY);
+	});
+
+	it('deve normalizar email no cadastro', async () => {
+		const repository = new MockUserRepository();
+		const useCase = new RegisterUserUseCase(
+			repository,
+			passwordHasher,
+			jwtService,
+		);
+
+		const result = await useCase.execute({
+			name: 'John Doe',
+			email: ' JOHN@EXAMPLE.COM ',
+			password: 'securePassword123',
+		});
+
+		expect(result.user.email).toBe('john@example.com');
+		expect(await repository.findByEmail('john@example.com')).not.toBeNull();
 	});
 
 	it('deve lançar ForbiddenError ao tentar cadastrar SUPER_ADMIN por esta rota', async () => {
@@ -183,7 +201,25 @@ describe('RegisterUserUseCase', () => {
 		expect(result.user.accountStatus).toBe(AccountStatus.ACTIVE);
 	});
 
-	it('deve aceitar accountStatus customizado', async () => {
+	it('deve rejeitar accountStatus customizado no cadastro público', async () => {
+		const repository = new MockUserRepository();
+		const useCase = new RegisterUserUseCase(
+			repository,
+			passwordHasher,
+			jwtService,
+		);
+
+		await expect(
+			useCase.execute({
+				name: 'John Doe',
+				email: 'john@example.com',
+				password: 'securePassword123',
+				accountStatus: AccountStatus.PENDING_VERIFICATION,
+			}),
+		).rejects.toThrow(ForbiddenError);
+	});
+
+	it('deve aceitar accountStatus customizado em cadastro administrativo', async () => {
 		const repository = new MockUserRepository();
 		const useCase = new RegisterUserUseCase(
 			repository,
@@ -192,10 +228,12 @@ describe('RegisterUserUseCase', () => {
 		);
 
 		const result = await useCase.execute({
-			name: 'John Doe',
-			email: 'john@example.com',
+			name: 'Employee Name',
+			email: 'employee@example.com',
 			password: 'securePassword123',
+			role: UserRole.EMPLOYEE,
 			accountStatus: AccountStatus.PENDING_VERIFICATION,
+			actor: { id: 'company-id', role: UserRole.COMPANY },
 		});
 
 		expect(result.user.accountStatus).toBe(AccountStatus.PENDING_VERIFICATION);
@@ -245,7 +283,7 @@ describe('RegisterUserUseCase', () => {
 		const user = await repository.findByEmail(input.email);
 		expect(user).not.toBeNull();
 		expect(user?.passwordHash).not.toBe(input.password);
-		expect(user?.passwordHash).toMatch(/^\$2[aby]\$/); // Formato bcrypt
+		expect(user?.passwordHash).toMatch(/^\$argon2id\$/);
 	});
 
 	it('deve gerar token JWT válido', async () => {

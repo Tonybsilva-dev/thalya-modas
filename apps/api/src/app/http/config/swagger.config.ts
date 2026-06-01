@@ -129,6 +129,11 @@ export function getSwaggerConfig() {
 						'Autenticação e autorização: login, registro, refresh token e gerenciamento de sessão',
 				},
 				{
+					name: 'onboarding',
+					description:
+						'Onboarding inicial da loja: perfil, endereço, preferências operacionais e conclusão',
+				},
+				{
 					name: 'root',
 					description: 'Informações gerais da API e endpoints raiz',
 				},

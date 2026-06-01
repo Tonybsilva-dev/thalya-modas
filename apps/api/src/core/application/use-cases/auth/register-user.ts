@@ -37,7 +37,23 @@ export class RegisterUserUseCase {
 	) {}
 
 	async execute(input: RegisterUserInput): Promise<RegisterUserOutput> {
-		const requestedRole = input.role ?? UserRole.CUSTOMER;
+		const email = input.email.trim().toLowerCase();
+		const isPublicRegistration = !input.actor;
+		const requestedRole = isPublicRegistration
+			? UserRole.COMPANY
+			: (input.role ?? UserRole.CUSTOMER);
+
+		if (isPublicRegistration && input.role) {
+			throw new ForbiddenError(
+				'Cadastro público não permite definir papel de usuário.',
+			);
+		}
+
+		if (isPublicRegistration && input.accountStatus) {
+			throw new ForbiddenError(
+				'Cadastro público não permite definir status da conta.',
+			);
+		}
 
 		if (requestedRole === UserRole.SUPER_ADMIN) {
 			throw new ForbiddenError(
@@ -45,15 +61,16 @@ export class RegisterUserUseCase {
 			);
 		}
 
-		if (requestedRole === UserRole.COMPANY) {
+		if (!isPublicRegistration && requestedRole === UserRole.COMPANY) {
 			if (input.actor?.role !== UserRole.SUPER_ADMIN) {
 				throw new ForbiddenError(
 					'Apenas Super Admin pode cadastrar Company (estabelecimento).',
 				);
 			}
 		} else if (
-			requestedRole === UserRole.EMPLOYEE ||
-			requestedRole === UserRole.DELIVERY_MAN
+			!isPublicRegistration &&
+			(requestedRole === UserRole.EMPLOYEE ||
+				requestedRole === UserRole.DELIVERY_MAN)
 		) {
 			if (input.actor?.role !== UserRole.COMPANY) {
 				throw new ForbiddenError(
@@ -64,7 +81,7 @@ export class RegisterUserUseCase {
 
 		const validatedData = createUserSchema.parse({
 			name: input.name,
-			email: input.email,
+			email,
 			password: input.password,
 			role: requestedRole,
 			accountStatus: input.accountStatus || AccountStatus.ACTIVE,

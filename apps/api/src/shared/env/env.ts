@@ -1,4 +1,7 @@
+import { config } from 'dotenv';
 import { z } from 'zod';
+
+config({ quiet: true });
 
 // Helper para transformar strings vazias em undefined e validar como URL opcional
 const optionalUrl = () =>
@@ -14,17 +17,38 @@ const optionalEmail = () =>
 		.optional()
 		.transform((val) => (val === '' ? undefined : val));
 
+const booleanFlag = (defaultValue: boolean) =>
+	z
+		.union([
+			z.boolean(),
+			z.enum(['true', 'false']),
+			z.literal(''),
+			z.undefined(),
+		])
+		.optional()
+		.transform((val) => {
+			if (val === '' || val === undefined) {
+				return defaultValue;
+			}
+
+			if (typeof val === 'boolean') {
+				return val;
+			}
+
+			return val === 'true';
+		});
+
 const envSchema = z.object({
 	NODE_ENV: z
 		.enum(['development', 'production', 'test'])
 		.default('development'),
 	PORT: z.preprocess((val) => {
 		if (val === '' || val === undefined || val === null) {
-			return 3000;
+			return 3333;
 		}
 		const num = Number(val);
-		return Number.isNaN(num) ? 3000 : num;
-	}, z.number().int().positive().default(3000)),
+		return Number.isNaN(num) ? 3333 : num;
+	}, z.number().int().positive().default(3333)),
 	HOST: z.string().default('0.0.0.0'),
 	API_VERSION: z.string().default('1.0.0'),
 	API_TITLE: z.string().default('Fastify Boilerplate API'),
@@ -50,6 +74,12 @@ const envSchema = z.object({
 		.string()
 		.optional()
 		.transform((val) => (val === '' ? undefined : val)),
+	// Persistence
+	PERSISTENCE_DRIVER: z.enum(['in-memory', 'postgres']).default('in-memory'),
+	DATABASE_URL: z
+		.string()
+		.optional()
+		.transform((val) => (val === '' ? undefined : val)),
 	// JWT Configuration
 	JWT_SECRET: z
 		.string()
@@ -60,6 +90,16 @@ const envSchema = z.object({
 		.pipe(z.string().min(32, 'JWT secret must be at least 32 characters'))
 		.default('development-secret-key-must-be-at-least-32-characters-long'),
 	JWT_EXPIRES_IN: z.string().default('7d'),
+	// Feature flags / Kill switches
+	FEATURE_AUTH_LOGIN_ENABLED: booleanFlag(true),
+	FEATURE_AUTH_REGISTER_ENABLED: booleanFlag(true),
+	FEATURE_AUTH_SSO_ENABLED: booleanFlag(false),
+	FEATURE_ONBOARDING_ENABLED: booleanFlag(true),
+	FEATURE_PASSWORD_RECOVERY_ENABLED: booleanFlag(true),
+	FEATURE_PASSWORD_RECOVERY_REQUEST_ENABLED: booleanFlag(true),
+	FEATURE_PASSWORD_RECOVERY_VERIFY_CODE_ENABLED: booleanFlag(true),
+	FEATURE_PASSWORD_RECOVERY_RESEND_CODE_ENABLED: booleanFlag(true),
+	FEATURE_PASSWORD_RECOVERY_RESET_ENABLED: booleanFlag(true),
 });
 
 export type Env = z.infer<typeof envSchema>;

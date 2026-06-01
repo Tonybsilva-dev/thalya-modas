@@ -55,11 +55,15 @@ describe('errorHandler', () => {
 		await errorHandler(error, mockRequest, mockReply);
 
 		expect(mockReply.code).toHaveBeenCalledWith(404);
-		expect(mockReply.send).toHaveBeenCalledWith({
-			error: 'NotFoundError',
-			message: 'Recurso não encontrado',
-			traceId: 'trace-123',
-		});
+		expect(mockReply.send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				code: 'TM-RES-404',
+				error: 'NotFoundError',
+				message: 'Recurso não encontrado',
+				traceId: 'trace-123',
+				userMessage: 'Recurso não encontrado',
+			}),
+		);
 		expect(mockLogger.warn).toHaveBeenCalled();
 	});
 
@@ -72,12 +76,16 @@ describe('errorHandler', () => {
 		await errorHandler(error, mockRequest, mockReply);
 
 		expect(mockReply.code).toHaveBeenCalledWith(400);
-		expect(mockReply.send).toHaveBeenCalledWith({
-			error: 'ValidationError',
-			message: 'Erro de validação',
-			details: [{ field: 'email', message: 'Email inválido' }],
-			traceId: 'trace-456',
-		});
+		expect(mockReply.send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				code: 'TM-VAL-400',
+				error: 'ValidationError',
+				message: 'Erro de validação',
+				details: [{ field: 'email', message: 'Email inválido' }],
+				traceId: 'trace-456',
+				userMessage: 'Erro de validação',
+			}),
+		);
 	});
 
 	it('deve tratar ZodError convertendo para ValidationError', async () => {
@@ -96,6 +104,7 @@ describe('errorHandler', () => {
 			expect.objectContaining({
 				error: 'ValidationError',
 				traceId: expect.any(String),
+				userMessage: 'Email inválido',
 			}),
 		);
 		expect(mockReply.send).toHaveBeenCalledWith(
@@ -104,6 +113,8 @@ describe('errorHandler', () => {
 					expect.objectContaining({
 						field: 'email',
 						message: 'Email inválido',
+						path: ['email'],
+						userMessage: 'Email inválido',
 					}),
 				]),
 			}),
@@ -157,12 +168,16 @@ describe('errorHandler', () => {
 		await errorHandler(fastifyError, mockRequest, mockReply);
 
 		expect(mockReply.code).toHaveBeenCalledWith(400);
-		expect(mockReply.send).toHaveBeenCalledWith({
-			error: 'ValidationError',
-			message: 'Erro de validação nos dados fornecidos',
-			details: fastifyError.validation,
-			traceId: expect.any(String),
-		});
+		expect(mockReply.send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				code: 'TM-VAL-400',
+				error: 'ValidationError',
+				message: 'Erro de validação nos dados fornecidos',
+				details: fastifyError.validation,
+				traceId: expect.any(String),
+				userMessage: 'Revise os campos destacados e tente novamente.',
+			}),
+		);
 	});
 
 	it('deve tratar erro desconhecido com statusCode 500', async () => {
@@ -193,11 +208,14 @@ describe('errorHandler', () => {
 		await errorHandler(error, mockRequest, mockReply);
 
 		expect(mockReply.code).toHaveBeenCalledWith(418);
-		expect(mockReply.send).toHaveBeenCalledWith({
-			error: 'InternalServerError',
-			message: 'Custom error',
-			traceId: expect.any(String),
-		});
+		expect(mockReply.send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				error: 'InternalServerError',
+				message: 'Custom error',
+				traceId: expect.any(String),
+				userMessage: 'Custom error',
+			}),
+		);
 	});
 
 	it('deve usar logLevel error para statusCode >= 500', async () => {
@@ -254,11 +272,15 @@ describe('errorHandler', () => {
 		await errorHandler(error, mockRequest, mockReply);
 
 		expect(mockReply.code).toHaveBeenCalledWith(403);
-		expect(mockReply.send).toHaveBeenCalledWith({
-			error: 'ForbiddenError',
-			message: 'Acesso negado',
-			traceId: 'trace-789',
-		});
+		expect(mockReply.send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				code: 'TM-AUTHZ-403',
+				error: 'ForbiddenError',
+				message: 'Acesso negado',
+				traceId: 'trace-789',
+				userMessage: 'Acesso negado',
+			}),
+		);
 		expect(mockLogger.warn).toHaveBeenCalled();
 	});
 });

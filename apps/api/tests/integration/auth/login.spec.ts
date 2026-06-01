@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AccountStatus } from '../../../src/core/domain/index.ts';
-import { BcryptPasswordHasher } from '../../../src/core/infra/auth/password-hasher';
+import { Argon2PasswordHasher } from '../../../src/core/infra/auth/password-hasher';
 import { UserFactory } from '../../factories';
 import { MockUserRepository } from '../../unit/core/domain/repositories/mock-user-repository';
 import { createTestServer, makeRequest } from '../helpers';
@@ -9,11 +9,11 @@ import { createTestServer, makeRequest } from '../helpers';
 describe('POST /auth/login - Integração', () => {
 	let server: FastifyInstance;
 	let userRepository: MockUserRepository;
-	let passwordHasher: BcryptPasswordHasher;
+	let passwordHasher: Argon2PasswordHasher;
 
 	beforeEach(async () => {
 		userRepository = new MockUserRepository();
-		passwordHasher = new BcryptPasswordHasher();
+		passwordHasher = new Argon2PasswordHasher();
 		server = await createTestServer(userRepository);
 	});
 
@@ -46,6 +46,11 @@ describe('POST /auth/login - Integração', () => {
 			expect(response.statusCode).toBe(200);
 			expect(response.body).toHaveProperty('user');
 			expect(response.body).toHaveProperty('token');
+			expect(response.body).toHaveProperty('expiresIn', 604800);
+			expect(response.headers['set-cookie']).toContain('thalya_modas_session=');
+			expect(response.headers['set-cookie']).toContain('HttpOnly');
+			expect(response.headers['set-cookie']).toContain('SameSite=Lax');
+			expect(response.headers['set-cookie']).toContain('Max-Age=604800');
 			expect((response.body as { user: unknown }).user).toMatchObject({
 				id: user.id,
 				email: user.email,
@@ -57,6 +62,33 @@ describe('POST /auth/login - Integração', () => {
 			expect((response.body as { token: string }).token.length).toBeGreaterThan(
 				0,
 			);
+		});
+
+		it('deve normalizar email e ampliar expiração com rememberMe', async () => {
+			const plainPassword = 'securePassword123';
+			const passwordHash = await passwordHasher.hash(plainPassword);
+
+			await userRepository.create(
+				UserFactory.create({
+					email: 'user@example.com',
+					passwordHash,
+					accountStatus: AccountStatus.ACTIVE,
+				}),
+			);
+
+			const response = await makeRequest(server, {
+				method: 'POST',
+				url: '/auth/login',
+				body: {
+					email: ' USER@EXAMPLE.COM ',
+					password: plainPassword,
+					rememberMe: true,
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.body).toHaveProperty('expiresIn', 2592000);
+			expect(response.headers['set-cookie']).toContain('Max-Age=2592000');
 		});
 	});
 

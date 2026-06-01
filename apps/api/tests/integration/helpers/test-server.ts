@@ -7,7 +7,18 @@ import { healthcheckRoutes } from '../../../src/app/http/healthcheck/healthcheck
 import { errorHandler } from '../../../src/app/http/middlewares/error-handler';
 import traceIdPlugin from '../../../src/app/http/middlewares/trace-id';
 import { authRoutes } from '../../../src/app/http/routes/auth.routes';
+import { onboardingRoutes } from '../../../src/app/http/routes/onboarding.routes';
+import type { PasswordRecoveryRepository } from '../../../src/core/domain/repositories/password-recovery-repository';
 import type { UserRepository } from '../../../src/core/domain/repositories/user-repository';
+import {
+	InMemoryOnboardingRepository,
+	InMemoryPasswordRecoveryRepository,
+	InMemoryStoreRepository,
+} from '../../../src/core/infra/persistence';
+import {
+	type FeatureFlagMap,
+	FeatureFlagService,
+} from '../../../src/shared/features';
 import { MockUserRepository } from '../../unit/core/domain/repositories/mock-user-repository';
 
 /**
@@ -19,6 +30,10 @@ import { MockUserRepository } from '../../unit/core/domain/repositories/mock-use
  */
 export async function createTestServer(
 	userRepository?: UserRepository,
+	options: {
+		featureFlags?: Partial<FeatureFlagMap>;
+		passwordRecoveryRepository?: PasswordRecoveryRepository;
+	} = {},
 ): Promise<FastifyInstance> {
 	// Cria servidor Fastify para testes
 	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
@@ -52,14 +67,23 @@ export async function createTestServer(
 	await server.register(healthcheckRoutes);
 
 	// Cria container de dependências
-	const container = new AppContainer();
+	const container = new AppContainer({
+		featureFlags: new FeatureFlagService(options.featureFlags),
+	});
 
 	// Usa o repositório fornecido ou cria um mock
 	const repository = userRepository ?? new MockUserRepository();
 	container.setUserRepository(repository);
+	container.setPasswordRecoveryRepository(
+		options.passwordRecoveryRepository ??
+			new InMemoryPasswordRecoveryRepository(),
+	);
+	container.setStoreRepository(new InMemoryStoreRepository());
+	container.setOnboardingRepository(new InMemoryOnboardingRepository());
 
 	// Registra rotas de autenticação (depois do Swagger estar registrado)
 	await server.register(authRoutes, { container });
+	await server.register(onboardingRoutes, { container });
 
 	// Registra rota raiz para testes
 	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos

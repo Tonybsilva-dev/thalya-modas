@@ -26,7 +26,7 @@ Equipes de desenvolvimento frequentemente perdem tempo recriando a mesma infraes
 Um **boilerplate completo e production-ready** que atua em múltiplas frentes:
 
 1. **Arquitetura DDD**: Separação clara entre domínio, aplicação e infraestrutura
-2. **Autenticação & Autorização**: JWT + RBAC com CASL pronto para uso
+2. **Autenticação & Autorização**: JWT, sessão via cookie `httpOnly` e RBAC com CASL pronto para uso
 3. **Qualidade de Código**: Pipeline completo de QA com lint, testes e type-check
 4. **Documentação**: Swagger/OpenAPI integrado
 5. **Testes**: Vitest configurado com coverage e padrão Factory
@@ -50,10 +50,13 @@ Um **boilerplate completo e production-ready** que atua em múltiplas frentes:
 
 ### 🔐 Autenticação e Autorização
 
-- ✅ **JWT Authentication**: Autenticação baseada em tokens
+- ✅ **JWT Authentication**: Autenticação baseada em JWT com cookie `httpOnly` para sessão do backoffice
 - ✅ **RBAC com CASL**: Controle de acesso baseado em roles
-- ✅ **User Roles**: Sistema de permissões (USER, ADMIN)
-- ✅ **Password Security**: Hash seguro com bcrypt
+- ✅ **User Roles**: Sistema de permissões (`SUPER_ADMIN`, `COMPANY`, `EMPLOYEE`, `DELIVERY_MAN`, `CUSTOMER`)
+- ✅ **Password Security**: Hash seguro com Argon2id
+- ✅ **Password Recovery**: Fluxo de recuperação com código temporário, reset token, cooldown e kill switches
+- ✅ **Onboarding de Loja**: Cadastro público cria `ROLE_COMPANY` e progresso inicial de onboarding
+- ✅ **Kill Switches**: Flags por módulo para desligar login, cadastro, onboarding e recuperação de senha
 
 ### ✅ Validação e Schemas
 
@@ -109,8 +112,8 @@ Um **boilerplate completo e production-ready** que atua em múltiplas frentes:
 
 - ✅ **Sensitive Files Detection**: Bloqueio de commits com .env ou chaves
 - ✅ **Security Audit**: npm audit integrado no CI
-- ✅ **Password Hashing**: Implementação segura com bcrypt
-- ✅ **JWT Best Practices**: Autenticação baseada em tokens
+- ✅ **Password Hashing**: Implementação segura com Argon2id
+- ✅ **JWT Best Practices**: Autenticação com JWT e cookie `httpOnly` (`SameSite=Lax`, `Secure` em produção)
 - ✅ **Security Headers**: Helmet configurado (X-Content-Type-Options, X-Frame-Options, etc.)
 - ✅ **Rate Limiting**: Proteção contra DDoS e força bruta
 - ✅ **CORS**: Configuração de Cross-Origin Resource Sharing
@@ -135,6 +138,8 @@ Um **boilerplate completo e production-ready** que atua em múltiplas frentes:
 - **Framework**: Fastify 4.x (alta performance)
 - **Language**: TypeScript 5.9 (strict mode)
 - **Architecture**: DDD (Domain-Driven Design)
+- **Database**: PostgreSQL via Docker
+- **ORM**: Prisma
 
 ### Validação e Schemas
 
@@ -225,10 +230,28 @@ cp .env.example .env
 
 # Edite o .env e configure pelo menos:
 # - JWT_SECRET (mínimo 32 caracteres)
-# - PORT (padrão: 3000)
+# - PORT (padrão local: 3333)
+# - PERSISTENCE_DRIVER ("in-memory" ou "postgres")
+# - DATABASE_URL (quando usar Postgres)
 ```
 
-#### Desenvolvimento (com hot-reload)
+#### Desenvolvimento com Postgres
+
+No monorepo, o Postgres local fica centralizado em `docker/compose.yml`:
+
+```bash
+pnpm docker:postgres:up
+pnpm db:migrate
+pnpm dev:api
+```
+
+`DATABASE_URL` local:
+
+```env
+DATABASE_URL="postgresql://thalya:thalya_dev_password@localhost:5432/thalya_modas?schema=public"
+```
+
+#### Desenvolvimento legado da API (com hot-reload)
 
 ```bash
 # Subir o container
@@ -474,7 +497,9 @@ cp .env.example .env
 # Configure suas variáveis de ambiente
 # Mínimo necessário:
 # - JWT_SECRET (mínimo 32 caracteres)
-# - PORT (padrão: 3000)
+# - PORT (padrão local: 3333)
+# - PERSISTENCE_DRIVER ("in-memory" ou "postgres")
+# - DATABASE_URL (quando usar Postgres)
 ```
 
 ### 3. Execute o QA

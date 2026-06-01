@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BcryptPasswordHasher } from '../../../../../src/core/infra/auth/password-hasher';
+import { Argon2PasswordHasher } from '../../../../../src/core/infra/auth/password-hasher';
 
-describe('BcryptPasswordHasher', () => {
-	const hasher = new BcryptPasswordHasher();
+describe('Argon2PasswordHasher', () => {
+	const hasher = new Argon2PasswordHasher();
 
 	describe('hash', () => {
 		it('deve gerar hash de uma senha válida', async () => {
@@ -11,8 +11,8 @@ describe('BcryptPasswordHasher', () => {
 
 			expect(hash).toBeDefined();
 			expect(hash).not.toBe(plainPassword);
-			expect(hash.length).toBeGreaterThan(20); // bcrypt hash tem ~60 caracteres
-			expect(hash).toMatch(/^\$2[aby]\$/); // Formato bcrypt
+			expect(hash.length).toBeGreaterThan(20);
+			expect(hash).toMatch(/^\$argon2id\$/);
 		});
 
 		it('deve gerar hashes diferentes para a mesma senha (salt único)', async () => {

@@ -22,7 +22,7 @@ describe('env validation', () => {
 		const { env } = await import('../../../../src/shared/env/env');
 
 		expect(env.NODE_ENV).toBe('development');
-		expect(env.PORT).toBe(3000);
+		expect(env.PORT).toBe(3333);
 		expect(env.HOST).toBe('0.0.0.0');
 		expect(env.API_VERSION).toBe('1.0.0');
 		expect(env.API_TITLE).toBe('Fastify Boilerplate API');
@@ -52,7 +52,7 @@ describe('env validation', () => {
 
 		const { env } = await import('../../../../src/shared/env/env');
 
-		expect(env.PORT).toBe(3000);
+		expect(env.PORT).toBe(3333);
 	});
 
 	it('deve usar valor padrão quando PORT é undefined', async () => {
@@ -60,7 +60,7 @@ describe('env validation', () => {
 
 		const { env } = await import('../../../../src/shared/env/env');
 
-		expect(env.PORT).toBe(3000);
+		expect(env.PORT).toBe(3333);
 	});
 
 	it('deve validar JWT_SECRET com mínimo de 32 caracteres', async () => {
@@ -150,11 +150,11 @@ describe('env validation', () => {
 	});
 
 	it('deve validar PORT como número inteiro', async () => {
-		process.env.PORT = '3000';
+		process.env.PORT = '3333';
 
 		const { env } = await import('../../../../src/shared/env/env');
 
-		expect(env.PORT).toBe(3000);
+		expect(env.PORT).toBe(3333);
 		expect(Number.isInteger(env.PORT)).toBe(true);
 	});
 
@@ -163,7 +163,7 @@ describe('env validation', () => {
 
 		const { env } = await import('../../../../src/shared/env/env');
 
-		expect(env.PORT).toBe(3000);
+		expect(env.PORT).toBe(3333);
 	});
 
 	it('deve validar NODE_ENV como test', async () => {

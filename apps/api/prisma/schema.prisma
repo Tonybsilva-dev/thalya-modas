@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  role          String
+  accountStatus String   @map("account_status")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  stores                    Store[]
+  onboardings               Onboarding[]
+  passwordRecoveryRequests  PasswordRecoveryRequest[]
+
+  @@map("users")
+}
+
+model Store {
+  id          String   @id @default(uuid())
+  ownerId     String   @map("owner_id")
+  name        String
+  phone       String
+  document    String   @unique
+  segment     String
+  address     Json?
+  preferences Json?
+  status      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  onboardings Onboarding[]
+
+  @@index([ownerId])
+  @@map("stores")
+}
+
+model Onboarding {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  storeId        String?  @map("store_id")
+  status         String
+  nextStep       String   @map("next_step")
+  completedSteps String[] @default([]) @map("completed_steps")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store? @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@unique([userId])
+  @@index([storeId])
+  @@map("onboardings")
+}
+
+model PasswordRecoveryRequest {
+  id                  String   @id @default(uuid())
+  email               String
+  userId              String   @map("user_id")
+  code                String
+  codeExpiresAt       DateTime @map("code_expires_at")
+  resetToken          String?  @unique @map("reset_token")
+  resetTokenExpiresAt DateTime? @map("reset_token_expires_at")
+  invalidAttempts     Int      @default(0) @map("invalid_attempts")
+  resendAvailableAt   DateTime @map("resend_available_at")
+  status              String
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([userId])
+  @@map("password_recovery_requests")
+}
