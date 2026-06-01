@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { authSessionCookieName } from '../../../src/app/http/auth-session-cookie';
 import {
 	OnboardingStatus,
 	OnboardingStep,
@@ -157,6 +158,44 @@ describe('Onboarding - Integração', () => {
 
 		expect(response.statusCode).toBe(400);
 		expect((response.body as { error: string }).error).toBe('DomainError');
+	});
+
+	it('deve consultar onboarding usando cookie de sessão', async () => {
+		await makeRequest(server, {
+			method: 'POST',
+			url: '/auth/register',
+			body: {
+				name: 'Ana Ribeiro',
+				email: 'ana@thalyamodas.com',
+				password: 'Secure123',
+			},
+		});
+
+		const loginResponse = await makeRequest(server, {
+			method: 'POST',
+			url: '/auth/login',
+			body: {
+				email: 'ana@thalyamodas.com',
+				password: 'Secure123',
+			},
+		});
+		const setCookie = loginResponse.headers['set-cookie'];
+		const sessionCookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+
+		expect(sessionCookie).toContain(`${authSessionCookieName}=`);
+
+		const response = await makeRequest(server, {
+			method: 'GET',
+			url: '/onboarding/me',
+			headers: { cookie: sessionCookie.split(';')[0] },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.body).toMatchObject({
+			status: OnboardingStatus.PENDING,
+			nextStep: OnboardingStep.STORE_PROFILE,
+			completedSteps: [],
+		});
 	});
 
 	it('deve rejeitar telefone inválido', async () => {

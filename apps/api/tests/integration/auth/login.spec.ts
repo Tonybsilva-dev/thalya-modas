@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { authSessionCookieName } from '../../../src/app/http/auth-session-cookie';
 import { AccountStatus } from '../../../src/core/domain/index.ts';
 import { Argon2PasswordHasher } from '../../../src/core/infra/auth/password-hasher';
 import { UserFactory } from '../../factories';
@@ -47,7 +48,9 @@ describe('POST /auth/login - Integração', () => {
 			expect(response.body).toHaveProperty('user');
 			expect(response.body).toHaveProperty('token');
 			expect(response.body).toHaveProperty('expiresIn', 604800);
-			expect(response.headers['set-cookie']).toContain('thalya_modas_session=');
+			expect(response.headers['set-cookie']).toContain(
+				`${authSessionCookieName}=`,
+			);
 			expect(response.headers['set-cookie']).toContain('HttpOnly');
 			expect(response.headers['set-cookie']).toContain('SameSite=Lax');
 			expect(response.headers['set-cookie']).toContain('Max-Age=604800');

@@ -173,7 +173,7 @@ export async function onboardingRoutes(
 			schema: {
 				description: 'Obtém progresso do onboarding do usuário autenticado',
 				tags: ['onboarding'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					200: createResponseSchema(
 						onboardingResponseSchema,
@@ -216,7 +216,7 @@ export async function onboardingRoutes(
 			schema: {
 				description: 'Salva as preferências operacionais iniciais da loja',
 				tags: ['onboarding'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				body: {
 					...(createRequestSchema({
 						body: storePreferencesRequestSchema,
@@ -281,7 +281,7 @@ export async function onboardingRoutes(
 			schema: {
 				description: 'Salva o endereço inicial da loja',
 				tags: ['onboarding'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				body: {
 					...(createRequestSchema({
 						body: storeAddressRequestSchema,
@@ -345,7 +345,7 @@ export async function onboardingRoutes(
 			schema: {
 				description: 'Salva o perfil inicial da loja',
 				tags: ['onboarding'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				body: {
 					...(createRequestSchema({
 						body: storeProfileRequestSchema,
@@ -401,7 +401,7 @@ export async function onboardingRoutes(
 			schema: {
 				description: 'Finaliza onboarding e ativa a loja',
 				tags: ['onboarding'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					200: createResponseSchema(
 						onboardingResponseSchema,

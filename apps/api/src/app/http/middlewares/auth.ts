@@ -1,6 +1,7 @@
 import type { FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import type { JWTService } from '../../../core/infra/auth/jwt-service';
+import { getAuthSessionTokenFromCookieHeader } from '../auth-session-cookie';
 import { AuthError } from '../errors/auth-error';
 import '../types'; // Importa o módulo de declaração para estender FastifyRequest
 
@@ -18,8 +19,8 @@ declare module 'fastify' {
 }
 
 /**
- * Middleware de autenticação JWT
- * Extrai e valida o token JWT do header Authorization
+ * Middleware de autenticação JWT.
+ * Extrai e valida o token pelo header Authorization ou pelo cookie httpOnly da sessão.
  */
 export async function authMiddleware(
 	request: FastifyRequest,
@@ -30,17 +31,21 @@ export async function authMiddleware(
 		request as { headers?: Record<string, string | string[] | undefined> }
 	).headers;
 	const authHeader = requestHeaders?.authorization;
+	const sessionCookieToken = getAuthSessionTokenFromCookieHeader(
+		requestHeaders?.cookie,
+	);
 
-	if (!authHeader || typeof authHeader !== 'string') {
+	if (!authHeader && !sessionCookieToken) {
 		throw new AuthError('Token de autenticação não fornecido');
 	}
 
-	const parts = authHeader.split(' ');
-	if (parts.length !== 2 || parts[0] !== 'Bearer') {
-		throw new AuthError('Formato de token inválido. Use: Bearer <token>');
+	const token = authHeader
+		? getBearerToken(authHeader)
+		: sessionCookieToken;
+	if (!token) {
+		throw new AuthError('Token de autenticação não fornecido');
 	}
 
-	const token = parts[1];
 	const validation = jwtService.validate(token);
 
 	if (!validation.valid || !validation.payload) {
@@ -54,6 +59,19 @@ export async function authMiddleware(
 			email: validation.payload.email,
 			role: validation.payload.role,
 		};
+}
+
+function getBearerToken(authHeader: string | string[]): string {
+	if (typeof authHeader !== 'string') {
+		throw new AuthError('Formato de token inválido. Use: Bearer <token>');
+	}
+
+	const parts = authHeader.split(' ');
+	if (parts.length !== 2 || parts[0] !== 'Bearer') {
+		throw new AuthError('Formato de token inválido. Use: Bearer <token>');
+	}
+
+	return parts[1];
 }
 
 /**

@@ -212,7 +212,7 @@ export async function userRoutes(
 				description:
 					'Lista usuários com paginação. Apenas Super Admin e Company.',
 				tags: ['users'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				querystring: listUsersQuerystringJsonSchema,
 				response: {
 					200: {
@@ -280,7 +280,7 @@ export async function userRoutes(
 				description:
 					'Retorna o total de usuários (com filtro opcional em nome/email). Apenas Super Admin e Company.',
 				tags: ['users'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				querystring: createRequestSchema({
 					query: countUsersQuerySchema,
 				}).querystring,
@@ -325,7 +325,7 @@ export async function userRoutes(
 				description:
 					'Obtém um usuário por ID. Próprio perfil ou Super Admin/Company.',
 				tags: ['users'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				params: paramsIdJsonSchema,
 				response: {
 					200: {
@@ -385,7 +385,7 @@ export async function userRoutes(
 				description:
 					'Atualiza parcialmente um usuário. Próprio perfil (nome) ou Super Admin/Company.',
 				tags: ['users'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				params: paramsIdJsonSchema,
 				body: {
 					...patchUserBodyJsonSchema,
@@ -477,7 +477,7 @@ export async function userRoutes(
 				description:
 					'Remove um usuário. Apenas Super Admin e Company (ou próprio usuário).',
 				tags: ['users'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				params: paramsIdJsonSchema,
 				response: {
 					204: { type: 'null', description: 'Usuário removido' },

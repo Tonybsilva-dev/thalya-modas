@@ -13,6 +13,7 @@ export const loginRouteContent = {
     rememberLabel: "Remember me",
     forgotPasswordLabel: "Forgot password?",
     submitLabel: "Sign in",
+    submittingLabel: "Signing in",
     dividerLabel: "or",
     ssoLabel: "Continue with secure SSO",
     accessPrompt: "Need access?",

@@ -151,6 +151,13 @@ export function getSwaggerConfig() {
 						bearerFormat: 'JWT',
 						description: 'Autenticação via JWT. Use o formato: Bearer {token}',
 					},
+					sessionCookie: {
+						type: 'apiKey' as const,
+						name: '@thalya-modas:session',
+						in: 'cookie' as const,
+						description:
+							'Sessão httpOnly emitida pelo login do backoffice.',
+					},
 					apiKey: {
 						type: 'apiKey' as const,
 						name: 'X-API-Key',

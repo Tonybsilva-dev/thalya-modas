@@ -190,6 +190,8 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
 
 - [x] `GET /onboarding/me`
 - [x] `POST /onboarding/store-profile`
+- [x] `POST /onboarding/store-address`
+- [x] `POST /onboarding/preferences`
 - [x] `POST /onboarding/complete`
 
 ### Validações implementadas
@@ -201,7 +203,10 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
 - [x] Documento normalizado para dígitos e limitado a CPF/CNPJ com 11 ou 14 dígitos.
 - [x] Documento não pode pertencer a outra loja.
 - [x] Segmento precisa pertencer ao enum `StoreSegment`.
-- [x] Onboarding só pode ser concluído depois de `STORE_PROFILE`.
+- [x] Endereço só pode ser salvo depois de `STORE_PROFILE`.
+- [x] Preferências só podem ser salvas depois de `STORE_ADDRESS`.
+- [x] Onboarding só pode ser concluído depois de `STORE_PROFILE`, `STORE_ADDRESS` e `STORE_PREFERENCES`.
+- [x] Rotas de onboarding aceitam autenticação por `Authorization: Bearer <token>` ou cookie `@thalya-modas:session`.
 
 ### Pendências para próxima etapa
 
@@ -241,7 +246,8 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
   - ampliar expiração do token quando verdadeiro, se aplicável.
 - [x] Decidir se o backoffice usará token em resposta JSON ou cookie httpOnly.
   - Decisão: usar cookie `httpOnly` para sessão do backoffice.
-  - Próxima etapa técnica: ajustar `POST /auth/login` para setar cookie seguro e revisar CSRF/CORS.
+  - Cookie padronizado: `@thalya-modas:session`.
+  - `POST /auth/login` seta cookie seguro e o middleware lê o mesmo padrão.
 - [x] Manter mensagens de erro genéricas para credenciais inválidas.
 
 ### Testes

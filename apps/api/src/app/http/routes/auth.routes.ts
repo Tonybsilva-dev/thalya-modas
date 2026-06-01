@@ -20,6 +20,7 @@ import {
 	createRequestSchema,
 	createResponseSchema,
 } from '../../../shared/utils/zod-to-json-schema';
+import { createAuthSessionCookie } from '../auth-session-cookie';
 import type { AppContainer } from '../container';
 import { authMiddleware } from '../middlewares/auth';
 
@@ -179,8 +180,6 @@ const loginSuccessExample = {
 	expiresIn: 604800,
 };
 
-const authSessionCookieName = 'thalya_modas_session';
-
 /**
  * Rotas de autenticação
  * POST /auth/register - Registra novo usuário
@@ -300,7 +299,7 @@ export async function authRoutes(
 				schema: {
 					description: 'Obtém dados do usuário autenticado',
 					tags: ['auth'],
-					security: [{ bearerAuth: [] }],
+					security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 					response: {
 						200: createResponseSchema(
 							currentUserResponseSchema,
@@ -844,7 +843,7 @@ export async function authRoutes(
 			schema: {
 				description: 'Obtém dados do usuário autenticado',
 				tags: ['auth'],
-				security: [{ bearerAuth: [] }],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					200: createResponseSchema(
 						currentUserResponseSchema,
@@ -901,20 +900,4 @@ export async function authRoutes(
 			};
 		},
 	);
-}
-
-function createAuthSessionCookie(token: string, maxAge: number): string {
-	const attributes = [
-		`${authSessionCookieName}=${encodeURIComponent(token)}`,
-		'Path=/',
-		`Max-Age=${maxAge}`,
-		'HttpOnly',
-		'SameSite=Lax',
-	];
-
-	if (env.NODE_ENV === 'production') {
-		attributes.push('Secure');
-	}
-
-	return attributes.join('; ');
 }

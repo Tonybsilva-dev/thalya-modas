@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { authSessionCookieName } from '../../../../../src/app/http/auth-session-cookie';
 import { AuthError } from '../../../../../src/app/http/errors/auth-error';
 import {
 	authMiddleware,
@@ -22,6 +23,29 @@ describe('authMiddleware', () => {
 		const mockRequest = {
 			headers: {
 				authorization: `Bearer ${token}`,
+			},
+			// biome-ignore lint/suspicious/noExplicitAny: Necessário para mock do FastifyRequest
+		} as any;
+
+		await authMiddleware(mockRequest, null, jwtService);
+
+		expect(mockRequest.user).toBeDefined();
+		expect(mockRequest.user?.userId).toBe(payload.userId);
+		expect(mockRequest.user?.email).toBe(payload.email);
+		expect(mockRequest.user?.role).toBe(payload.role);
+	});
+
+	it('deve autenticar request com token válido no cookie da sessão', async () => {
+		const payload = {
+			userId: 'user-123',
+			email: 'user@example.com',
+			role: UserRole.CUSTOMER,
+		};
+		const token = jwtService.generate(payload);
+
+		const mockRequest = {
+			headers: {
+				cookie: `${authSessionCookieName}=${encodeURIComponent(token)}`,
 			},
 			// biome-ignore lint/suspicious/noExplicitAny: Necessário para mock do FastifyRequest
 		} as any;

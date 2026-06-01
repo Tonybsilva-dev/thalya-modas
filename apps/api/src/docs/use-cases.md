@@ -62,7 +62,7 @@ Sem token, se o body enviar `role` ou `accountStatus`, a API retorna **403 Forbi
 
 **Saída (200):** `{ user, token, expiresIn }`
 
-**Sessão:** o login também seta cookie `thalya_modas_session` com `HttpOnly`, `SameSite=Lax`, `Path=/`, `Max-Age` igual a `expiresIn`, e `Secure` em produção.
+**Sessão:** o login também seta cookie `@thalya-modas:session` com `HttpOnly`, `SameSite=Lax`, `Path=/`, `Max-Age` igual a `expiresIn`, e `Secure` em produção.
 
 **Expiração:**
 
@@ -136,4 +136,4 @@ Após cadastro público, a API cria onboarding pendente para a loja.
 | Atualizar usuário | `PATCH /users/:id` | Atualização parcial (nome, email, role, accountStatus). Nome é normalizado. | Próprio (só nome) ou Super Admin/Company (todos os campos) |
 | Excluir usuário | `DELETE /users/:id` | Remove o usuário | Próprio ou Super Admin/Company |
 
-Respostas paginadas seguem o formato `{ items, total, page, perPage, totalPages }`. Todas as rotas (exceto check-email) exigem autenticação via `Authorization: Bearer <token>` no contrato atual; o backoffice deve migrar para sessão via cookie `httpOnly`.
+Respostas paginadas seguem o formato `{ items, total, page, perPage, totalPages }`. Todas as rotas (exceto check-email) aceitam autenticação via `Authorization: Bearer <token>` ou cookie `@thalya-modas:session` emitido pelo login.

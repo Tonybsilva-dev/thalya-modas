@@ -1,8 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
 import {
   Button,
   Card,
@@ -13,6 +15,9 @@ import {
   cn,
 } from "@thalya-modas/ui";
 
+import { ApiRequestError } from "@/src/shared/api/http-client";
+
+import { login } from "../application/login-api";
 import { loginRouteContent } from "../domain/login-route-content";
 import { ArrowRightIcon, LockIcon, MailIcon, ShieldIcon } from "./login-icons";
 
@@ -27,6 +32,21 @@ function FieldIcon({ children }: { children: ReactNode }) {
 export function LoginForm() {
   const { form } = loginRouteContent;
   const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const loginMutation = useMutation({
+    mutationFn: login,
+    onSuccess: () => {
+      router.push("/manager/dashboard");
+    },
+    onError: (error) => {
+      if (error instanceof ApiRequestError) {
+        setErrorMessage(error.payload.userMessage ?? error.payload.message ?? "Sign in failed.");
+        return;
+      }
+
+      setErrorMessage("Sign in failed.");
+    },
+  });
 
   return (
     <Card className="w-full max-w-[440px] animate-nitro-slide-up border-white/70 bg-card/95 shadow-[0_30px_90px_rgba(0,0,0,0.28)] backdrop-blur-sm">
@@ -42,7 +62,14 @@ export function LoginForm() {
           className="grid gap-5"
           onSubmit={(event) => {
             event.preventDefault();
-            router.push("/manager/dashboard");
+            setErrorMessage(null);
+
+            const formData = new FormData(event.currentTarget);
+            loginMutation.mutate({
+              email: String(formData.get("email") ?? ""),
+              password: String(formData.get("password") ?? ""),
+              rememberMe: formData.get("rememberMe") === "on",
+            });
           }}
         >
           <div className="grid gap-2">
@@ -53,8 +80,10 @@ export function LoginForm() {
               </FieldIcon>
               <Input
                 id="email"
+                name="email"
                 autoComplete="email"
                 className="h-11 pl-10"
+                defaultValue="ana@thalyamodas.com"
                 inputMode="email"
                 placeholder={form.emailPlaceholder}
                 type="email"
@@ -70,9 +99,10 @@ export function LoginForm() {
               </FieldIcon>
               <Input
                 id="password"
+                name="password"
                 autoComplete="current-password"
                 className="h-11 pl-10"
-                defaultValue="password"
+                defaultValue="Password123"
                 type="password"
               />
             </div>
@@ -80,7 +110,7 @@ export function LoginForm() {
 
           <div className="flex items-center justify-between gap-4">
             <Label className="flex cursor-pointer items-center gap-2 text-sm font-normal text-foreground">
-              <Checkbox defaultChecked />
+              <Checkbox defaultChecked name="rememberMe" />
               {form.rememberLabel}
             </Label>
             <Link
@@ -91,8 +121,18 @@ export function LoginForm() {
             </Link>
           </div>
 
-          <Button className="h-[46px] w-full justify-between px-5" type="submit">
-            <span>{form.submitLabel}</span>
+          {errorMessage ? (
+            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </p>
+          ) : null}
+
+          <Button
+            className="h-[46px] w-full justify-between px-5"
+            disabled={loginMutation.isPending}
+            type="submit"
+          >
+            <span>{loginMutation.isPending ? form.submittingLabel : form.submitLabel}</span>
             <ArrowRightIcon className="size-4" />
           </Button>
         </form>
