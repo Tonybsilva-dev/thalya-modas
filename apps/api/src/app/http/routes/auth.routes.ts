@@ -20,7 +20,10 @@ import {
 	createRequestSchema,
 	createResponseSchema,
 } from '../../../shared/utils/zod-to-json-schema';
-import { createAuthSessionCookie } from '../auth-session-cookie';
+import {
+	createAuthSessionCookie,
+	createExpiredAuthSessionCookie,
+} from '../auth-session-cookie';
 import type { AppContainer } from '../container';
 import { authMiddleware } from '../middlewares/auth';
 
@@ -114,6 +117,10 @@ const passwordRecoveryResetResponseSchema = z.object({
 	success: z.literal(true),
 });
 
+const logoutResponseSchema = z.object({
+	success: z.literal(true),
+});
+
 const currentUserResponseSchema = z.object({
 	id: z.string().uuid(),
 	name: z.string(),
@@ -178,6 +185,10 @@ const loginSuccessExample = {
 	},
 	token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.preview-login-token',
 	expiresIn: 604800,
+};
+
+const logoutSuccessExample = {
+	success: true,
 };
 
 /**
@@ -336,6 +347,29 @@ export async function authRoutes(
 				},
 			},
 			errorHandler,
+		);
+
+		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+		(fastify as any).post(
+			'/auth/logout',
+			{
+				schema: {
+					description: 'Encerra a sessão HTTP atual removendo o cookie seguro',
+					tags: ['auth'],
+					response: {
+						200: createResponseSchema(
+							logoutResponseSchema,
+							'Sessão encerrada',
+							logoutSuccessExample,
+						),
+					},
+				},
+			},
+			async (_request: unknown, reply: any) => {
+				return reply
+					.header('Set-Cookie', createExpiredAuthSessionCookie())
+					.send(logoutSuccessExample);
+			},
 		);
 
 		return;
@@ -657,6 +691,31 @@ export async function authRoutes(
 			});
 
 			return reply.code(202).send(result);
+		},
+	);
+
+	// POST /auth/logout
+	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+	(fastify as any).post(
+		'/auth/logout',
+		{
+			schema: {
+				description: 'Encerra a sessão HTTP atual removendo o cookie seguro',
+				tags: ['auth'],
+				response: {
+					200: createResponseSchema(
+						logoutResponseSchema,
+						'Sessão encerrada',
+						logoutSuccessExample,
+					),
+				},
+			},
+		},
+		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+		async (_request: any, reply: any) => {
+			return reply
+				.header('Set-Cookie', createExpiredAuthSessionCookie())
+				.send(logoutSuccessExample);
 		},
 	);
 

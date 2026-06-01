@@ -4,6 +4,7 @@ import { Space_Grotesk } from "next/font/google";
 import { cookies } from "next/headers";
 
 import { isThemeMode, themeCookieName } from "@/src/shared/theme/theme-cookie";
+import { appConfig } from "@/src/shared/config/app";
 
 import { AppProviders } from "./providers";
 import "./globals.css";
@@ -15,8 +16,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Thalya Modas Backoffice",
-  description: "Local store management workspace for Thalya Modas.",
+  title: `${appConfig.name} Backoffice`,
+  description: "Local store management workspace.",
 };
 
 export default async function RootLayout({

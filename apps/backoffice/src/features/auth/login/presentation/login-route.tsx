@@ -3,10 +3,14 @@ import { BrandMark } from "@/src/shared/ui/brand-mark";
 import { loginRouteContent } from "../domain/login-route-content";
 import { LoginForm } from "./login-form";
 
+type LoginRouteProps = {
+  brandName?: string;
+};
+
 const backgroundImage =
   "https://images.unsplash.com/photo-1567966374914-fcf38ba2bd8d?auto=format&fit=crop&q=80&w=1800";
 
-export function LoginRoute() {
+export function LoginRoute({ brandName }: LoginRouteProps) {
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div
@@ -18,7 +22,7 @@ export function LoginRoute() {
 
       <section className="relative z-10 grid min-h-screen grid-cols-1 gap-10 px-6 py-8 md:px-12 lg:grid-cols-[minmax(0,1fr)_440px] lg:px-16 lg:py-14">
         <div className="flex min-h-[44rem] flex-col justify-between">
-          <BrandMark tone="light" />
+          <BrandMark name={brandName} tone="light" />
 
           <div className="max-w-[520px] animate-nitro-slide-up text-white">
             <h2 className="text-4xl font-semibold leading-[1.08] tracking-normal md:text-[44px]">

@@ -23,13 +23,16 @@ export async function apiRequest<TResponse>(
   path: string,
   init: RequestInit = {},
 ): Promise<TResponse> {
+  const headers = new Headers(init.headers);
+
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
+    headers,
   });
 
   const contentType = response.headers.get("content-type");

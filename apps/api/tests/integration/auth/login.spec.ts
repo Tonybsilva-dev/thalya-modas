@@ -273,3 +273,34 @@ describe('POST /auth/login - Integração', () => {
 		});
 	});
 });
+
+describe('POST /auth/logout - Integração', () => {
+	let server: FastifyInstance;
+	let userRepository: MockUserRepository;
+
+	beforeEach(async () => {
+		userRepository = new MockUserRepository();
+		server = await createTestServer(userRepository);
+	});
+
+	afterEach(async () => {
+		await server.close();
+		userRepository.clear();
+	});
+
+	it('deve encerrar a sessão removendo o cookie httpOnly', async () => {
+		const response = await makeRequest(server, {
+			method: 'POST',
+			url: '/auth/logout',
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.body).toEqual({ success: true });
+		expect(response.headers['set-cookie']).toContain(
+			`${authSessionCookieName}=`,
+		);
+		expect(response.headers['set-cookie']).toContain('Max-Age=0');
+		expect(response.headers['set-cookie']).toContain('HttpOnly');
+		expect(response.headers['set-cookie']).toContain('SameSite=Lax');
+	});
+});

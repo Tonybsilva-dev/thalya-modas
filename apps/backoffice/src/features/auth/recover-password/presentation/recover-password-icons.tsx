@@ -1,4 +1,5 @@
 export {
+  ArrowLeft as ArrowLeftIcon,
   ArrowRight as ArrowRightIcon,
   Check as CheckIcon,
   EnvelopeSimple as MailIcon,

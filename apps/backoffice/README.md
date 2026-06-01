@@ -1,4 +1,4 @@
-# Thalya Modas Backoffice
+# Store Flow Backoffice
 
 Aplicacao Next.js responsavel pela interface operacional da loja.
 

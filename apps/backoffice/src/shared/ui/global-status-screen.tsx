@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Button } from "@thalya-modas/ui";
+import { appConfig } from "../config/app";
 
 function StatusBackdrop({ children }: { children: ReactNode }) {
   return (
@@ -67,7 +68,7 @@ export function GlobalLoadingScreen({ progress }: GlobalLoadingScreenProps) {
         </div>
 
         <div className="grid gap-2">
-          <h1 className="text-[32px] font-bold leading-tight">Thalya Modas</h1>
+          <h1 className="text-[32px] font-bold leading-tight">{appConfig.name}</h1>
           <p className="text-[15px] font-medium text-muted-foreground">Carregando...</p>
         </div>
 

@@ -6,7 +6,7 @@ export const loginRouteContent = {
   },
   form: {
     title: "Welcome back",
-    description: "Sign in to continue to the Thalya Modas command center.",
+    description: "Sign in to continue to the store command center.",
     emailLabel: "Email",
     emailPlaceholder: "ana@thalyamodas.com",
     passwordLabel: "Password",

@@ -1,4 +1,3 @@
-export const brandConfig = {
-  name: "Thalya Modas",
-  context: "Store management",
-};
+import { appConfig } from "./app";
+
+export const brandConfig = appConfig;

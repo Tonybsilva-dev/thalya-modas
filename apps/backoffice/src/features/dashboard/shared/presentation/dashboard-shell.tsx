@@ -2,8 +2,11 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { SignOut } from "@phosphor-icons/react";
 import {
+  Button,
   IconButton,
   Sidebar,
   SidebarContent,
@@ -13,6 +16,8 @@ import {
   cn,
 } from "@thalya-modas/ui";
 
+import { logout } from "@/src/features/auth/logout/application/logout-api";
+import { appConfig } from "@/src/shared/config/app";
 import { useAppUiStore } from "@/src/shared/state/app-ui-store";
 import { BrandMark } from "@/src/shared/ui/brand-mark";
 
@@ -64,12 +69,21 @@ function StoreSidebar({
   status,
 }: Omit<DashboardShellProps, "children"> & { className?: string }) {
   const basePath = useDashboardBasePath();
+  const router = useRouter();
   const closeMobileNavigation = useAppUiStore((state) => state.closeMobileNavigation);
+  const activeStore = useAppUiStore((state) => state.activeStore);
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      closeMobileNavigation();
+      router.push("/auth/login");
+    },
+  });
 
   return (
     <Sidebar className={cn("shrink-0", className)}>
       <SidebarHeader className="grid gap-4">
-        <BrandMark />
+        <BrandMark context={activeStore?.name ?? appConfig.context} name={appConfig.name} />
         <div className="flex items-center gap-2 bg-muted px-3 py-2 text-sm text-foreground">
           <ClockIcon className="size-4 text-success-foreground" />
           <span>{status}</span>
@@ -98,27 +112,40 @@ function StoreSidebar({
         })}
       </SidebarContent>
 
-      <SidebarFooter className="flex items-center gap-3 p-6">
-        <div className="flex size-9 items-center justify-center bg-muted text-sm font-semibold text-foreground">
-          AR
+      <SidebarFooter className="grid gap-3 p-6">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center bg-muted text-sm font-semibold text-foreground">
+            AR
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">Ana Ribeiro</p>
+            <p className="truncate text-xs text-muted-foreground">{operatorRole}</p>
+          </div>
+          <IconButton
+            aria-label="Open settings"
+            asChild
+            className={cn(
+              "size-9 bg-muted text-muted-foreground",
+              settingsActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+            )}
+            variant="ghost"
+          >
+            <Link href={`${basePath}/settings`}>
+              <GearIcon className="size-4" />
+            </Link>
+          </IconButton>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">Ana Ribeiro</p>
-          <p className="truncate text-xs text-muted-foreground">{operatorRole}</p>
-        </div>
-        <IconButton
-          aria-label="Open settings"
-          asChild
-          className={cn(
-            "size-9 bg-muted text-muted-foreground",
-            settingsActive && "bg-sidebar-accent text-sidebar-accent-foreground",
-          )}
-          variant="ghost"
+
+        <Button
+          aria-label="Sign out"
+          className="h-10 w-full justify-start border-sidebar-border px-3 text-sidebar-foreground"
+          disabled={logoutMutation.isPending}
+          onClick={() => logoutMutation.mutate()}
+          variant="outline"
         >
-          <Link href={`${basePath}/settings`}>
-            <GearIcon className="size-4" />
-          </Link>
-        </IconButton>
+          <SignOut className="size-4" />
+          {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
@@ -126,10 +153,11 @@ function StoreSidebar({
 
 function MobileHeader() {
   const toggleMobileNavigation = useAppUiStore((state) => state.toggleMobileNavigation);
+  const activeStore = useAppUiStore((state) => state.activeStore);
 
   return (
     <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 lg:hidden">
-      <BrandMark />
+      <BrandMark context={activeStore?.name ?? appConfig.context} name={appConfig.name} />
       <IconButton aria-label="Open navigation" onClick={toggleMobileNavigation} variant="ghost">
         <MenuIcon className="size-5" />
       </IconButton>

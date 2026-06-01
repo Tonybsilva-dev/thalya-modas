@@ -18,6 +18,22 @@ export function createAuthSessionCookie(token: string, maxAge: number): string {
 	return attributes.join('; ');
 }
 
+export function createExpiredAuthSessionCookie(): string {
+	const attributes = [
+		`${authSessionCookieName}=`,
+		'Path=/',
+		'Max-Age=0',
+		'HttpOnly',
+		'SameSite=Lax',
+	];
+
+	if (env.NODE_ENV === 'production') {
+		attributes.push('Secure');
+	}
+
+	return attributes.join('; ');
+}
+
 export function getAuthSessionTokenFromCookieHeader(
 	cookieHeader: string | string[] | undefined,
 ): string | null {

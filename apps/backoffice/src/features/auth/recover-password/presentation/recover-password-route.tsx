@@ -2,13 +2,26 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Button, Card, CardContent, Input, Label, cn } from "@thalya-modas/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  IconButton,
+  Input,
+  Label,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  cn,
+} from "@thalya-modas/ui";
 
 import {
   recoverPasswordContent,
   type RecoverPasswordStep,
 } from "../domain/recover-password-content";
 import {
+  ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
   LockIcon,
@@ -18,6 +31,7 @@ import {
 } from "./recover-password-icons";
 
 type RecoverPasswordRouteProps = {
+  brandName?: string;
   step: RecoverPasswordStep;
 };
 
@@ -30,6 +44,13 @@ const nextHref: Record<RecoverPasswordStep, string> = {
   success: "/manager/dashboard",
 };
 
+const previousHref: Partial<Record<RecoverPasswordStep, string>> = {
+  code: "/recover-password",
+  request: "/auth/login",
+  reset: "/recover-password/code",
+  success: "/auth/login",
+};
+
 function FieldIcon({ children }: { children: ReactNode }) {
   return (
     <span className="pointer-events-none absolute left-3 top-1/2 flex size-4 -translate-y-1/2 items-center justify-center text-muted-foreground">
@@ -39,9 +60,11 @@ function FieldIcon({ children }: { children: ReactNode }) {
 }
 
 function RecoveryShell({
+  brandName,
   children,
   step,
 }: {
+  brandName?: string;
   children: ReactNode;
   step: RecoverPasswordStep;
 }) {
@@ -57,7 +80,7 @@ function RecoveryShell({
                 <StoreIcon className="size-[22px]" />
               </div>
               <span className="text-lg font-semibold">
-                {recoverPasswordContent.shared.brand}
+                {brandName ?? recoverPasswordContent.shared.brand}
               </span>
             </div>
 
@@ -94,7 +117,7 @@ function StepIndicator({ step }: { step: RecoverPasswordStep }) {
   const activeIndex = stepOrder.indexOf(step);
 
   return (
-    <div className="flex w-full max-w-[520px] gap-2">
+    <div className="flex w-full max-w-[520px] justify-end gap-2">
       {stepOrder.map((item, index) => (
         <div
           key={item}
@@ -136,23 +159,65 @@ function LinkButton({
   children,
   href,
   variant = "default",
+  className,
 }: {
   children: ReactNode;
+  className?: string;
   href: string;
   variant?: "default" | "outline";
 }) {
   return (
-    <Button asChild className="h-11 w-full justify-center" variant={variant}>
+    <Button asChild className={cn("h-11 w-full justify-center", className)} variant={variant}>
       <Link href={href}>{children}</Link>
     </Button>
   );
 }
 
-function RequestStep() {
+function BackIconLinkButton({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}) {
+  return (
+    <TooltipProvider delayDuration={250}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <IconButton aria-label={label} asChild className="size-11 shrink-0" variant="outline">
+            <Link href={href}>
+              <ArrowLeftIcon className="size-4" />
+            </Link>
+          </IconButton>
+        </TooltipTrigger>
+        <TooltipContent side="top">{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function ActionRow({
+  backHref,
+  backLabel,
+  children,
+}: {
+  backHref: string;
+  backLabel: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <BackIconLinkButton href={backHref} label={backLabel} />
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+function RequestStep({ brandName }: { brandName?: string }) {
   const content = recoverPasswordContent.request;
 
   return (
-    <RecoveryShell step="request">
+    <RecoveryShell brandName={brandName} step="request">
       <RecoveryCard>
         <CardIntro description={content.description} title={content.title} />
 
@@ -173,23 +238,25 @@ function RequestStep() {
           </div>
         </div>
 
-        <LinkButton href={nextHref.request}>
-          {content.primaryAction}
-          <ArrowRightIcon className="size-4" />
-        </LinkButton>
-        <LinkButton href="/auth/login" variant="outline">
-          {content.secondaryAction}
-        </LinkButton>
+        <ActionRow
+          backHref={previousHref.request ?? "/auth/login"}
+          backLabel={recoverPasswordContent.shared.backToLogin}
+        >
+          <LinkButton href={nextHref.request}>
+            {content.primaryAction}
+            <ArrowRightIcon className="size-4" />
+          </LinkButton>
+        </ActionRow>
       </RecoveryCard>
     </RecoveryShell>
   );
 }
 
-function CodeStep() {
+function CodeStep({ brandName }: { brandName?: string }) {
   const content = recoverPasswordContent.code;
 
   return (
-    <RecoveryShell step="code">
+    <RecoveryShell brandName={brandName} step="code">
       <RecoveryCard>
         <CardIntro description={content.description} title={content.title} />
 
@@ -207,10 +274,15 @@ function CodeStep() {
           ))}
         </div>
 
-        <LinkButton href={nextHref.code}>
-          {content.primaryAction}
-          <ArrowRightIcon className="size-4" />
-        </LinkButton>
+        <ActionRow
+          backHref={previousHref.code ?? "/recover-password"}
+          backLabel={recoverPasswordContent.shared.backToEmail}
+        >
+          <LinkButton href={nextHref.code}>
+            {content.primaryAction}
+            <ArrowRightIcon className="size-4" />
+          </LinkButton>
+        </ActionRow>
         <Button className="h-11 w-full justify-center" variant="outline">
           {content.secondaryAction}
         </Button>
@@ -219,11 +291,11 @@ function CodeStep() {
   );
 }
 
-function ResetStep() {
+function ResetStep({ brandName }: { brandName?: string }) {
   const content = recoverPasswordContent.reset;
 
   return (
-    <RecoveryShell step="reset">
+    <RecoveryShell brandName={brandName} step="reset">
       <RecoveryCard>
         <CardIntro description={content.description} title={content.title} />
 
@@ -253,20 +325,25 @@ function ResetStep() {
           <p className="text-sm leading-5 text-muted-foreground">{content.hint}</p>
         </div>
 
-        <LinkButton href={nextHref.reset}>
-          {content.primaryAction}
-          <ArrowRightIcon className="size-4" />
-        </LinkButton>
+        <ActionRow
+          backHref={previousHref.reset ?? "/recover-password/code"}
+          backLabel={recoverPasswordContent.shared.backToCode}
+        >
+          <LinkButton href={nextHref.reset}>
+            {content.primaryAction}
+            <ArrowRightIcon className="size-4" />
+          </LinkButton>
+        </ActionRow>
       </RecoveryCard>
     </RecoveryShell>
   );
 }
 
-function SuccessStep() {
+function SuccessStep({ brandName }: { brandName?: string }) {
   const content = recoverPasswordContent.success;
 
   return (
-    <RecoveryShell step="success">
+    <RecoveryShell brandName={brandName} step="success">
       <RecoveryCard>
         <div className="flex gap-4">
           <div className="grid size-16 shrink-0 place-items-center border border-success-foreground bg-success text-success-foreground">
@@ -275,24 +352,26 @@ function SuccessStep() {
           <CardIntro description={content.description} title={content.title} />
         </div>
 
-        <LinkButton href={nextHref.success}>
-          {content.primaryAction}
-          <ArrowRightIcon className="size-4" />
-        </LinkButton>
-        <LinkButton href="/auth/login" variant="outline">
-          {content.secondaryAction}
-        </LinkButton>
+        <ActionRow
+          backHref={previousHref.success ?? "/auth/login"}
+          backLabel={content.secondaryAction}
+        >
+          <LinkButton href={nextHref.success}>
+            {content.primaryAction}
+            <ArrowRightIcon className="size-4" />
+          </LinkButton>
+        </ActionRow>
       </RecoveryCard>
     </RecoveryShell>
   );
 }
 
-export function RecoverPasswordRoute({ step }: RecoverPasswordRouteProps) {
+export function RecoverPasswordRoute({ brandName, step }: RecoverPasswordRouteProps) {
   const routes: Record<RecoverPasswordStep, ReactNode> = {
-    code: <CodeStep />,
-    request: <RequestStep />,
-    reset: <ResetStep />,
-    success: <SuccessStep />,
+    code: <CodeStep brandName={brandName} />,
+    request: <RequestStep brandName={brandName} />,
+    reset: <ResetStep brandName={brandName} />,
+    success: <SuccessStep brandName={brandName} />,
   };
 
   return routes[step];

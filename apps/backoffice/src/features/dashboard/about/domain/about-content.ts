@@ -13,13 +13,13 @@ export const aboutContent = {
     initials: "AG",
     name: "Agência de Desenvolvimento",
     description:
-      "Parceiro técnico responsável pelo desenvolvimento e evolução do sistema Thalya Modas.",
+      "Parceiro técnico responsável pelo desenvolvimento e evolução do Store Flow.",
     summary:
       "Esta página centraliza informações institucionais e técnicas para consulta pela equipe da loja, suporte e gestão.",
     badges: ["Sistema em evolução", "Suporte ativo"],
   },
   facts: [
-    ["Produto", "Thalya Modas"],
+    ["Produto", "Store Flow"],
     ["Versão", "1.0.0"],
     ["Última atualização", "26 mai 2026"],
     ["Canal", "Configurações > Sobre"],
@@ -47,6 +47,6 @@ export const aboutContent = {
   ],
   footer: {
     note: "Acessível pelo rodapé da aplicação ou pelo dashboard em Configurações > Sobre.",
-    copyright: "© 2026 Thalya Modas",
+    copyright: "© 2026 Store Flow",
   },
 } as const;

@@ -6,7 +6,10 @@ export const recoverPasswordContent = {
     { key: "success", width: "w-[54px]" },
   ],
   shared: {
-    brand: "Thalya Modas",
+    brand: "Store Flow",
+    backToCode: "Voltar para código",
+    backToEmail: "Voltar para e-mail",
+    backToLogin: "Voltar para login",
     bullets: [
       "Proteção para contas administrativas",
       "Código temporário por e-mail",
@@ -21,7 +24,7 @@ export const recoverPasswordContent = {
     description:
       "Informe o e-mail usado para acessar o dashboard da loja. Enviaremos um código temporário para continuar.",
     emailLabel: "E-mail",
-    emailPlaceholder: "financeiro@thalyamodas.com",
+    emailPlaceholder: "financeiro@loja.com",
     primaryAction: "Enviar código",
     secondaryAction: "Voltar para login",
   },
@@ -31,7 +34,7 @@ export const recoverPasswordContent = {
       "A verificação por código reduz o risco de acesso indevido ao painel administrativo.",
     title: "Verificar código",
     description:
-      "Digite o código enviado para financeiro@thalyamodas.com. O código expira em 10 minutos.",
+      "Digite o código enviado para financeiro@loja.com. O código expira em 10 minutos.",
     code: ["4", "8", "1", "2", "", ""],
     primaryAction: "Confirmar código",
     secondaryAction: "Reenviar código em 32s",

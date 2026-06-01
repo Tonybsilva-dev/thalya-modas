@@ -1,6 +1,6 @@
 export const dashboardOverviewContent = {
   store: {
-    name: "Thalya Modas",
+    name: "Store Flow",
     location: "Centro • Loja 01",
     status: "Open until 19:00",
     operatorInitials: "AR",
