@@ -2,7 +2,7 @@
 
 Este arquivo mapeia as rotas públicas existentes em `apps/backoffice` e traduz cada tela em funcionalidades para implementar em `apps/api` usando persistência in-memory e testes automatizados.
 
-Escopo inicial: somente rotas públicas do backoffice. Rotas protegidas do dashboard ficam para outro mapeamento.
+Escopo inicial: rotas públicas do backoffice. Rotas protegidas do dashboard foram iniciadas em seção própria abaixo.
 
 ## Convenções
 
@@ -91,6 +91,14 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 | `FEATURE_AUTH_LOGIN_ENABLED` | `POST /auth/login` | Login valida credenciais, status da conta e emite token. | Login retorna `403`; nenhum token é emitido. |
 | `FEATURE_AUTH_REGISTER_ENABLED` | `POST /auth/register` | Registro cria usuário e pode emitir token. | Registro retorna `403`; nenhum usuário é criado. |
 | `FEATURE_AUTH_SSO_ENABLED` | `POST /auth/sso/start`, se criado | Inicia fluxo SSO ou mock explícito. | SSO retorna `403` ou `501`, sem criar sessão. |
+| `FEATURE_DASHBOARD_ENABLED` | Todas `/dashboard/*` | Dashboard protegido retorna dados operacionais. | Todas as rotas de dashboard retornam `403`. |
+| `FEATURE_DASHBOARD_OVERVIEW_ENABLED` | `GET /dashboard/overview` | Retorna visão geral da loja. | Overview retorna `403`. |
+| `FEATURE_DASHBOARD_ORDERS_ENABLED` | `GET /dashboard/orders` | Retorna pedidos e filas operacionais. | Orders retorna `403`. |
+| `FEATURE_DASHBOARD_INVENTORY_ENABLED` | `GET /dashboard/inventory` | Retorna estoque e movimentações. | Inventory retorna `403`. |
+| `FEATURE_DASHBOARD_CUSTOMERS_ENABLED` | `GET /dashboard/customers` | Retorna clientes e segmentos. | Customers retorna `403`. |
+| `FEATURE_DASHBOARD_CASH_REGISTER_ENABLED` | `GET /dashboard/cash-register` | Retorna caixa, formas de pagamento e venda atual. | Cash register retorna `403`. |
+| `FEATURE_DASHBOARD_SUPPLIERS_ENABLED` | `GET /dashboard/suppliers` | Retorna fornecedores e recebimentos. | Suppliers retorna `403`. |
+| `FEATURE_DASHBOARD_REPORTS_ENABLED` | `GET /dashboard/reports` | Retorna relatórios e séries. | Reports retorna `403`. |
 | `FEATURE_PASSWORD_RECOVERY_ENABLED` | Todas `/auth/password-recovery/*` | Fluxo completo pode executar conforme switches específicos. | Todas as rotas de recuperação retornam `403`; nenhum código/token é criado. |
 | `FEATURE_PASSWORD_RECOVERY_REQUEST_ENABLED` | `POST /auth/password-recovery/request` | Gera código temporário quando aplicável. | Retorna `403`; não cria nem invalida códigos. |
 | `FEATURE_PASSWORD_RECOVERY_VERIFY_CODE_ENABLED` | `POST /auth/password-recovery/verify-code` | Valida código e emite `resetToken`. | Retorna `403`; não consome tentativas. |
@@ -106,6 +114,39 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 - [x] Quando `FEATURE_PASSWORD_RECOVERY_VERIFY_CODE_ENABLED=false`, verify retorna `403` e não incrementa tentativas.
 - [x] Quando `FEATURE_PASSWORD_RECOVERY_RESEND_CODE_ENABLED=false`, resend retorna `403` e não invalida o código atual.
 - [x] Quando `FEATURE_PASSWORD_RECOVERY_RESET_ENABLED=false`, reset retorna `403` e não altera a senha.
+- [x] Quando `FEATURE_DASHBOARD_ENABLED=false`, rotas de dashboard retornam `403`.
+- [x] Quando um kill switch individual do dashboard está desligado, somente a rota correspondente retorna `403`.
+
+## Rotas protegidas do dashboard
+
+### Estratégia inicial
+
+- [x] Criar read model in-memory para o dashboard antes de persistência transacional.
+- [x] Proteger todas as rotas com autenticação por `Authorization: Bearer <token>` ou cookie `@thalya-modas:session`.
+- [x] Documentar contratos no Swagger.
+- [x] Adicionar kill switch global e individual por módulo.
+- [x] Adicionar testes de integração para autenticação, resposta feliz e kill switch.
+- [ ] Conectar backoffice às APIs protegidas via React Query.
+- [ ] Evoluir read models para Prisma/Postgres conforme cada módulo ganhar regras de escrita.
+
+### Mapeamento inicial implementado
+
+| Rota | Tela do backoffice | Status de API |
+| --- | --- | --- |
+| `GET /dashboard/overview` | `dashboard-local-store-management--overview-route` | In-memory implementado |
+| `GET /dashboard/orders` | `dashboard-local-store-management--orders-route` | In-memory implementado |
+| `GET /dashboard/inventory` | `dashboard-local-store-management--inventory-route` | In-memory implementado |
+| `GET /dashboard/customers` | `dashboard-local-store-management--customers-route` | In-memory implementado |
+| `GET /dashboard/cash-register` | `dashboard-local-store-management--cash-register-route` | In-memory implementado |
+| `GET /dashboard/suppliers` | `dashboard-local-store-management--suppliers-route` | In-memory implementado |
+| `GET /dashboard/reports` | `dashboard-local-store-management--reports-route` | In-memory implementado |
+
+### Próximas pendências protegidas
+
+- [ ] Mapear e implementar detalhes de cliente: `GET /dashboard/customers/:customerId`.
+- [ ] Mapear e implementar promissória do cliente: `GET /dashboard/customers/:customerId/promissory`.
+- [ ] Mapear ações de escrita para pedidos, estoque, caixa, fornecedores e relatórios.
+- [ ] Definir contratos de paginação/filtros com `page`, `perPage`, `q`, `status` e período.
 
 ## Estratégia Prisma/Postgres
 

@@ -7,6 +7,7 @@ import { healthcheckRoutes } from '../../../src/app/http/healthcheck/healthcheck
 import { errorHandler } from '../../../src/app/http/middlewares/error-handler';
 import traceIdPlugin from '../../../src/app/http/middlewares/trace-id';
 import { authRoutes } from '../../../src/app/http/routes/auth.routes';
+import { dashboardRoutes } from '../../../src/app/http/routes/dashboard.routes';
 import { onboardingRoutes } from '../../../src/app/http/routes/onboarding.routes';
 import type { OnboardingRepository } from '../../../src/core/domain/repositories/onboarding-repository';
 import type { PasswordRecoveryRepository } from '../../../src/core/domain/repositories/password-recovery-repository';
@@ -14,6 +15,7 @@ import type { StoreRepository } from '../../../src/core/domain/repositories/stor
 import type { UserRepository } from '../../../src/core/domain/repositories/user-repository';
 import {
 	InMemoryOnboardingRepository,
+	InMemoryDashboardRepository,
 	InMemoryPasswordRecoveryRepository,
 	InMemoryStoreRepository,
 } from '../../../src/core/infra/persistence';
@@ -78,6 +80,7 @@ export async function createTestServer(
 	// Usa o repositório fornecido ou cria um mock
 	const repository = userRepository ?? new MockUserRepository();
 	container.setUserRepository(repository);
+	container.setDashboardRepository(new InMemoryDashboardRepository());
 	container.setPasswordRecoveryRepository(
 		options.passwordRecoveryRepository ??
 			new InMemoryPasswordRecoveryRepository(),
@@ -91,6 +94,7 @@ export async function createTestServer(
 
 	// Registra rotas de autenticação (depois do Swagger estar registrado)
 	await server.register(authRoutes, { container });
+	await server.register(dashboardRoutes, { container });
 	await server.register(onboardingRoutes, { container });
 
 	// Registra rota raiz para testes

@@ -6,6 +6,7 @@ import swaggerUI from '@fastify/swagger-ui';
 import fastify from 'fastify';
 import {
 	InMemoryOnboardingRepository,
+	InMemoryDashboardRepository,
 	InMemoryPasswordRecoveryRepository,
 	InMemoryStoreRepository,
 	InMemoryUserRepository,
@@ -25,6 +26,7 @@ import { errorHandler } from './middlewares/error-handler';
 import performancePlugin from './middlewares/performance';
 import traceIdPlugin from './middlewares/trace-id';
 import { authRoutes } from './routes/auth.routes';
+import { dashboardRoutes } from './routes/dashboard.routes';
 import { errorExampleRoutes } from './routes/error-example.routes';
 import { internalMetricsRoutes } from './routes/internal-metrics.routes';
 import { onboardingRoutes } from './routes/onboarding.routes';
@@ -111,6 +113,7 @@ async function build() {
 	await server.register(healthcheckRoutes);
 
 	const container = new AppContainer();
+	container.setDashboardRepository(new InMemoryDashboardRepository());
 
 	if (env.PERSISTENCE_DRIVER === 'postgres') {
 		container.setUserRepository(new PrismaUserRepository(prisma));
@@ -132,6 +135,7 @@ async function build() {
 	}
 
 	await server.register(authRoutes, { container });
+	await server.register(dashboardRoutes, { container });
 	await server.register(onboardingRoutes, { container });
 	await server.register(userRoutes, { container });
 

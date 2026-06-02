@@ -1,3 +1,4 @@
+import type { DashboardRepository } from '../../core/domain/repositories/dashboard-repository';
 import type { OnboardingRepository } from '../../core/domain/repositories/onboarding-repository';
 import type { PasswordRecoveryRepository } from '../../core/domain/repositories/password-recovery-repository';
 import type { StoreRepository } from '../../core/domain/repositories/store-repository';
@@ -15,6 +16,7 @@ export class AppContainer {
 	public readonly featureFlags: FeatureFlagService;
 	public readonly jwtService: JWTService;
 	public readonly passwordHasher: Argon2PasswordHasher;
+	public dashboardRepository?: DashboardRepository;
 	public onboardingRepository?: OnboardingRepository;
 	public passwordRecoveryRepository?: PasswordRecoveryRepository;
 	public storeRepository?: StoreRepository;
@@ -32,6 +34,10 @@ export class AppContainer {
 	 */
 	setUserRepository(repository: UserRepository): void {
 		this.userRepository = repository;
+	}
+
+	setDashboardRepository(repository: DashboardRepository): void {
+		this.dashboardRepository = repository;
 	}
 
 	setPasswordRecoveryRepository(repository: PasswordRecoveryRepository): void {

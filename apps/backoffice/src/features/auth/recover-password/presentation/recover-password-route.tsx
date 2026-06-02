@@ -17,6 +17,8 @@ import {
   cn,
 } from "@thalya-modas/ui";
 
+import { BrandMark } from "@/src/shared/ui/brand-mark";
+
 import type { RecoverPasswordStep } from "../domain/recover-password-content";
 import {
   ArrowLeftIcon,
@@ -25,7 +27,6 @@ import {
   LockIcon,
   MailIcon,
   ShieldIcon,
-  StoreIcon,
 } from "./recover-password-icons";
 
 type RecoverPasswordRouteProps = {
@@ -74,14 +75,7 @@ function RecoveryShell({
       <aside className="flex min-h-[320px] flex-col justify-between gap-7 bg-secondary p-8 text-secondary-foreground sm:p-12 lg:min-h-screen">
         <div className="grid gap-7">
           <div className="grid gap-[18px]">
-            <div className="flex items-center gap-3">
-              <div className="grid size-11 place-items-center bg-primary text-primary-foreground">
-                <StoreIcon className="size-[22px]" />
-              </div>
-              <span className="text-lg font-semibold">
-                {brandName ?? t("shared.brand")}
-              </span>
-            </div>
+            <BrandMark name={brandName ?? t("shared.brand")} showContext={false} tone="light" />
 
             <div className="grid max-w-[420px] gap-3">
               <h1 className="text-[34px] font-bold leading-tight text-secondary-foreground">
