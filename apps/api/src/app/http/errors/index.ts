@@ -5,4 +5,5 @@ export * from './error-catalog';
 export * from './feature-disabled-error';
 export * from './forbidden-error';
 export * from './not-found-error';
+export * from './public-error-contract';
 export * from './validation-error';

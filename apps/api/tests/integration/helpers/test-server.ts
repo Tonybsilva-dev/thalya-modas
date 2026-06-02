@@ -8,7 +8,9 @@ import { errorHandler } from '../../../src/app/http/middlewares/error-handler';
 import traceIdPlugin from '../../../src/app/http/middlewares/trace-id';
 import { authRoutes } from '../../../src/app/http/routes/auth.routes';
 import { onboardingRoutes } from '../../../src/app/http/routes/onboarding.routes';
+import type { OnboardingRepository } from '../../../src/core/domain/repositories/onboarding-repository';
 import type { PasswordRecoveryRepository } from '../../../src/core/domain/repositories/password-recovery-repository';
+import type { StoreRepository } from '../../../src/core/domain/repositories/store-repository';
 import type { UserRepository } from '../../../src/core/domain/repositories/user-repository';
 import {
 	InMemoryOnboardingRepository,
@@ -32,7 +34,9 @@ export async function createTestServer(
 	userRepository?: UserRepository,
 	options: {
 		featureFlags?: Partial<FeatureFlagMap>;
+		onboardingRepository?: OnboardingRepository;
 		passwordRecoveryRepository?: PasswordRecoveryRepository;
+		storeRepository?: StoreRepository;
 	} = {},
 ): Promise<FastifyInstance> {
 	// Cria servidor Fastify para testes
@@ -78,8 +82,12 @@ export async function createTestServer(
 		options.passwordRecoveryRepository ??
 			new InMemoryPasswordRecoveryRepository(),
 	);
-	container.setStoreRepository(new InMemoryStoreRepository());
-	container.setOnboardingRepository(new InMemoryOnboardingRepository());
+	container.setStoreRepository(
+		options.storeRepository ?? new InMemoryStoreRepository(),
+	);
+	container.setOnboardingRepository(
+		options.onboardingRepository ?? new InMemoryOnboardingRepository(),
+	);
 
 	// Registra rotas de autenticação (depois do Swagger estar registrado)
 	await server.register(authRoutes, { container });

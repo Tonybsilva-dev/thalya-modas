@@ -1,16 +1,11 @@
-export type ApiErrorPayload = {
-  error?: string;
-  message?: string;
-  userMessage?: string;
-  traceId?: string;
-};
+import { type NormalizedApiError, normalizeApiErrorPayload } from "./api-error";
 
 export class ApiRequestError extends Error {
-  readonly payload: ApiErrorPayload;
+  readonly payload: NormalizedApiError;
   readonly status: number;
 
-  constructor(status: number, payload: ApiErrorPayload) {
-    super(payload.userMessage ?? payload.message ?? "Unable to complete request.");
+  constructor(status: number, payload: NormalizedApiError) {
+    super(payload.userMessage);
     this.name = "ApiRequestError";
     this.payload = payload;
     this.status = status;
@@ -41,16 +36,8 @@ export async function apiRequest<TResponse>(
     : undefined;
 
   if (!response.ok) {
-    throw new ApiRequestError(response.status, normalizeErrorPayload(payload));
+    throw new ApiRequestError(response.status, normalizeApiErrorPayload(response.status, payload));
   }
 
   return payload as TResponse;
-}
-
-function normalizeErrorPayload(payload: unknown): ApiErrorPayload {
-  if (!payload || typeof payload !== "object") {
-    return { message: "Unable to complete request." };
-  }
-
-  return payload as ApiErrorPayload;
 }

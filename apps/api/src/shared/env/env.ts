@@ -100,6 +100,7 @@ const envSchema = z.object({
 	FEATURE_PASSWORD_RECOVERY_VERIFY_CODE_ENABLED: booleanFlag(true),
 	FEATURE_PASSWORD_RECOVERY_RESEND_CODE_ENABLED: booleanFlag(true),
 	FEATURE_PASSWORD_RECOVERY_RESET_ENABLED: booleanFlag(true),
+	SEED_PREVIEW_USER_ENABLED: booleanFlag(false),
 });
 
 export type Env = z.infer<typeof envSchema>;

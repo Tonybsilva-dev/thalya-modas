@@ -139,7 +139,8 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
 - [x] `src/core/infra/persistence/prisma/index.ts`
 - [x] `DATABASE_URL` em `.env.example`
 - [x] `docker/compose.yml` com Postgres para desenvolvimento.
-- [ ] Adicionar testes de integração específicos contra Prisma/Postgres em ambiente de banco.
+- [x] Adicionar testes de integração específicos contra Prisma/Postgres em ambiente de banco.
+  - Testes opt-in via `RUN_PRISMA_INTEGRATION_TESTS=true`.
 
 ## Estratégia de erros
 
@@ -148,8 +149,8 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
 - [x] Usar RFC 9457 Problem Details como formato base para erros HTTP.
 - [x] Manter compatibilidade temporária com o formato atual (`error`, `message`, `details`, `traceId`).
 - [x] Criar catálogo de erros com `code`, `acronym`, `level`, `category`, `status`, `title` e `type`.
-- [ ] Exportar tipos compartilháveis para o backoffice consumir respostas da API em telas globais e toasts.
-- [ ] Criar parser no backoffice para transformar erro HTTP em mensagem visual padronizada.
+- [x] Exportar tipos compartilháveis para o backoffice consumir respostas da API em telas globais e toasts.
+- [x] Criar parser no backoffice para transformar erro HTTP em mensagem visual padronizada.
 
 ### Convenção de códigos
 
@@ -214,7 +215,7 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
 - [x] Adicionar etapa de endereço.
 - [x] Adicionar etapa de preferências operacionais.
 - [x] Adicionar testes específicos para documento duplicado, telefone inválido e conclusão sem perfil.
-- [ ] Levar `Store` e `Onboarding` para Prisma/Postgres depois dos contratos estabilizarem.
+- [x] Levar `Store` e `Onboarding` para Prisma/Postgres depois dos contratos estabilizarem.
 
 ## `/auth/login`
 
@@ -237,9 +238,9 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
   - `user.accountStatus`
   - `token`
   - `expiresIn`
-- [ ] Adicionar seed in-memory para usuário de preview:
+- [x] Adicionar seed para usuário de preview:
   - e-mail sugerido: `ana@thalyamodas.com`
-  - senha sugerida: `password`
+  - senha sugerida: `Password123`
   - role de gerente/admin compatível com rotas `/manager/dashboard`.
 - [x] Definir comportamento de “Remember me”:
   - receber `rememberMe?: boolean`

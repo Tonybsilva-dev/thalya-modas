@@ -14,6 +14,7 @@ import {
 	PrismaStoreRepository,
 	PrismaUserRepository,
 	prisma,
+	seedPreviewUser,
 } from '../../core/infra/persistence';
 import { env } from '../../shared/env';
 import { getSwaggerConfig } from './config/swagger.config';
@@ -118,6 +119,9 @@ async function build() {
 		);
 		container.setStoreRepository(new PrismaStoreRepository(prisma));
 		container.setOnboardingRepository(new PrismaOnboardingRepository(prisma));
+		if (env.SEED_PREVIEW_USER_ENABLED) {
+			await seedPreviewUser(prisma);
+		}
 	} else {
 		container.setUserRepository(new InMemoryUserRepository());
 		container.setPasswordRecoveryRepository(
