@@ -19,6 +19,7 @@ import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
+import { useDashboardInventoryQuery } from "../../shared/application/dashboard-api";
 import {
   BoxIcon,
   ChartIcon,
@@ -30,7 +31,7 @@ import {
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { inventoryContentByLocale } from "../domain/inventory-content";
 
-const toneStyles = {
+const toneStyles: Record<string, string> = {
   success: "bg-success text-success-foreground",
   info: "bg-info text-info-foreground",
   warning: "bg-warning text-warning-foreground",
@@ -40,7 +41,35 @@ const toneStyles = {
 const metricIcons = [BoxIcon, ClockIcon, CheckIcon, ChartIcon];
 
 function useInventoryContent() {
-  return inventoryContentByLocale[normalizeLocale(useLocale())];
+  const fallback = inventoryContentByLocale[normalizeLocale(useLocale())];
+  const { data } = useDashboardInventoryQuery();
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    metrics: data.summary.map((metric) => [
+      metric.label,
+      metric.value,
+      metric.description,
+      metric.tone,
+    ]),
+    table: {
+      ...fallback.table,
+      rows: data.products.map((product) => [
+        String(product.product ?? ""),
+        String(product.sku ?? ""),
+        String(product.stock ?? ""),
+        String(product.minimum ?? ""),
+        "Loja",
+        String(product.status ?? ""),
+      ]),
+    },
+    activity: data.movements.map((movement) => [
+      `${String(movement.type ?? "")} ${String(movement.sku ?? "")}`,
+      String(movement.date ?? ""),
+    ]),
+  };
 }
 
 function InventoryHeader() {

@@ -20,6 +20,7 @@ import { CreditCard, CurrencyDollar, QrCode } from "@phosphor-icons/react";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
+import { useDashboardCashRegisterQuery } from "../../shared/application/dashboard-api";
 import {
   BoxIcon,
   ChartIcon,
@@ -31,7 +32,7 @@ import {
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { cashRegisterContentByLocale } from "../domain/cash-register-content";
 
-const toneStyles = {
+const toneStyles: Record<string, string> = {
   success: "bg-success text-success-foreground",
   info: "bg-info text-info-foreground",
   warning: "bg-warning text-warning-foreground",
@@ -42,7 +43,38 @@ const metricIcons = [ChartIcon, CheckIcon, BoxIcon, ClockIcon];
 const paymentIcons = [CreditCard, QrCode, CurrencyDollar];
 
 function useCashRegisterContent() {
-  return cashRegisterContentByLocale[normalizeLocale(useLocale())];
+  const fallback = cashRegisterContentByLocale[normalizeLocale(useLocale())];
+  const { data } = useDashboardCashRegisterQuery();
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    metrics: data.summary.map((metric) => [
+      metric.label,
+      metric.value,
+      metric.description,
+      metric.tone,
+    ]),
+    paymentMethods: data.paymentMethods.map((method, index) => [
+      String(method.method ?? ""),
+      String(method.amount ?? ""),
+      index === 0 ? "secondary" : "muted",
+    ]),
+    currentSale: {
+      ...fallback.currentSale,
+      rows: data.currentSale.map((sale) => [
+        String(sale.item ?? ""),
+        String(sale.quantity ?? ""),
+        String(sale.price ?? ""),
+        String(sale.total ?? ""),
+      ]),
+    },
+    transactions: data.closingTasks.map((task) => [
+      String(task.task ?? ""),
+      String(task.status ?? ""),
+    ]),
+  };
 }
 
 function CashRegisterHeader() {

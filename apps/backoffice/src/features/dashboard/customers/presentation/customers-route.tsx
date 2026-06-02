@@ -20,6 +20,7 @@ import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
+import { useDashboardCustomersQuery } from "../../shared/application/dashboard-api";
 import {
   BoxIcon,
   ChartIcon,
@@ -31,7 +32,7 @@ import {
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { customersContentByLocale } from "../domain/customers-content";
 
-const toneStyles = {
+const toneStyles: Record<string, string> = {
   success: "bg-success text-success-foreground",
   info: "bg-info text-info-foreground",
   warning: "bg-warning text-warning-foreground",
@@ -41,7 +42,40 @@ const toneStyles = {
 const metricIcons = [UsersIcon, CheckIcon, BoxIcon, ChartIcon];
 
 function useCustomersContent() {
-  return customersContentByLocale[normalizeLocale(useLocale())];
+  const fallback = customersContentByLocale[normalizeLocale(useLocale())];
+  const { data } = useDashboardCustomersQuery();
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    metrics: data.summary.map((metric) => [
+      metric.label,
+      metric.value,
+      metric.description,
+      metric.tone,
+    ]),
+    table: {
+      ...fallback.table,
+      rows: data.customers.map((customer) => [
+        String(customer.name ?? ""),
+        String(customer.phone ?? "-"),
+        String(customer.lastPurchase ?? "-"),
+        String(customer.totalSpent ?? "-"),
+        String(customer.status ?? "-"),
+        "WhatsApp",
+      ]),
+    },
+    rail: {
+      ...fallback.rail,
+      name: String(data.customers[0]?.name ?? fallback.rail.name),
+      description: String(data.customers[0]?.status ?? fallback.rail.description),
+      stats: [
+        ["Lifetime", String(data.customers[0]?.totalSpent ?? "-")],
+        ["Last buy", String(data.customers[0]?.lastPurchase ?? "-")],
+      ],
+    },
+  };
 }
 
 function CustomersHeader() {

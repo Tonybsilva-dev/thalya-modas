@@ -19,6 +19,7 @@ import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
+import { useDashboardSuppliersQuery } from "../../shared/application/dashboard-api";
 import {
   BoxIcon,
   ChartIcon,
@@ -30,7 +31,7 @@ import {
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { suppliersContentByLocale } from "../domain/suppliers-content";
 
-const toneStyles = {
+const toneStyles: Record<string, string> = {
   success: "bg-success text-success-foreground",
   info: "bg-info text-info-foreground",
   warning: "bg-warning text-warning-foreground",
@@ -40,7 +41,47 @@ const toneStyles = {
 const metricIcons = [BoxIcon, CheckIcon, ClockIcon, ChartIcon];
 
 function useSuppliersContent() {
-  return suppliersContentByLocale[normalizeLocale(useLocale())];
+  const fallback = suppliersContentByLocale[normalizeLocale(useLocale())];
+  const { data } = useDashboardSuppliersQuery();
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    metrics: data.summary.map((metric) => [
+      metric.label,
+      metric.value,
+      metric.description,
+      metric.tone,
+    ]),
+    table: {
+      ...fallback.table,
+      rows: data.suppliers.map((supplier) => [
+        String(supplier.name ?? ""),
+        String(supplier.id ?? ""),
+        String(supplier.nextDelivery ?? ""),
+        "-",
+        "-",
+        String(supplier.status ?? ""),
+      ]),
+    },
+    selectedSupplier: {
+      ...fallback.selectedSupplier,
+      name: String(data.suppliers[0]?.name ?? fallback.selectedSupplier.name),
+      description: String(data.suppliers[0]?.status ?? fallback.selectedSupplier.description),
+      stats: [
+        ["Next delivery", String(data.suppliers[0]?.nextDelivery ?? "-")],
+        ["Receivings", String(data.receivings.length)],
+      ],
+    },
+    deliveryPlan: {
+      ...fallback.deliveryPlan,
+      rows: data.receivings.map((receiving) => [
+        String(receiving.invoice ?? ""),
+        `${String(receiving.items ?? "")} itens`,
+      ]),
+    },
+  };
 }
 
 function SuppliersHeader() {

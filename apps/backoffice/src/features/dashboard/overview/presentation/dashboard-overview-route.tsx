@@ -19,6 +19,7 @@ import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
+import { useDashboardOverviewQuery } from "../../shared/application/dashboard-api";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { dashboardOverviewContentByLocale } from "../domain/overview-content";
 import {
@@ -29,7 +30,7 @@ import {
   SparkIcon,
 } from "./dashboard-icons";
 
-const toneStyles = {
+const toneStyles: Record<string, string> = {
   success: "bg-success text-success-foreground",
   info: "bg-info text-info-foreground",
   warning: "bg-warning text-warning-foreground",
@@ -37,7 +38,48 @@ const toneStyles = {
 };
 
 function useDashboardOverviewContent() {
-  return dashboardOverviewContentByLocale[normalizeLocale(useLocale())];
+  const fallback = dashboardOverviewContentByLocale[normalizeLocale(useLocale())];
+  const { data } = useDashboardOverviewQuery();
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    store: {
+      ...fallback.store,
+      status: data.store.status,
+      operatorRole: data.store.operatorRole,
+    },
+    header: {
+      ...fallback.header,
+      title: data.header.title,
+      description: data.header.description,
+    },
+    metrics: data.metrics,
+    salesPulse: {
+      ...fallback.salesPulse,
+      title: data.salesPulse.title,
+      description: data.salesPulse.description,
+      status: data.salesPulse.status,
+      hours: data.salesPulse.hours,
+      bars: data.salesPulse.values,
+    },
+    spotlight: data.spotlight,
+    inventory: {
+      ...fallback.inventory,
+      title: data.inventoryRisk.title,
+      description: data.inventoryRisk.description,
+      rows: data.inventoryRisk.rows.map((row) => [
+        String(row.product ?? ""),
+        String(row.sku ?? ""),
+        String(row.stock ?? ""),
+        String(row.demand ?? ""),
+        String(row.action ?? ""),
+      ]),
+    },
+    actionRail: data.actionRail,
+    checklist: data.checklist.map((item) => [item.task, item.time]),
+  };
 }
 
 function DashboardHeader() {

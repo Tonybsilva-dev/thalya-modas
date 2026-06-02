@@ -19,6 +19,7 @@ import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
+import { useDashboardOrdersQuery } from "../../shared/application/dashboard-api";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import {
   BoxIcon,
@@ -30,7 +31,7 @@ import {
 } from "../../overview/presentation/dashboard-icons";
 import { ordersContentByLocale } from "../domain/orders-content";
 
-const toneStyles = {
+const toneStyles: Record<string, string> = {
   success: "bg-success text-success-foreground",
   info: "bg-info text-info-foreground",
   warning: "bg-warning text-warning-foreground",
@@ -40,7 +41,41 @@ const toneStyles = {
 const metricIcons = [BoxIcon, CheckIcon, ClockIcon, ChartIcon];
 
 function useOrdersContent() {
-  return ordersContentByLocale[normalizeLocale(useLocale())];
+  const fallback = ordersContentByLocale[normalizeLocale(useLocale())];
+  const { data } = useDashboardOrdersQuery();
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    metrics: data.summary.map((metric) => [
+      metric.label,
+      metric.value,
+      metric.description,
+      metric.tone,
+    ]),
+    table: {
+      ...fallback.table,
+      rows: data.orders.map((order) => [
+        String(order.id ?? ""),
+        String(order.customer ?? ""),
+        String(order.channel ?? ""),
+        String(order.total ?? ""),
+        String(order.due ?? "-"),
+        String(order.status ?? ""),
+      ]),
+    },
+    selectedOrder: {
+      ...fallback.selectedOrder,
+      title: String(data.orders[0]?.id ?? fallback.selectedOrder.title),
+      description: String(data.orders[0]?.customer ?? fallback.selectedOrder.description),
+      meta: [
+        ["Status", String(data.orders[0]?.status ?? "-")],
+        ["Channel", String(data.orders[0]?.channel ?? "-")],
+        ["Total", String(data.orders[0]?.total ?? "-")],
+      ],
+    },
+  };
 }
 
 function OrdersHeader() {

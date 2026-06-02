@@ -13,6 +13,7 @@ import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
+import { useDashboardReportsQuery } from "../../shared/application/dashboard-api";
 import {
   CalendarIcon,
   ClockIcon,
@@ -27,7 +28,36 @@ import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { reportsContentByLocale } from "../domain/reports-content";
 
 function useReportsContent() {
-  return reportsContentByLocale[normalizeLocale(useLocale())];
+  const fallback = reportsContentByLocale[normalizeLocale(useLocale())];
+  const { data } = useDashboardReportsQuery();
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    metrics: data.summary.map((metric) => [
+      metric.value,
+      metric.label,
+      metric.description,
+    ]),
+    catalog: data.reports.map((report, index): [string, string, boolean] => [
+      String(report.name ?? ""),
+      String(report.status ?? ""),
+      index === 0,
+    ]),
+    preview: {
+      ...fallback.preview,
+      weeks: data.periods.map((period, index) => [
+        period,
+        data.series[0]?.values[index] ?? 0,
+      ]),
+      table: data.series.map((serie) => [
+        serie.name,
+        String(serie.values.at(-1) ?? "-"),
+        `${serie.values.length} pts`,
+      ]),
+    },
+  };
 }
 
 function ReportsHeader() {

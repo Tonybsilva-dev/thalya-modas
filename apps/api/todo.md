@@ -126,7 +126,7 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 - [x] Documentar contratos no Swagger.
 - [x] Adicionar kill switch global e individual por módulo.
 - [x] Adicionar testes de integração para autenticação, resposta feliz e kill switch.
-- [ ] Conectar backoffice às APIs protegidas via React Query.
+- [x] Conectar backoffice às APIs protegidas via React Query.
 - [ ] Evoluir read models para Prisma/Postgres conforme cada módulo ganhar regras de escrita.
 
 ### Mapeamento inicial implementado
