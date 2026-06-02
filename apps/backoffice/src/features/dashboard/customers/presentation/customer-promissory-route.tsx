@@ -10,6 +10,7 @@ import {
   CardContent,
 } from "@thalya-modas/ui";
 import { useLocale } from "next-intl";
+import { useParams } from "next/navigation";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
@@ -21,10 +22,48 @@ import {
   UsersIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
+import { useDashboardCustomerPromissoryQuery } from "../../shared/application/dashboard-api";
 import { customersContentByLocale } from "../domain/customers-content";
 
 function useCustomersContent() {
-  return customersContentByLocale[normalizeLocale(useLocale())];
+  const fallback = customersContentByLocale[normalizeLocale(useLocale())];
+  const params = useParams<{ customerId?: string }>();
+  const customerId = params.customerId ?? "mariana-costa";
+  const { data } = useDashboardCustomerPromissoryQuery(customerId);
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    promissory: {
+      ...fallback.promissory,
+      alertDescription: data.alertDescription,
+      alertTitle: data.alertTitle,
+      breadcrumb: `Customers / ${data.customerName} / Promissory`,
+      title: `Promissoria de ${data.customerName}`,
+      metrics: data.metrics.map((row) => [
+        String(row.label ?? ""),
+        String(row.value ?? ""),
+        String(row.description ?? ""),
+      ]),
+      installments: data.installments.map((row) => [
+        String(row.date ?? ""),
+        String(row.due ?? ""),
+        String(row.value ?? ""),
+        String(row.status ?? ""),
+      ]),
+      purchases: data.purchases.map((row) => [
+        String(row.title ?? ""),
+        String(row.date ?? ""),
+        String(row.value ?? ""),
+      ]),
+      timeline: data.timeline.map((row) => [
+        String(row.title ?? ""),
+        String(row.description ?? ""),
+      ]),
+      risk: data.risk,
+    },
+  };
 }
 
 function PromissoryHeader() {

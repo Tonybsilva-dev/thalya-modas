@@ -2,6 +2,8 @@ import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
 	GetDashboardCashRegisterUseCase,
+	GetDashboardCustomerDetailUseCase,
+	GetDashboardCustomerPromissoryUseCase,
 	GetDashboardCustomersUseCase,
 	GetDashboardInventoryUseCase,
 	GetDashboardOrdersUseCase,
@@ -10,6 +12,7 @@ import {
 	GetDashboardSuppliersUseCase,
 } from '../../../core/application/use-cases/dashboard';
 import {
+	createRequestSchema,
 	createResponseSchema,
 } from '../../../shared/utils/zod-to-json-schema';
 import type { AppContainer } from '../container';
@@ -23,6 +26,18 @@ const metricSchema = z.object({
 });
 
 const tableRowSchema = z.record(z.string(), z.union([z.string(), z.number()]));
+
+const listQuerySchema = z.object({
+	page: z.coerce.number().int().positive().default(1),
+	perPage: z.coerce.number().int().positive().max(100).default(20),
+	period: z.string().trim().optional(),
+	q: z.string().trim().optional(),
+	status: z.string().trim().optional(),
+});
+
+const customerParamsSchema = z.object({
+	customerId: z.string().min(1),
+});
 
 const overviewSchema = z.object({
 	store: z.object({
@@ -100,6 +115,42 @@ const customersSchema = summaryResponseSchema.extend({
 	),
 });
 
+const customerDetailSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	description: z.string(),
+	email: z.string(),
+	phone: z.string(),
+	tags: z.array(z.string()),
+	stats: z.array(tableRowSchema),
+	recentOrders: z.array(tableRowSchema),
+	notes: z.array(z.string()),
+	loyaltyTier: z.object({
+		title: z.string(),
+		description: z.string(),
+		progress: z.number(),
+	}),
+	nextActions: z.array(z.string()),
+	timeline: z.array(tableRowSchema),
+});
+
+const customerPromissorySchema = z.object({
+	customerId: z.string(),
+	customerName: z.string(),
+	alertTitle: z.string(),
+	alertDescription: z.string(),
+	metrics: z.array(tableRowSchema),
+	installments: z.array(tableRowSchema),
+	purchases: z.array(tableRowSchema),
+	timeline: z.array(tableRowSchema),
+	risk: z.object({
+		label: z.string(),
+		value: z.string(),
+		description: z.string(),
+		progress: z.number(),
+	}),
+});
+
 const cashRegisterSchema = summaryResponseSchema.extend({
 	paymentMethods: z.array(tableRowSchema),
 	currentSale: z.array(tableRowSchema),
@@ -143,6 +194,12 @@ export async function dashboardRoutes(
 		cashRegister: new GetDashboardCashRegisterUseCase(
 			container.dashboardRepository,
 		),
+		customerDetail: new GetDashboardCustomerDetailUseCase(
+			container.dashboardRepository,
+		),
+		customerPromissory: new GetDashboardCustomerPromissoryUseCase(
+			container.dashboardRepository,
+		),
 		customers: new GetDashboardCustomersUseCase(container.dashboardRepository),
 		inventory: new GetDashboardInventoryUseCase(container.dashboardRepository),
 		orders: new GetDashboardOrdersUseCase(container.dashboardRepository),
@@ -164,23 +221,42 @@ export async function dashboardRoutes(
 		description: 'Obtém dados operacionais de pedidos',
 		feature: 'dashboard.orders',
 		responseSchema: ordersSchema,
-		execute: (userId) => useCases.orders.execute({ userId }),
+		execute: (userId, query) => useCases.orders.execute({ query, userId }),
 		container,
+		withQuery: true,
 	});
 	registerReadRoute(fastify, {
 		path: '/dashboard/inventory',
 		description: 'Obtém dados de estoque e movimentações',
 		feature: 'dashboard.inventory',
 		responseSchema: inventorySchema,
-		execute: (userId) => useCases.inventory.execute({ userId }),
+		execute: (userId, query) => useCases.inventory.execute({ query, userId }),
 		container,
+		withQuery: true,
 	});
 	registerReadRoute(fastify, {
 		path: '/dashboard/customers',
 		description: 'Obtém dados de clientes e segmentos',
 		feature: 'dashboard.customers',
 		responseSchema: customersSchema,
-		execute: (userId) => useCases.customers.execute({ userId }),
+		execute: (userId, query) => useCases.customers.execute({ query, userId }),
+		container,
+		withQuery: true,
+	});
+	registerCustomerReadRoute(fastify, {
+		path: '/dashboard/customers/:customerId',
+		description: 'Obtém detalhes de um cliente',
+		responseSchema: customerDetailSchema,
+		execute: (userId, customerId) =>
+			useCases.customerDetail.execute({ customerId, userId }),
+		container,
+	});
+	registerCustomerReadRoute(fastify, {
+		path: '/dashboard/customers/:customerId/promissory',
+		description: 'Obtém promissória de um cliente',
+		responseSchema: customerPromissorySchema,
+		execute: (userId, customerId) =>
+			useCases.customerPromissory.execute({ customerId, userId }),
 		container,
 	});
 	registerReadRoute(fastify, {
@@ -196,16 +272,18 @@ export async function dashboardRoutes(
 		description: 'Obtém dados de fornecedores e recebimentos',
 		feature: 'dashboard.suppliers',
 		responseSchema: suppliersSchema,
-		execute: (userId) => useCases.suppliers.execute({ userId }),
+		execute: (userId, query) => useCases.suppliers.execute({ query, userId }),
 		container,
+		withQuery: true,
 	});
 	registerReadRoute(fastify, {
 		path: '/dashboard/reports',
 		description: 'Obtém dados dos relatórios operacionais',
 		feature: 'dashboard.reports',
 		responseSchema: reportsSchema,
-		execute: (userId) => useCases.reports.execute({ userId }),
+		execute: (userId, query) => useCases.reports.execute({ query, userId }),
 		container,
+		withQuery: true,
 	});
 }
 
@@ -224,8 +302,9 @@ function registerReadRoute<TResponse>(
 			| 'dashboard.reports'
 			| 'dashboard.suppliers';
 		responseSchema: z.ZodTypeAny;
-		execute: (userId: string) => Promise<TResponse>;
+		execute: (userId: string, query?: z.infer<typeof listQuerySchema>) => Promise<TResponse>;
 		container: AppContainer;
+		withQuery?: boolean;
 	},
 ) {
 	const preHandler = async (request: FastifyRequest, reply: unknown) => {
@@ -242,6 +321,12 @@ function registerReadRoute<TResponse>(
 				description: options.description,
 				tags: ['dashboard'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				...(options.withQuery
+					? {
+							querystring: createRequestSchema({ query: listQuerySchema })
+								.querystring,
+						}
+					: {}),
 				response: {
 					200: createResponseSchema(options.responseSchema, options.description),
 					401: createResponseSchema(
@@ -267,7 +352,53 @@ function registerReadRoute<TResponse>(
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
 		async (request: any) => {
 			const user = getAuthenticatedUser(request);
-			return options.execute(user.userId);
+			const query = options.withQuery
+				? listQuerySchema.parse(request.query ?? {})
+				: undefined;
+			return options.execute(user.userId, query);
+		},
+	);
+}
+
+function registerCustomerReadRoute<TResponse>(
+	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos, necessário type assertion
+	fastify: any,
+	options: {
+		path: string;
+		description: string;
+		responseSchema: z.ZodTypeAny;
+		execute: (userId: string, customerId: string) => Promise<TResponse>;
+		container: AppContainer;
+	},
+) {
+	const preHandler = async (request: FastifyRequest, reply: unknown) => {
+		options.container.featureFlags.assertEnabled('dashboard');
+		options.container.featureFlags.assertEnabled('dashboard.customers');
+		await authMiddleware(request, reply, options.container.jwtService);
+	};
+
+	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+	(fastify as any).get(
+		options.path,
+		{
+			schema: {
+				description: options.description,
+				tags: ['dashboard'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				params: createRequestSchema({ params: customerParamsSchema }).params,
+				response: {
+					200: createResponseSchema(options.responseSchema, options.description),
+					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
+					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+				},
+			},
+			preHandler,
+		},
+		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
+		async (request: any) => {
+			const user = getAuthenticatedUser(request);
+			const params = customerParamsSchema.parse(request.params);
+			return options.execute(user.userId, params.customerId);
 		},
 	);
 }

@@ -9,6 +9,14 @@ export type DashboardMetric = {
 
 export type DashboardTableRow = Record<string, string | number>;
 
+export type DashboardListQuery = {
+	page?: number;
+	perPage?: number;
+	period?: string;
+	q?: string;
+	status?: string;
+};
+
 export type DashboardOverview = {
 	store: {
 		name: string;
@@ -76,6 +84,42 @@ export type DashboardCustomers = {
 	}>;
 };
 
+export type DashboardCustomerDetail = {
+	id: string;
+	name: string;
+	description: string;
+	email: string;
+	phone: string;
+	tags: string[];
+	stats: DashboardTableRow[];
+	recentOrders: DashboardTableRow[];
+	notes: string[];
+	loyaltyTier: {
+		title: string;
+		description: string;
+		progress: number;
+	};
+	nextActions: string[];
+	timeline: DashboardTableRow[];
+};
+
+export type DashboardCustomerPromissory = {
+	customerId: string;
+	customerName: string;
+	alertTitle: string;
+	alertDescription: string;
+	metrics: DashboardTableRow[];
+	installments: DashboardTableRow[];
+	purchases: DashboardTableRow[];
+	timeline: DashboardTableRow[];
+	risk: {
+		label: string;
+		value: string;
+		description: string;
+		progress: number;
+	};
+};
+
 export type DashboardCashRegister = {
 	summary: DashboardMetric[];
 	paymentMethods: DashboardTableRow[];
@@ -102,6 +146,8 @@ export type DashboardReports = {
 export type DashboardReadModel =
 	| DashboardCashRegister
 	| DashboardCustomers
+	| DashboardCustomerDetail
+	| DashboardCustomerPromissory
 	| DashboardInventory
 	| DashboardOrders
 	| DashboardOverview

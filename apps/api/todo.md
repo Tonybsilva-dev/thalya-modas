@@ -143,10 +143,10 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 
 ### Próximas pendências protegidas
 
-- [ ] Mapear e implementar detalhes de cliente: `GET /dashboard/customers/:customerId`.
-- [ ] Mapear e implementar promissória do cliente: `GET /dashboard/customers/:customerId/promissory`.
+- [x] Mapear e implementar detalhes de cliente: `GET /dashboard/customers/:customerId`.
+- [x] Mapear e implementar promissória do cliente: `GET /dashboard/customers/:customerId/promissory`.
 - [ ] Mapear ações de escrita para pedidos, estoque, caixa, fornecedores e relatórios.
-- [ ] Definir contratos de paginação/filtros com `page`, `perPage`, `q`, `status` e período.
+- [x] Definir contratos de paginação/filtros com `page`, `perPage`, `q`, `status` e período.
 
 ## Estratégia Prisma/Postgres
 

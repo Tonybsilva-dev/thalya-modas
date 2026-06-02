@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { apiRequest } from "@/src/shared/api/http-client";
 
@@ -12,6 +12,14 @@ export type DashboardMetric = {
 };
 
 export type DashboardRow = Record<string, number | string>;
+
+export type DashboardListQuery = {
+  page?: number;
+  perPage?: number;
+  period?: string | null;
+  q?: string | null;
+  status?: string | null;
+};
 
 export type DashboardOverview = {
   store: {
@@ -80,6 +88,42 @@ export type DashboardCustomers = {
   }>;
 };
 
+export type DashboardCustomerDetail = {
+  id: string;
+  name: string;
+  description: string;
+  email: string;
+  phone: string;
+  tags: string[];
+  stats: DashboardRow[];
+  recentOrders: DashboardRow[];
+  notes: string[];
+  loyaltyTier: {
+    title: string;
+    description: string;
+    progress: number;
+  };
+  nextActions: string[];
+  timeline: DashboardRow[];
+};
+
+export type DashboardCustomerPromissory = {
+  customerId: string;
+  customerName: string;
+  alertTitle: string;
+  alertDescription: string;
+  metrics: DashboardRow[];
+  installments: DashboardRow[];
+  purchases: DashboardRow[];
+  timeline: DashboardRow[];
+  risk: {
+    label: string;
+    value: string;
+    description: string;
+    progress: number;
+  };
+};
+
 export type DashboardCashRegister = {
   summary: DashboardMetric[];
   paymentMethods: DashboardRow[];
@@ -107,6 +151,11 @@ const dashboardQueryOptions = {
   staleTime: 30_000,
 };
 
+const dashboardListQueryOptions = {
+  ...dashboardQueryOptions,
+  placeholderData: keepPreviousData,
+};
+
 export function useDashboardOverviewQuery() {
   return useQuery({
     queryKey: ["dashboard", "overview"],
@@ -115,27 +164,27 @@ export function useDashboardOverviewQuery() {
   });
 }
 
-export function useDashboardOrdersQuery() {
+export function useDashboardOrdersQuery(query?: DashboardListQuery) {
   return useQuery({
-    queryKey: ["dashboard", "orders"],
-    queryFn: () => apiRequest<DashboardOrders>("/dashboard/orders"),
-    ...dashboardQueryOptions,
+    queryKey: ["dashboard", "orders", query],
+    queryFn: () => apiRequest<DashboardOrders>(withDashboardQuery("/dashboard/orders", query)),
+    ...dashboardListQueryOptions,
   });
 }
 
-export function useDashboardInventoryQuery() {
+export function useDashboardInventoryQuery(query?: DashboardListQuery) {
   return useQuery({
-    queryKey: ["dashboard", "inventory"],
-    queryFn: () => apiRequest<DashboardInventory>("/dashboard/inventory"),
-    ...dashboardQueryOptions,
+    queryKey: ["dashboard", "inventory", query],
+    queryFn: () => apiRequest<DashboardInventory>(withDashboardQuery("/dashboard/inventory", query)),
+    ...dashboardListQueryOptions,
   });
 }
 
-export function useDashboardCustomersQuery() {
+export function useDashboardCustomersQuery(query?: DashboardListQuery) {
   return useQuery({
-    queryKey: ["dashboard", "customers"],
-    queryFn: () => apiRequest<DashboardCustomers>("/dashboard/customers"),
-    ...dashboardQueryOptions,
+    queryKey: ["dashboard", "customers", query],
+    queryFn: () => apiRequest<DashboardCustomers>(withDashboardQuery("/dashboard/customers", query)),
+    ...dashboardListQueryOptions,
   });
 }
 
@@ -147,18 +196,53 @@ export function useDashboardCashRegisterQuery() {
   });
 }
 
-export function useDashboardSuppliersQuery() {
+export function useDashboardCustomerDetailQuery(customerId: string) {
   return useQuery({
-    queryKey: ["dashboard", "suppliers"],
-    queryFn: () => apiRequest<DashboardSuppliers>("/dashboard/suppliers"),
+    enabled: Boolean(customerId),
+    queryKey: ["dashboard", "customers", customerId],
+    queryFn: () => apiRequest<DashboardCustomerDetail>(`/dashboard/customers/${customerId}`),
     ...dashboardQueryOptions,
   });
 }
 
-export function useDashboardReportsQuery() {
+export function useDashboardCustomerPromissoryQuery(customerId: string) {
   return useQuery({
-    queryKey: ["dashboard", "reports"],
-    queryFn: () => apiRequest<DashboardReports>("/dashboard/reports"),
+    enabled: Boolean(customerId),
+    queryKey: ["dashboard", "customers", customerId, "promissory"],
+    queryFn: () =>
+      apiRequest<DashboardCustomerPromissory>(`/dashboard/customers/${customerId}/promissory`),
     ...dashboardQueryOptions,
   });
+}
+
+export function useDashboardSuppliersQuery(query?: DashboardListQuery) {
+  return useQuery({
+    queryKey: ["dashboard", "suppliers", query],
+    queryFn: () => apiRequest<DashboardSuppliers>(withDashboardQuery("/dashboard/suppliers", query)),
+    ...dashboardListQueryOptions,
+  });
+}
+
+export function useDashboardReportsQuery(query?: DashboardListQuery) {
+  return useQuery({
+    queryKey: ["dashboard", "reports", query],
+    queryFn: () => apiRequest<DashboardReports>(withDashboardQuery("/dashboard/reports", query)),
+    ...dashboardListQueryOptions,
+  });
+}
+
+function withDashboardQuery(path: string, query?: DashboardListQuery) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (
+      value !== undefined &&
+      value !== null &&
+      value !== "" &&
+      value !== "all"
+    ) {
+      params.set(key, String(value));
+    }
+  }
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
 }

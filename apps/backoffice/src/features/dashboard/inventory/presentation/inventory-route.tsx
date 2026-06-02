@@ -15,11 +15,11 @@ import {
   cn,
 } from "@thalya-modas/ui";
 import { useLocale } from "next-intl";
-import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { useDashboardInventoryQuery } from "../../shared/application/dashboard-api";
+import { useInventoryFilters } from "../../shared/application/dashboard-filters";
 import {
   BoxIcon,
   ChartIcon,
@@ -42,7 +42,8 @@ const metricIcons = [BoxIcon, ClockIcon, CheckIcon, ChartIcon];
 
 function useInventoryContent() {
   const fallback = inventoryContentByLocale[normalizeLocale(useLocale())];
-  const { data } = useDashboardInventoryQuery();
+  const { query } = useInventoryFilters();
+  const { data } = useDashboardInventoryQuery(query);
 
   if (!data) return fallback;
 
@@ -73,7 +74,7 @@ function useInventoryContent() {
 }
 
 function InventoryHeader() {
-  const [search, setSearch] = useQueryState("q", { defaultValue: "" });
+  const { q: search, setQ: setSearch } = useInventoryFilters();
   const { header } = useInventoryContent();
 
   return (
@@ -140,7 +141,7 @@ function InventoryMetrics() {
 }
 
 function InventoryFilterBar() {
-  const [filter, setFilter] = useQueryState("filter", { defaultValue: "all" });
+  const { setStatus: setFilter, status: filter } = useInventoryFilters();
   const content = useInventoryContent();
 
   return (

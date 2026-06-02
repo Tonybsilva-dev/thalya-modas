@@ -9,11 +9,11 @@ import {
   cn,
 } from "@thalya-modas/ui";
 import { useLocale } from "next-intl";
-import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { useDashboardReportsQuery } from "../../shared/application/dashboard-api";
+import { useReportsFilters } from "../../shared/application/dashboard-filters";
 import {
   CalendarIcon,
   ClockIcon,
@@ -29,7 +29,8 @@ import { reportsContentByLocale } from "../domain/reports-content";
 
 function useReportsContent() {
   const fallback = reportsContentByLocale[normalizeLocale(useLocale())];
-  const { data } = useDashboardReportsQuery();
+  const { query } = useReportsFilters();
+  const { data } = useDashboardReportsQuery(query);
 
   if (!data) return fallback;
 
@@ -92,7 +93,7 @@ function ReportsHeader() {
 }
 
 function ReportFilters() {
-  const [search, setSearch] = useQueryState("q", { defaultValue: "" });
+  const { q: search, setQ: setSearch } = useReportsFilters();
   const controlIcons = [CalendarIcon, StoreIcon, FileTextIcon];
   const content = useReportsContent();
   const labels = "labels" in content ? content.labels : { filters: "Filters" };

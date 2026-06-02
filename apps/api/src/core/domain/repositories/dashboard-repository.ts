@@ -1,7 +1,10 @@
 import type {
 	DashboardCashRegister,
 	DashboardCustomers,
+	DashboardCustomerDetail,
+	DashboardCustomerPromissory,
 	DashboardInventory,
+	DashboardListQuery,
 	DashboardOrders,
 	DashboardOverview,
 	DashboardReports,
@@ -10,10 +13,12 @@ import type {
 
 export interface DashboardRepository {
 	getOverview(userId: string): Promise<DashboardOverview>;
-	getOrders(userId: string): Promise<DashboardOrders>;
-	getInventory(userId: string): Promise<DashboardInventory>;
-	getCustomers(userId: string): Promise<DashboardCustomers>;
+	getOrders(userId: string, query?: DashboardListQuery): Promise<DashboardOrders>;
+	getInventory(userId: string, query?: DashboardListQuery): Promise<DashboardInventory>;
+	getCustomers(userId: string, query?: DashboardListQuery): Promise<DashboardCustomers>;
+	getCustomerDetail(userId: string, customerId: string): Promise<DashboardCustomerDetail>;
+	getCustomerPromissory(userId: string, customerId: string): Promise<DashboardCustomerPromissory>;
 	getCashRegister(userId: string): Promise<DashboardCashRegister>;
-	getSuppliers(userId: string): Promise<DashboardSuppliers>;
-	getReports(userId: string): Promise<DashboardReports>;
+	getSuppliers(userId: string, query?: DashboardListQuery): Promise<DashboardSuppliers>;
+	getReports(userId: string, query?: DashboardListQuery): Promise<DashboardReports>;
 }

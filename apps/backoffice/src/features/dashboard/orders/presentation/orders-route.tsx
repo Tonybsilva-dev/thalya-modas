@@ -15,11 +15,11 @@ import {
   cn,
 } from "@thalya-modas/ui";
 import { useLocale } from "next-intl";
-import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { useDashboardOrdersQuery } from "../../shared/application/dashboard-api";
+import { useOrdersFilters } from "../../shared/application/dashboard-filters";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import {
   BoxIcon,
@@ -42,7 +42,8 @@ const metricIcons = [BoxIcon, CheckIcon, ClockIcon, ChartIcon];
 
 function useOrdersContent() {
   const fallback = ordersContentByLocale[normalizeLocale(useLocale())];
-  const { data } = useDashboardOrdersQuery();
+  const { query } = useOrdersFilters();
+  const { data } = useDashboardOrdersQuery(query);
 
   if (!data) return fallback;
 
@@ -79,7 +80,7 @@ function useOrdersContent() {
 }
 
 function OrdersHeader() {
-  const [search, setSearch] = useQueryState("q", { defaultValue: "" });
+  const { q: search, setQ: setSearch } = useOrdersFilters();
   const { header } = useOrdersContent();
 
   return (
@@ -142,7 +143,7 @@ function OrdersMetrics() {
 }
 
 function FilterBar() {
-  const [status, setStatus] = useQueryState("status", { defaultValue: "all" });
+  const { setStatus, status } = useOrdersFilters();
   const content = useOrdersContent();
 
   return (

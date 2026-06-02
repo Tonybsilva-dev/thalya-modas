@@ -16,11 +16,11 @@ import {
   cn,
 } from "@thalya-modas/ui";
 import { useLocale } from "next-intl";
-import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { useDashboardCustomersQuery } from "../../shared/application/dashboard-api";
+import { useCustomersFilters } from "../../shared/application/dashboard-filters";
 import {
   BoxIcon,
   ChartIcon,
@@ -43,7 +43,8 @@ const metricIcons = [UsersIcon, CheckIcon, BoxIcon, ChartIcon];
 
 function useCustomersContent() {
   const fallback = customersContentByLocale[normalizeLocale(useLocale())];
-  const { data } = useDashboardCustomersQuery();
+  const { query } = useCustomersFilters();
+  const { data } = useDashboardCustomersQuery(query);
 
   if (!data) return fallback;
 
@@ -79,7 +80,7 @@ function useCustomersContent() {
 }
 
 function CustomersHeader() {
-  const [search, setSearch] = useQueryState("q", { defaultValue: "" });
+  const { q: search, setQ: setSearch } = useCustomersFilters();
   const { header } = useCustomersContent();
 
   return (
@@ -144,7 +145,7 @@ function CustomersMetrics() {
 }
 
 function CustomersFilterBar() {
-  const [segment, setSegment] = useQueryState("segment", { defaultValue: "all" });
+  const { setStatus: setSegment, status: segment } = useCustomersFilters();
   const content = useCustomersContent();
 
   return (
@@ -216,8 +217,8 @@ function CustomersTableCard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {table.rows.map(([customer, phone, lastBuy, lifetime, segment, action]) => (
-              <TableRow key={phone}>
+            {table.rows.map(([customer, phone, lastBuy, lifetime, segment, action], index) => (
+              <TableRow key={`${customer}-${phone}-${lastBuy}-${index}`}>
                 <TableCell className="min-w-[170px] font-medium text-foreground">
                   <Link className="hover:text-primary" href="/manager/dashboard/customers/mariana-costa">
                     {customer}

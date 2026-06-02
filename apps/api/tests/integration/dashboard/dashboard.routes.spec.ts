@@ -8,6 +8,8 @@ const dashboardEndpoints = [
 	'/dashboard/orders',
 	'/dashboard/inventory',
 	'/dashboard/customers',
+	'/dashboard/customers/mariana-costa',
+	'/dashboard/customers/mariana-costa/promissory',
 	'/dashboard/cash-register',
 	'/dashboard/suppliers',
 	'/dashboard/reports',
@@ -91,6 +93,54 @@ describe('Dashboard - Integração', () => {
 			orders: expect.arrayContaining([
 				expect.objectContaining({ id: '#1842' }),
 			]),
+		});
+	});
+
+	it('deve aplicar filtro e paginação em pedidos', async () => {
+		const token = await registerAndGetToken();
+		const response = await makeRequest(server, {
+			method: 'GET',
+			url: '/dashboard/orders',
+			headers: { authorization: `Bearer ${token}` },
+			query: { perPage: '1', q: 'Paula' },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect((response.body as { orders: unknown[] }).orders).toHaveLength(1);
+		expect(response.body).toMatchObject({
+			orders: [expect.objectContaining({ customer: 'Paula Neves' })],
+		});
+	});
+
+	it('deve retornar detalhes do cliente', async () => {
+		const token = await registerAndGetToken();
+		const response = await makeRequest(server, {
+			method: 'GET',
+			url: '/dashboard/customers/mariana-costa',
+			headers: { authorization: `Bearer ${token}` },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.body).toMatchObject({
+			id: 'mariana-costa',
+			name: 'Mariana Costa',
+			loyaltyTier: { title: 'Membro Gold' },
+		});
+	});
+
+	it('deve retornar promissória do cliente', async () => {
+		const token = await registerAndGetToken();
+		const response = await makeRequest(server, {
+			method: 'GET',
+			url: '/dashboard/customers/mariana-costa/promissory',
+			headers: { authorization: `Bearer ${token}` },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.body).toMatchObject({
+			customerId: 'mariana-costa',
+			customerName: 'Mariana Costa',
+			risk: { value: 'Medio' },
 		});
 	});
 

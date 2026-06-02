@@ -15,11 +15,11 @@ import {
   cn,
 } from "@thalya-modas/ui";
 import { useLocale } from "next-intl";
-import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { useDashboardSuppliersQuery } from "../../shared/application/dashboard-api";
+import { useSuppliersFilters } from "../../shared/application/dashboard-filters";
 import {
   BoxIcon,
   ChartIcon,
@@ -42,7 +42,8 @@ const metricIcons = [BoxIcon, CheckIcon, ClockIcon, ChartIcon];
 
 function useSuppliersContent() {
   const fallback = suppliersContentByLocale[normalizeLocale(useLocale())];
-  const { data } = useDashboardSuppliersQuery();
+  const { query } = useSuppliersFilters();
+  const { data } = useDashboardSuppliersQuery(query);
 
   if (!data) return fallback;
 
@@ -85,7 +86,7 @@ function useSuppliersContent() {
 }
 
 function SuppliersHeader() {
-  const [search, setSearch] = useQueryState("q", { defaultValue: "" });
+  const { q: search, setQ: setSearch } = useSuppliersFilters();
   const { header } = useSuppliersContent();
 
   return (
@@ -148,7 +149,7 @@ function SupplierMetrics() {
 }
 
 function SupplierFilterBar() {
-  const [filter, setFilter] = useQueryState("filter", { defaultValue: "all" });
+  const { setStatus: setFilter, status: filter } = useSuppliersFilters();
   const content = useSuppliersContent();
 
   return (

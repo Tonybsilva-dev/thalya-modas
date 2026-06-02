@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   Badge,
   Button,
@@ -18,10 +19,42 @@ import {
   UsersIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
+import { useDashboardCustomerDetailQuery } from "../../shared/application/dashboard-api";
 import { customersContentByLocale } from "../domain/customers-content";
 
 function useCustomersContent() {
-  return customersContentByLocale[normalizeLocale(useLocale())];
+  const fallback = customersContentByLocale[normalizeLocale(useLocale())];
+  const params = useParams<{ customerId?: string }>();
+  const customerId = params.customerId ?? "mariana-costa";
+  const { data } = useDashboardCustomerDetailQuery(customerId);
+
+  if (!data) return fallback;
+
+  return {
+    ...fallback,
+    detail: {
+      ...fallback.detail,
+      breadcrumb: `Customers / ${data.name}`,
+      description: data.description,
+      email: `${data.email} - ${data.phone}`,
+      name: data.name,
+      notes: data.notes,
+      tags: data.tags,
+      stats: data.stats.map((row) => [String(row.label ?? ""), String(row.value ?? "")]),
+      recentOrders: data.recentOrders.map((row) => [
+        String(row.order ?? ""),
+        String(row.date ?? ""),
+        String(row.total ?? ""),
+        String(row.status ?? ""),
+      ]),
+      loyaltyTier: data.loyaltyTier,
+      nextActions: data.nextActions,
+      timeline: data.timeline.map((row) => [
+        String(row.title ?? ""),
+        String(row.date ?? ""),
+      ]),
+    },
+  };
 }
 
 function DetailHeader() {

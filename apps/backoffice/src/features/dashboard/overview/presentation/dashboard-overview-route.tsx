@@ -15,11 +15,11 @@ import {
   cn,
 } from "@thalya-modas/ui";
 import { useLocale } from "next-intl";
-import { useQueryState } from "nuqs";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { useDashboardOverviewQuery } from "../../shared/application/dashboard-api";
+import { useDashboardSearchFilter } from "../../shared/application/dashboard-filters";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { dashboardOverviewContentByLocale } from "../domain/overview-content";
 import {
@@ -84,7 +84,7 @@ function useDashboardOverviewContent() {
 
 function DashboardHeader() {
   const { header } = useDashboardOverviewContent();
-  const [search, setSearch] = useQueryState("q", { defaultValue: "" });
+  const { q: search, setQ: setSearch } = useDashboardSearchFilter();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">

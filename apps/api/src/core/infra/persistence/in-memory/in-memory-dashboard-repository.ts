@@ -1,7 +1,10 @@
 import type {
 	DashboardCashRegister,
 	DashboardCustomers,
+	DashboardCustomerDetail,
+	DashboardCustomerPromissory,
 	DashboardInventory,
+	DashboardListQuery,
 	DashboardOrders,
 	DashboardOverview,
 	DashboardReports,
@@ -14,28 +17,45 @@ export class InMemoryDashboardRepository implements DashboardRepository {
 		return clone(overview);
 	}
 
-	async getOrders(_userId: string): Promise<DashboardOrders> {
-		return clone(orders);
+	async getOrders(_userId: string, query?: DashboardListQuery): Promise<DashboardOrders> {
+		return { ...clone(orders), orders: filterRows(orders.orders, query) };
 	}
 
-	async getInventory(_userId: string): Promise<DashboardInventory> {
-		return clone(inventory);
+	async getInventory(_userId: string, query?: DashboardListQuery): Promise<DashboardInventory> {
+		return { ...clone(inventory), products: filterRows(inventory.products, query) };
 	}
 
-	async getCustomers(_userId: string): Promise<DashboardCustomers> {
-		return clone(customers);
+	async getCustomers(_userId: string, query?: DashboardListQuery): Promise<DashboardCustomers> {
+		return { ...clone(customers), customers: filterRows(customers.customers, query) };
+	}
+
+	async getCustomerDetail(_userId: string, customerId: string): Promise<DashboardCustomerDetail> {
+		return {
+			...clone(customerDetail),
+			id: customerId,
+		};
+	}
+
+	async getCustomerPromissory(
+		_userId: string,
+		customerId: string,
+	): Promise<DashboardCustomerPromissory> {
+		return {
+			...clone(customerPromissory),
+			customerId,
+		};
 	}
 
 	async getCashRegister(_userId: string): Promise<DashboardCashRegister> {
 		return clone(cashRegister);
 	}
 
-	async getSuppliers(_userId: string): Promise<DashboardSuppliers> {
-		return clone(suppliers);
+	async getSuppliers(_userId: string, query?: DashboardListQuery): Promise<DashboardSuppliers> {
+		return { ...clone(suppliers), suppliers: filterRows(suppliers.suppliers, query) };
 	}
 
-	async getReports(_userId: string): Promise<DashboardReports> {
-		return clone(reports);
+	async getReports(_userId: string, query?: DashboardListQuery): Promise<DashboardReports> {
+		return { ...clone(reports), reports: filterRows(reports.reports, query) };
 	}
 }
 
@@ -222,6 +242,76 @@ const customers: DashboardCustomers = {
 	],
 };
 
+const customerDetail: DashboardCustomerDetail = {
+	id: 'mariana-costa',
+	name: 'Mariana Costa',
+	description: 'Cliente VIP - Ultima compra ha 2 dias - WhatsApp opt-in',
+	email: 'mariana.costa@email.com',
+	phone: '+55 85 98842-7810',
+	tags: ['VIP', 'WhatsApp', 'Sem divida'],
+	stats: [
+		{ label: 'Total gasto', value: 'R$ 8.420' },
+		{ label: 'Pedidos', value: '37' },
+		{ label: 'Ticket medio', value: 'R$ 227' },
+		{ label: 'Pontos', value: '3.240' },
+	],
+	recentOrders: [
+		{ order: '#1048', date: '2 dias atras', total: 'R$ 420', status: 'Pago' },
+		{ order: '#1032', date: '12 dias atras', total: 'R$ 189', status: 'Retirado' },
+		{ order: '#1017', date: '30 abr.', total: 'R$ 760', status: 'Devolucao' },
+	],
+	notes: [
+		'Prefere vestidos de linho em cores neutras.',
+		'Costuma comprar perto do pagamento e responde no WhatsApp.',
+		'Aniversario: 18 de agosto. Oferecer preview VIP.',
+	],
+	loyaltyTier: {
+		title: 'Membro Gold',
+		description: 'R$ 580 ate o nivel Platinum',
+		progress: 75,
+	},
+	nextActions: ['Enviar preview de aniversario', 'Oferecer reposicao de linho', 'Convidar para venda VIP'],
+	timeline: [
+		{ title: 'Comprou conjunto de linho', date: '2 dias atras' },
+		{ title: 'Resgatou credito fidelidade', date: '12 dias atras' },
+		{ title: 'Abriu campanha WhatsApp', date: '18 dias atras' },
+	],
+};
+
+const customerPromissory: DashboardCustomerPromissory = {
+	customerId: 'mariana-costa',
+	customerName: 'Mariana Costa',
+	alertTitle: 'Pagamento em atraso ha 12 dias',
+	alertDescription:
+		'A parcela vencida em 14 de maio de 2026 ainda nao foi baixada. Proxima acao recomendada: contato por WhatsApp hoje.',
+	metrics: [
+		{ label: 'Valor em aberto', value: 'R$ 1.248,00', description: '3 parcelas pendentes' },
+		{ label: 'Em atraso', value: 'R$ 416,00', description: '12 dias vencidos' },
+		{ label: 'Ultimo pagamento', value: '02 maio 2026', description: 'R$ 416 via Pix' },
+		{ label: 'Limite a prazo', value: 'R$ 2.000,00', description: '62% utilizado' },
+	],
+	installments: [
+		{ date: '14 maio 2026', due: 'Venceu ha 12 dias', value: 'R$ 416,00', status: 'Atrasada' },
+		{ date: '14 junho 2026', due: 'Vence em 19 dias', value: 'R$ 416,00', status: 'Em aberto' },
+		{ date: '14 julho 2026', due: 'Vence em 49 dias', value: 'R$ 416,00', status: 'Em aberto' },
+	],
+	purchases: [
+		{ title: '#1048 - Vestido linho + sandalia', date: '02 maio 2026', value: 'R$ 1.248,00' },
+		{ title: '#0991 - Blusa alfaiataria', date: '18 abr. 2026', value: 'R$ 238,00' },
+	],
+	timeline: [
+		{ title: 'Pagamento recebido', description: '02 maio - R$ 416 via Pix' },
+		{ title: 'Compra parcelada criada', description: '02 maio - 3x de R$ 416' },
+		{ title: 'Lembrete enviado', description: '15 maio - WhatsApp entregue' },
+	],
+	risk: {
+		label: 'Risco de cobranca',
+		value: 'Medio',
+		description: 'Cliente historicamente paga apos o primeiro lembrete.',
+		progress: 60,
+	},
+};
+
 const cashRegister: DashboardCashRegister = {
 	summary: [
 		{ label: 'Caixa previsto', value: 'R$ 7.310', description: 'Hoje', tone: 'success' },
@@ -289,4 +379,24 @@ const reports: DashboardReports = {
 
 function clone<T>(value: T): T {
 	return structuredClone(value);
+}
+
+function filterRows<T extends Record<string, number | string>>(
+	rows: T[],
+	query?: DashboardListQuery,
+): T[] {
+	const page = Math.max(1, query?.page ?? 1);
+	const perPage = Math.max(1, query?.perPage ?? rows.length);
+	const q = query?.q?.trim().toLowerCase();
+	const status = query?.status?.trim().toLowerCase();
+	const filtered = rows.filter((row) => {
+		const values = Object.values(row).map((value) => String(value).toLowerCase());
+		const matchesQuery = q ? values.some((value) => value.includes(q)) : true;
+		const matchesStatus =
+			status && status !== 'all'
+				? values.some((value) => value === status || value.includes(status))
+				: true;
+		return matchesQuery && matchesStatus;
+	});
+	return filtered.slice((page - 1) * perPage, page * perPage);
 }
