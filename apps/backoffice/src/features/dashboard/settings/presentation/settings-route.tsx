@@ -3,11 +3,16 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge, Button, Card, CardContent, Switch, cn } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
 
+import { normalizeLocale } from "@/src/shared/i18n/locales";
+import { ThemeSwitcher } from "@/src/shared/ui/theme-switcher";
 import { CheckIcon, PlusIcon } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { settingsContent, type SettingsSection } from "../domain/settings-content";
-import { ThemeSwitcher } from "@/src/shared/ui/theme-switcher";
+import {
+  settingsContentByLocale,
+  type SettingsSection,
+} from "../domain/settings-content";
 
 type SettingsRouteProps = {
   section: SettingsSection;
@@ -20,8 +25,12 @@ function useSettingsBasePath() {
   return `/${role}/dashboard/settings`;
 }
 
+function useSettingsContent() {
+  return settingsContentByLocale[normalizeLocale(useLocale())];
+}
+
 function SettingsHeader() {
-  const { header } = settingsContent;
+  const { header } = useSettingsContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -43,10 +52,11 @@ function SettingsHeader() {
 
 function SettingsTabs({ activeSection }: { activeSection: SettingsSection }) {
   const basePath = useSettingsBasePath();
+  const content = useSettingsContent();
 
   return (
     <div className="flex gap-2 overflow-x-auto bg-muted p-1">
-      {settingsContent.tabs.map(([value, label, segment]) => {
+      {content.tabs.map(([value, label, segment]) => {
         const active = value === activeSection;
         const href = segment ? `${basePath}/${segment}` : basePath;
 
@@ -66,7 +76,7 @@ function SettingsTabs({ activeSection }: { activeSection: SettingsSection }) {
 }
 
 function SettingsPanel({ section }: { section: SettingsSection }) {
-  const content = settingsContent.sections[section];
+  const content = useSettingsContent().sections[section];
 
   return (
     <Card className="min-h-[520px]">
@@ -102,22 +112,35 @@ function SettingsPanel({ section }: { section: SettingsSection }) {
 }
 
 function SettingsRail({ section }: { section: SettingsSection }) {
-  const content = settingsContent.sections[section];
+  const settings = useSettingsContent();
+  const content = settings.sections[section];
+  const labels =
+    "labels" in settings
+      ? settings.labels
+      : {
+          configurationHealth: "Configuration health",
+          currentTab: "Current tab",
+          routeState: "Route state",
+          routeStateDescription:
+            "Settings tabs are separate route states, preserving local workflow context per section.",
+        };
 
   return (
     <aside className="grid gap-4 xl:w-[340px]">
       <Card className="bg-secondary text-secondary-foreground">
         <CardContent className="grid gap-3 p-5">
-          <p className="text-xs font-semibold">Current tab</p>
+          <p className="text-xs font-semibold">{labels.currentTab}</p>
           <h2 className="text-[26px] font-semibold leading-tight">{content.title}</h2>
-          <p className="text-sm leading-6 text-white/80">{settingsContent.handoff}</p>
+          <p className="text-sm leading-6 text-white/80">{settings.handoff}</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="grid gap-3 p-4">
-          <h2 className="text-base font-semibold text-foreground">Configuration health</h2>
-          {settingsContent.health.map(([label, value]) => (
+          <h2 className="text-base font-semibold text-foreground">
+            {labels.configurationHealth}
+          </h2>
+          {settings.health.map(([label, value]) => (
             <div key={label} className="flex items-center justify-between gap-3 py-1">
               <span className="text-xs text-muted-foreground">{label}</span>
               <div className="flex items-center gap-2">
@@ -131,13 +154,12 @@ function SettingsRail({ section }: { section: SettingsSection }) {
 
       <Card>
         <CardContent className="grid gap-2 p-4">
-          <h2 className="text-base font-semibold text-foreground">Route state</h2>
+          <h2 className="text-base font-semibold text-foreground">{labels.routeState}</h2>
           <Badge className="w-fit" variant="outline">
             {content.title}
           </Badge>
           <p className="text-xs leading-5 text-muted-foreground">
-            Settings tabs are separate route states, preserving local workflow context per
-            section.
+            {labels.routeStateDescription}
           </p>
         </CardContent>
       </Card>
@@ -146,7 +168,7 @@ function SettingsRail({ section }: { section: SettingsSection }) {
 }
 
 export function SettingsRoute({ section }: SettingsRouteProps) {
-  const { sidebar } = settingsContent;
+  const { sidebar } = useSettingsContent();
 
   return (
     <DashboardShell

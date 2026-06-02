@@ -1,12 +1,12 @@
 export const dashboardNavigation = [
-  { label: "Overview", segment: "" },
-  { label: "Orders", segment: "orders" },
-  { label: "Inventory", segment: "inventory" },
-  { label: "Customers", segment: "customers" },
-  { label: "Cash register", segment: "cash-register" },
-  { label: "Suppliers", segment: "suppliers" },
-  { label: "Reports", segment: "reports" },
-  { label: "About", segment: "about" },
+  { i18nKey: "overview", label: "Overview", segment: "" },
+  { i18nKey: "orders", label: "Orders", segment: "orders" },
+  { i18nKey: "inventory", label: "Inventory", segment: "inventory" },
+  { i18nKey: "customers", label: "Customers", segment: "customers" },
+  { i18nKey: "cashRegister", label: "Cash register", segment: "cash-register" },
+  { i18nKey: "suppliers", label: "Suppliers", segment: "suppliers" },
+  { i18nKey: "reports", label: "Reports", segment: "reports" },
+  { i18nKey: "about", label: "About", segment: "about" },
 ] as const;
 
 export type DashboardNavigationLabel = (typeof dashboardNavigation)[number]["label"];

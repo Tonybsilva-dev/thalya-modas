@@ -14,8 +14,11 @@ import {
   TableRow,
   cn,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
 import { useQueryState } from "nuqs";
 import { CreditCard, CurrencyDollar, QrCode } from "@phosphor-icons/react";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   BoxIcon,
@@ -26,7 +29,7 @@ import {
   SearchIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { cashRegisterContent } from "../domain/cash-register-content";
+import { cashRegisterContentByLocale } from "../domain/cash-register-content";
 
 const toneStyles = {
   success: "bg-success text-success-foreground",
@@ -38,9 +41,13 @@ const toneStyles = {
 const metricIcons = [ChartIcon, CheckIcon, BoxIcon, ClockIcon];
 const paymentIcons = [CreditCard, QrCode, CurrencyDollar];
 
+function useCashRegisterContent() {
+  return cashRegisterContentByLocale[normalizeLocale(useLocale())];
+}
+
 function CashRegisterHeader() {
   const [query, setQuery] = useQueryState("scan", { defaultValue: "" });
-  const { header } = cashRegisterContent;
+  const { header } = useCashRegisterContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -73,9 +80,11 @@ function CashRegisterHeader() {
 }
 
 function RegisterMetrics() {
+  const content = useCashRegisterContent();
+
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {cashRegisterContent.metrics.map(([label, value, description, tone], index) => {
+      {content.metrics.map(([label, value, description, tone], index) => {
         const Icon = metricIcons[index] ?? ChartIcon;
 
         return (
@@ -100,7 +109,9 @@ function RegisterMetrics() {
 }
 
 function CurrentSaleCard() {
-  const { currentSale } = cashRegisterContent;
+  const { currentSale } = useCashRegisterContent();
+  const tableHeads =
+    "heads" in currentSale ? currentSale.heads : ["Item", "Qty", "Price", "Total"];
 
   return (
     <Card className="min-h-[370px]">
@@ -119,10 +130,14 @@ function CurrentSaleCard() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted hover:bg-muted">
-                <TableHead className="h-8 px-3">Item</TableHead>
-                <TableHead className="h-8 px-3">Qty</TableHead>
-                <TableHead className="h-8 px-3">Price</TableHead>
-                <TableHead className="h-8 px-3 text-right">Total</TableHead>
+                {tableHeads.map((head, index) => (
+                  <TableHead
+                    key={head}
+                    className={cn("h-8 px-3", index === tableHeads.length - 1 && "text-right")}
+                  >
+                    {head}
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -150,9 +165,11 @@ function CurrentSaleCard() {
 }
 
 function PaymentMethods() {
+  const content = useCashRegisterContent();
+
   return (
     <div className="grid items-start gap-4 md:grid-cols-3">
-      {cashRegisterContent.paymentMethods.map(([label, value, tone], index) => {
+      {content.paymentMethods.map(([label, value, tone], index) => {
         const active = tone === "secondary";
         const Icon = paymentIcons[index] ?? CreditCard;
 
@@ -186,7 +203,7 @@ function PaymentMethods() {
 }
 
 function ReceiptSummary() {
-  const { receipt } = cashRegisterContent;
+  const { receipt } = useCashRegisterContent();
 
   return (
     <Card className="bg-secondary text-secondary-foreground">
@@ -211,11 +228,14 @@ function ReceiptSummary() {
 }
 
 function DrawerCount() {
+  const content = useCashRegisterContent();
+  const labels = "labels" in content ? content.labels : { drawerCount: "Drawer count" };
+
   return (
     <Card>
       <CardContent className="grid gap-3 p-4">
-        <h2 className="text-base font-semibold text-foreground">Drawer count</h2>
-        {cashRegisterContent.drawerCount.map(([label, value]) => (
+        <h2 className="text-base font-semibold text-foreground">{labels.drawerCount}</h2>
+        {content.drawerCount.map(([label, value]) => (
           <div key={label} className="flex items-center justify-between gap-3 py-1">
             <span className="text-xs text-muted-foreground">{label}</span>
             <strong className="text-xs font-semibold text-foreground">{value}</strong>
@@ -227,11 +247,17 @@ function DrawerCount() {
 }
 
 function RecentTransactions() {
+  const content = useCashRegisterContent();
+  const labels =
+    "labels" in content ? content.labels : { recentTransactions: "Recent transactions" };
+
   return (
     <Card>
       <CardContent className="grid gap-3 p-4">
-        <h2 className="text-base font-semibold text-foreground">Recent transactions</h2>
-        {cashRegisterContent.transactions.map(([title, value]) => (
+        <h2 className="text-base font-semibold text-foreground">
+          {labels.recentTransactions}
+        </h2>
+        {content.transactions.map(([title, value]) => (
           <div key={title} className="flex items-center gap-3 py-0.5">
             <ClockIcon className="size-4 text-muted-foreground" />
             <div className="min-w-0 flex-1">
@@ -256,7 +282,7 @@ function SettlementRail() {
 }
 
 export function CashRegisterRoute() {
-  const { sidebar } = cashRegisterContent;
+  const { sidebar } = useCashRegisterContent();
 
   return (
     <DashboardShell

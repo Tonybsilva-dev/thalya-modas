@@ -76,7 +76,11 @@ export const storeSegments = [
 
 export const storeCurrencies = [{ label: "BRL", value: "BRL" }] as const;
 
-export const storeLanguages = [{ label: "pt-BR", value: "pt-BR" }] as const;
+export const storeLanguages = [
+  { label: "Portugues (Brasil)", value: "pt-BR" },
+  { label: "English", value: "en" },
+  { label: "Espanol", value: "es" },
+] as const;
 
 export const storeTimezones = [
   { label: "America/Fortaleza", value: "America/Fortaleza" },

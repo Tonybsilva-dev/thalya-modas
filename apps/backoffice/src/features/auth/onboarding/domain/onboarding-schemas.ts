@@ -46,7 +46,7 @@ export const storeAddressSchema = z.object({
 export const storePreferencesSchema = z
   .object({
     currency: z.enum(["BRL"]),
-    language: z.enum(["pt-BR"]),
+    language: z.enum(["pt-BR", "en", "es"]),
     timezone: z.enum(["America/Fortaleza", "America/Sao_Paulo"]),
     openingTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, {
       message: "Horario de abertura invalido.",

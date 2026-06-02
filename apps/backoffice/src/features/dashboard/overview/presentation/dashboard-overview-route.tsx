@@ -14,10 +14,13 @@ import {
   TableRow,
   cn,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
 import { useQueryState } from "nuqs";
 
+import { normalizeLocale } from "@/src/shared/i18n/locales";
+
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { dashboardOverviewContent } from "../domain/overview-content";
+import { dashboardOverviewContentByLocale } from "../domain/overview-content";
 import {
   ChartIcon,
   CheckIcon,
@@ -33,8 +36,12 @@ const toneStyles = {
   muted: "bg-muted text-muted-foreground",
 };
 
+function useDashboardOverviewContent() {
+  return dashboardOverviewContentByLocale[normalizeLocale(useLocale())];
+}
+
 function DashboardHeader() {
-  const { header } = dashboardOverviewContent;
+  const { header } = useDashboardOverviewContent();
   const [search, setSearch] = useQueryState("q", { defaultValue: "" });
 
   return (
@@ -68,9 +75,11 @@ function DashboardHeader() {
 }
 
 function MetricGrid() {
+  const content = useDashboardOverviewContent();
+
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {dashboardOverviewContent.metrics.map((metric) => (
+      {content.metrics.map((metric) => (
         <Card key={metric.label} className="animate-nitro-scale-in">
           <CardContent className="grid gap-3 p-4">
             <div className="flex items-center gap-3">
@@ -96,7 +105,7 @@ function MetricGrid() {
 }
 
 function SalesPulseCard() {
-  const { salesPulse } = dashboardOverviewContent;
+  const { salesPulse } = useDashboardOverviewContent();
 
   return (
     <Card className="min-h-[250px] flex-1">
@@ -132,7 +141,7 @@ function SalesPulseCard() {
 }
 
 function ProductSpotlightCard() {
-  const { spotlight } = dashboardOverviewContent;
+  const { spotlight } = useDashboardOverviewContent();
 
   return (
     <Card className="min-h-[250px] bg-secondary text-secondary-foreground lg:w-[260px]">
@@ -151,7 +160,9 @@ function ProductSpotlightCard() {
 }
 
 function InventoryRiskTable() {
-  const { inventory } = dashboardOverviewContent;
+  const { inventory } = useDashboardOverviewContent();
+  const tableHeads =
+    "heads" in inventory ? inventory.heads : ["Product", "SKU", "Stock", "Demand", "Action"];
 
   return (
     <Card className="min-h-[360px] flex-1">
@@ -167,11 +178,14 @@ function InventoryRiskTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Product</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Demand</TableHead>
-              <TableHead className="text-right">Action</TableHead>
+              {tableHeads.map((head, index) => (
+                <TableHead
+                  key={head}
+                  className={index === tableHeads.length - 1 ? "text-right" : undefined}
+                >
+                  {head}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -185,7 +199,7 @@ function InventoryRiskTable() {
                 <TableCell className="text-muted-foreground">{demand}</TableCell>
                 <TableCell className="text-right">
                   <Badge
-                    variant={action === "Watch" ? "outline" : "warning"}
+                    variant={action === "Watch" || action === "Observar" ? "outline" : "warning"}
                     className="justify-center"
                   >
                     {action}
@@ -201,9 +215,14 @@ function InventoryRiskTable() {
 }
 
 function ActionRail() {
+  const content = useDashboardOverviewContent();
+  const locale = normalizeLocale(useLocale());
+  const checklistTitle =
+    locale === "pt-BR" ? "Checklist de hoje" : locale === "es" ? "Checklist de hoy" : "Today checklist";
+
   return (
     <aside className="grid gap-3 xl:w-[340px]">
-      {dashboardOverviewContent.actionRail.map((item) => (
+      {content.actionRail.map((item) => (
         <Card key={item.title}>
           <CardContent className="grid gap-2 p-3">
             <div className="flex items-center gap-3">
@@ -224,8 +243,8 @@ function ActionRail() {
 
       <Card className="xl:flex-1">
         <CardContent className="grid gap-3.5 p-4">
-          <h2 className="text-[17px] font-semibold text-foreground">Today checklist</h2>
-          {dashboardOverviewContent.checklist.map(([task, time]) => (
+          <h2 className="text-[17px] font-semibold text-foreground">{checklistTitle}</h2>
+          {content.checklist.map(([task, time]) => (
             <div key={task} className="flex items-center gap-3 py-1">
               <span className="flex size-4 items-center justify-center border border-input">
                 <span className="size-1.5 bg-primary" />
@@ -241,7 +260,7 @@ function ActionRail() {
 }
 
 export function DashboardOverviewRoute() {
-  const { store } = dashboardOverviewContent;
+  const { store } = useDashboardOverviewContent();
 
   return (
     <DashboardShell

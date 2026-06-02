@@ -1,5 +1,8 @@
+import { defaultLocale, normalizeLocale, type AppLocale } from "../i18n/locales";
+
 export type LastStore = {
   id: string;
+  language: AppLocale;
   name: string;
 };
 
@@ -22,6 +25,7 @@ export function getLastStoreFromCookie(cookieSource: string): LastStore | null {
 
     return {
       id: parsed.id,
+      language: normalizeLocale(parsed.language),
       name: parsed.name,
     };
   } catch {
@@ -31,7 +35,13 @@ export function getLastStoreFromCookie(cookieSource: string): LastStore | null {
 
 export function serializeLastStoreCookie(store: LastStore) {
   return [
-    `${lastStoreCookieName}=${encodeURIComponent(JSON.stringify(store))}`,
+    `${lastStoreCookieName}=${encodeURIComponent(
+      JSON.stringify({
+        id: store.id,
+        language: store.language ?? defaultLocale,
+        name: store.name,
+      }),
+    )}`,
     "Path=/",
     "Max-Age=31536000",
     "SameSite=Lax",

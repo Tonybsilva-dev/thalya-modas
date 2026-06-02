@@ -8,7 +8,10 @@ import {
   Input,
   cn,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
 import { useQueryState } from "nuqs";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   CalendarIcon,
@@ -21,10 +24,14 @@ import {
   StoreIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { reportsContent } from "../domain/reports-content";
+import { reportsContentByLocale } from "../domain/reports-content";
+
+function useReportsContent() {
+  return reportsContentByLocale[normalizeLocale(useLocale())];
+}
 
 function ReportsHeader() {
-  const { header } = reportsContent;
+  const { header } = useReportsContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -57,6 +64,8 @@ function ReportsHeader() {
 function ReportFilters() {
   const [search, setSearch] = useQueryState("q", { defaultValue: "" });
   const controlIcons = [CalendarIcon, StoreIcon, FileTextIcon];
+  const content = useReportsContent();
+  const labels = "labels" in content ? content.labels : { filters: "Filters" };
 
   return (
     <Card>
@@ -66,11 +75,11 @@ function ReportFilters() {
           <Input
             className="h-10 bg-background pl-10"
             onChange={(event) => void setSearch(event.target.value || null)}
-            placeholder={reportsContent.searchPlaceholder}
+            placeholder={content.searchPlaceholder}
             value={search}
           />
         </div>
-        {reportsContent.controls.map((control, index) => {
+        {content.controls.map((control, index) => {
           const Icon = controlIcons[index] ?? ClockIcon;
 
           return (
@@ -82,7 +91,7 @@ function ReportFilters() {
         })}
         <Button className="h-10 px-3" variant="outline">
           <SlidersIcon className="size-[15px]" />
-          Filters
+          {labels.filters}
         </Button>
       </CardContent>
     </Card>
@@ -90,9 +99,11 @@ function ReportFilters() {
 }
 
 function ReportMetrics() {
+  const content = useReportsContent();
+
   return (
     <section className="grid gap-3 sm:grid-cols-3">
-      {reportsContent.metrics.map(([value, label, description]) => (
+      {content.metrics.map(([value, label, description]) => (
         <Card key={label}>
           <CardContent className="flex items-center gap-3 p-3.5">
             <div className="grid size-[34px] shrink-0 place-items-center bg-muted text-sm font-semibold text-foreground">
@@ -110,14 +121,17 @@ function ReportMetrics() {
 }
 
 function ReportCatalog() {
+  const content = useReportsContent();
+  const labels = "labels" in content ? content.labels : { templates: "Templates" };
+
   return (
     <Card className="xl:w-[360px]">
       <CardContent className="grid gap-3 p-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-foreground">Templates</h2>
-          <span className="text-sm text-muted-foreground">{reportsContent.catalog.length}</span>
+          <h2 className="text-base font-semibold text-foreground">{labels.templates}</h2>
+          <span className="text-sm text-muted-foreground">{content.catalog.length}</span>
         </div>
-        {reportsContent.catalog.map(([title, description, active]) => (
+        {content.catalog.map(([title, description, active]) => (
           <div
             key={title}
             className={cn(
@@ -149,7 +163,7 @@ function ReportCatalog() {
 }
 
 function ReportPreview() {
-  const { preview } = reportsContent;
+  const { preview } = useReportsContent();
 
   return (
     <div className="grid min-w-0 gap-3">
@@ -204,12 +218,18 @@ function ReportPreview() {
 }
 
 function ReportsActivityRail() {
+  const content = useReportsContent();
+  const labels =
+    "labels" in content
+      ? content.labels
+      : { recentExports: "Recent exports", scheduled: "Scheduled" };
+
   return (
     <aside className="grid gap-3 md:grid-cols-2">
       <Card>
         <CardContent className="grid gap-2 p-3.5">
-          <h2 className="text-base font-semibold text-foreground">Scheduled</h2>
-          {reportsContent.scheduled.map((item) => (
+          <h2 className="text-base font-semibold text-foreground">{labels.scheduled}</h2>
+          {content.scheduled.map((item) => (
             <div key={item} className="flex items-center gap-2">
               <span className="size-1.5 rounded-full bg-primary" />
               <p className="text-sm text-muted-foreground">{item}</p>
@@ -220,8 +240,8 @@ function ReportsActivityRail() {
 
       <Card>
         <CardContent className="grid gap-2 p-3.5">
-          <h2 className="text-base font-semibold text-foreground">Recent exports</h2>
-          {reportsContent.exports.map((item) => (
+          <h2 className="text-base font-semibold text-foreground">{labels.recentExports}</h2>
+          {content.exports.map((item) => (
             <div key={item} className="flex items-center gap-2">
               <span className="size-1.5 rounded-full bg-primary" />
               <p className="text-sm text-muted-foreground">{item}</p>
@@ -234,7 +254,7 @@ function ReportsActivityRail() {
 }
 
 export function ReportsRoute() {
-  const { sidebar } = reportsContent;
+  const { sidebar } = useReportsContent();
 
   return (
     <DashboardShell activeItem="Reports" operatorRole={sidebar.operatorRole} status={sidebar.status}>

@@ -14,7 +14,10 @@ import {
   TableRow,
   cn,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
 import { useQueryState } from "nuqs";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   BoxIcon,
@@ -25,7 +28,7 @@ import {
   SearchIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { inventoryContent } from "../domain/inventory-content";
+import { inventoryContentByLocale } from "../domain/inventory-content";
 
 const toneStyles = {
   success: "bg-success text-success-foreground",
@@ -36,9 +39,13 @@ const toneStyles = {
 
 const metricIcons = [BoxIcon, ClockIcon, CheckIcon, ChartIcon];
 
+function useInventoryContent() {
+  return inventoryContentByLocale[normalizeLocale(useLocale())];
+}
+
 function InventoryHeader() {
   const [search, setSearch] = useQueryState("q", { defaultValue: "" });
-  const { header } = inventoryContent;
+  const { header } = useInventoryContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -75,9 +82,11 @@ function InventoryHeader() {
 }
 
 function InventoryMetrics() {
+  const content = useInventoryContent();
+
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {inventoryContent.metrics.map(([label, value, description, tone], index) => {
+      {content.metrics.map(([label, value, description, tone], index) => {
         const Icon = metricIcons[index] ?? ChartIcon;
 
         return (
@@ -103,10 +112,11 @@ function InventoryMetrics() {
 
 function InventoryFilterBar() {
   const [filter, setFilter] = useQueryState("filter", { defaultValue: "all" });
+  const content = useInventoryContent();
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
-      {inventoryContent.filters.map(([value, label]) => {
+      {content.filters.map(([value, label]) => {
         const active = filter === value;
 
         return (
@@ -125,7 +135,7 @@ function InventoryFilterBar() {
 }
 
 function statusVariant(status: string) {
-  if (["Low", "Critical", "Supplier"].includes(status)) {
+  if (["Low", "Critical", "Supplier", "Baixo", "Critico", "Fornecedor", "Bajo", "Proveedor"].includes(status)) {
     return "warning";
   }
 
@@ -133,7 +143,11 @@ function statusVariant(status: string) {
 }
 
 function InventoryTableCard() {
-  const { table } = inventoryContent;
+  const { table } = useInventoryContent();
+  const tableHeads =
+    "heads" in table
+      ? table.heads
+      : ["Item", "SKU", "On hand", "Reserved", "Channel", "Status"];
 
   return (
     <Card className="min-h-[560px]">
@@ -151,12 +165,11 @@ function InventoryTableCard() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Item</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>On hand</TableHead>
-              <TableHead>Reserved</TableHead>
-              <TableHead>Channel</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              {tableHeads.map((head, index) => (
+                <TableHead key={head} className={index === tableHeads.length - 1 ? "text-right" : undefined}>
+                  {head}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -182,7 +195,7 @@ function InventoryTableCard() {
 }
 
 function InventoryBulkActions() {
-  const { bulkActions } = inventoryContent;
+  const { bulkActions } = useInventoryContent();
 
   return (
     <Card>
@@ -196,7 +209,9 @@ function InventoryBulkActions() {
 }
 
 function InventoryDetailRail() {
-  const { activity, reorderPlan, selectedItem } = inventoryContent;
+  const content = useInventoryContent();
+  const { activity, reorderPlan, selectedItem } = content;
+  const labels = "labels" in content ? content.labels : { recentActivity: "Recent activity" };
 
   return (
     <aside className="grid gap-3 xl:w-[340px]">
@@ -234,7 +249,7 @@ function InventoryDetailRail() {
 
       <Card>
         <CardContent className="grid gap-3 p-4">
-          <h2 className="text-[17px] font-semibold text-foreground">Recent activity</h2>
+          <h2 className="text-[17px] font-semibold text-foreground">{labels.recentActivity}</h2>
           {activity.map(([title, time]) => (
             <div key={title} className="flex gap-2.5 py-0.5">
               <ClockIcon className="mt-0.5 size-4 text-muted-foreground" />
@@ -251,7 +266,7 @@ function InventoryDetailRail() {
 }
 
 export function InventoryRoute() {
-  const { sidebar } = inventoryContent;
+  const { sidebar } = useInventoryContent();
 
   return (
     <DashboardShell

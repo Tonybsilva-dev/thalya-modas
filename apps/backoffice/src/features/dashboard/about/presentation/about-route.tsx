@@ -1,6 +1,9 @@
 "use client";
 
 import { Badge, Button, Card, CardContent } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   BriefcaseIcon,
@@ -9,7 +12,7 @@ import {
   ShieldCheckIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { aboutContent } from "../domain/about-content";
+import { aboutContentByLocale } from "../domain/about-content";
 
 const supportIcons = {
   briefcase: BriefcaseIcon,
@@ -18,8 +21,12 @@ const supportIcons = {
   shield: ShieldCheckIcon,
 };
 
+function useAboutContent() {
+  return aboutContentByLocale[normalizeLocale(useLocale())];
+}
+
 function AboutHeader() {
-  const { header } = aboutContent;
+  const { header } = useAboutContent();
 
   return (
     <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -40,7 +47,8 @@ function AboutHeader() {
 }
 
 function AgencySummary() {
-  const { agency } = aboutContent;
+  const content = useAboutContent();
+  const { agency } = content;
 
   return (
     <section className="grid gap-4">
@@ -71,7 +79,7 @@ function AgencySummary() {
       </Card>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {aboutContent.facts.map(([label, value]) => (
+        {content.facts.map(([label, value]) => (
           <Card key={label}>
             <CardContent className="grid gap-1 p-4">
               <span className="text-xs text-muted-foreground">{label}</span>
@@ -85,10 +93,13 @@ function AgencySummary() {
 }
 
 function ScopeCard() {
+  const content = useAboutContent();
+  const labels = "labels" in content ? content.labels : { scope: "Escopo do sistema" };
+
   return (
     <section className="grid content-start gap-2.5">
-      <h2 className="text-lg font-bold text-foreground">Escopo do sistema</h2>
-      {aboutContent.scope.map(([title, description]) => (
+      <h2 className="text-lg font-bold text-foreground">{labels.scope}</h2>
+      {content.scope.map(([title, description]) => (
         <Card key={title}>
           <CardContent className="flex min-h-24 gap-2.5 p-3.5">
             <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
@@ -104,10 +115,13 @@ function ScopeCard() {
 }
 
 function SupportCard() {
+  const content = useAboutContent();
+  const labels = "labels" in content ? content.labels : { support: "Contato e manutenção" };
+
   return (
     <section className="grid content-start gap-2.5">
-      <h2 className="text-lg font-bold text-foreground">Contato e manutenção</h2>
-      {aboutContent.support.map(([title, description, icon]) => {
+      <h2 className="text-lg font-bold text-foreground">{labels.support}</h2>
+      {content.support.map(([title, description, icon]) => {
         const Icon = supportIcons[icon];
 
         return (
@@ -127,7 +141,7 @@ function SupportCard() {
 }
 
 function AboutFooterNote() {
-  const { footer } = aboutContent;
+  const { footer } = useAboutContent();
 
   return (
     <footer className="flex flex-col gap-2 border-t border-border pt-3 text-xs sm:flex-row sm:items-center sm:justify-between">
@@ -138,7 +152,7 @@ function AboutFooterNote() {
 }
 
 export function AboutRoute() {
-  const { sidebar } = aboutContent;
+  const { sidebar } = useAboutContent();
 
   return (
     <DashboardShell

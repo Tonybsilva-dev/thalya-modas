@@ -1,0 +1,179 @@
+{
+  "app": {
+    "name": "Store Flow",
+    "context": "Gestao da loja",
+    "metadataDescription": "Area de trabalho para gestao de loja local."
+  },
+  "common": {
+    "errors": {
+      "generic": "Nao foi possivel concluir a acao.",
+      "signIn": "Nao foi possivel entrar."
+    },
+    "theme": {
+      "title": "Tema",
+      "description": "Escolha aparencia clara, escura ou do sistema para o backoffice.",
+      "ariaLabel": "Modo de tema",
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema"
+    }
+  },
+  "dashboard": {
+    "navigation": {
+      "overview": "Visao geral",
+      "orders": "Pedidos",
+      "inventory": "Estoque",
+      "customers": "Clientes",
+      "cashRegister": "Caixa",
+      "suppliers": "Fornecedores",
+      "reports": "Relatorios",
+      "about": "Sobre"
+    },
+    "shell": {
+      "openSettings": "Abrir configuracoes",
+      "openNavigation": "Abrir navegacao",
+      "closeNavigation": "Fechar navegacao",
+      "signOut": "Sair",
+      "signingOut": "Saindo..."
+    }
+  },
+  "login": {
+    "hero": {
+      "title": "Controle cada detalhe da loja antes de abrir as portas.",
+      "description": "Vendas, estoque, fornecedores, clientes e fechamento de caixa em um workspace focado para lojas locais."
+    },
+    "form": {
+      "title": "Boas-vindas",
+      "description": "Entre para continuar no centro de comando da loja.",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "ana@thalyamodas.com",
+      "passwordLabel": "Senha",
+      "rememberLabel": "Lembrar de mim",
+      "forgotPasswordLabel": "Esqueceu a senha?",
+      "submitLabel": "Entrar",
+      "submittingLabel": "Entrando",
+      "dividerLabel": "ou",
+      "ssoLabel": "Continuar com SSO seguro",
+      "accessPrompt": "Precisa de acesso?",
+      "accessLinkLabel": "Fale com o admin da loja"
+    },
+    "status": "Sistemas online - sincronizado ha 2 min"
+  },
+  "recoverPassword": {
+    "shared": {
+      "brand": "Store Flow",
+      "backToCode": "Voltar para codigo",
+      "backToEmail": "Voltar para e-mail",
+      "backToLogin": "Voltar para login",
+      "bullets": [
+        "Protecao para contas administrativas",
+        "Codigo temporario por e-mail",
+        "Redefinicao guiada em poucos passos"
+      ]
+    },
+    "request": {
+      "heroTitle": "Recupere o acesso com seguranca",
+      "heroDescription": "Um fluxo claro para restaurar o acesso sem interromper a operacao da loja.",
+      "title": "Recuperar senha",
+      "description": "Informe o e-mail usado para acessar o dashboard da loja. Enviaremos um codigo temporario para continuar.",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "financeiro@loja.com",
+      "primaryAction": "Enviar codigo",
+      "secondaryAction": "Voltar para login"
+    },
+    "code": {
+      "heroTitle": "Confirme sua identidade",
+      "heroDescription": "A verificacao por codigo reduz o risco de acesso indevido ao painel administrativo.",
+      "title": "Verificar codigo",
+      "description": "Digite o codigo enviado para financeiro@loja.com. O codigo expira em 10 minutos.",
+      "primaryAction": "Confirmar codigo",
+      "secondaryAction": "Reenviar codigo em 32s"
+    },
+    "reset": {
+      "heroTitle": "Defina uma nova credencial",
+      "heroDescription": "O sistema guia os requisitos minimos antes de liberar o retorno ao dashboard.",
+      "title": "Criar nova senha",
+      "description": "Defina uma senha forte para proteger pedidos, estoque, caixa e relatorios da loja.",
+      "passwordLabel": "Nova senha",
+      "confirmPasswordLabel": "Confirmar senha",
+      "hint": "Use pelo menos 8 caracteres com numero e letra maiuscula.",
+      "primaryAction": "Atualizar senha"
+    },
+    "success": {
+      "heroTitle": "Acesso restaurado",
+      "heroDescription": "Confirmacao simples para fechar o fluxo e voltar para o sistema sem duvida sobre o proximo passo.",
+      "title": "Senha atualizada",
+      "description": "A nova senha ja esta ativa. Voce pode retornar ao dashboard e continuar a operacao da loja.",
+      "primaryAction": "Entrar no dashboard",
+      "secondaryAction": "Voltar para login"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "profile": "Perfil",
+      "address": "Endereco",
+      "preferences": "Preferencias",
+      "completed": "Concluido"
+    },
+    "profile": {
+      "title": "Perfil da loja",
+      "description": "Informe os dados principais da loja.",
+      "action": "Salvar e continuar",
+      "fields": {
+        "storeName": "Nome da loja",
+        "phone": "Telefone",
+        "document": "CPF ou CNPJ",
+        "segment": "Segmento"
+      }
+    },
+    "address": {
+      "title": "Endereco da loja",
+      "description": "Adicione o endereco comercial.",
+      "action": "Salvar endereco",
+      "fields": {
+        "zipCode": "CEP",
+        "number": "Numero",
+        "street": "Rua",
+        "neighborhood": "Bairro",
+        "complement": "Complemento",
+        "city": "Cidade",
+        "state": "UF"
+      },
+      "lookupIdle": "Digite o CEP completo para preencher o endereco.",
+      "lookupLoading": "Buscando endereco pelo CEP.",
+      "lookupNotFound": "CEP nao encontrado. Preencha o endereco manualmente."
+    },
+    "preferences": {
+      "title": "Preferencias da operacao",
+      "description": "Defina as preferencias basicas da operacao.",
+      "action": "Finalizar preferencias",
+      "helper": "O horario de abertura precisa ser anterior ao fechamento.",
+      "fields": {
+        "currency": "Moeda",
+        "language": "Idioma",
+        "timezone": "Fuso horario",
+        "openingTime": "Abertura",
+        "closingTime": "Fechamento"
+      }
+    },
+    "completed": {
+      "title": "Onboarding concluido",
+      "description": "Tudo pronto para comecar.",
+      "successTitle": "Configuracao concluida",
+      "successDescription": "Sua loja esta pronta para uso.",
+      "primaryAction": "Entrar no dashboard",
+      "secondaryAction": "Revisar dados"
+    },
+    "segments": {
+      "fashion": "Moda",
+      "accessories": "Acessorios",
+      "footwear": "Calcados",
+      "mixed": "Misto"
+    },
+    "languages": {
+      "pt-BR": "Portugues (Brasil)",
+      "en": "Ingles",
+      "es": "Espanhol"
+    }
+  }
+}

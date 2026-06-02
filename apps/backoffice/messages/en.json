@@ -1,0 +1,179 @@
+{
+  "app": {
+    "name": "Store Flow",
+    "context": "Store management",
+    "metadataDescription": "Local store management workspace."
+  },
+  "common": {
+    "errors": {
+      "generic": "Unable to complete request.",
+      "signIn": "Sign in failed."
+    },
+    "theme": {
+      "title": "Theme",
+      "description": "Choose light, dark or system appearance for the backoffice.",
+      "ariaLabel": "Theme mode",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "dashboard": {
+    "navigation": {
+      "overview": "Overview",
+      "orders": "Orders",
+      "inventory": "Inventory",
+      "customers": "Customers",
+      "cashRegister": "Cash register",
+      "suppliers": "Suppliers",
+      "reports": "Reports",
+      "about": "About"
+    },
+    "shell": {
+      "openSettings": "Open settings",
+      "openNavigation": "Open navigation",
+      "closeNavigation": "Close navigation",
+      "signOut": "Sign out",
+      "signingOut": "Signing out..."
+    }
+  },
+  "login": {
+    "hero": {
+      "title": "Manage every store detail before opening the doors.",
+      "description": "Sales, inventory, suppliers, customers and cash close in one focused workspace for local retail teams."
+    },
+    "form": {
+      "title": "Welcome back",
+      "description": "Sign in to continue to the store command center.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "ana@thalyamodas.com",
+      "passwordLabel": "Password",
+      "rememberLabel": "Remember me",
+      "forgotPasswordLabel": "Forgot password?",
+      "submitLabel": "Sign in",
+      "submittingLabel": "Signing in",
+      "dividerLabel": "or",
+      "ssoLabel": "Continue with secure SSO",
+      "accessPrompt": "Need access?",
+      "accessLinkLabel": "Ask your store admin"
+    },
+    "status": "Systems online - synced 2 min ago"
+  },
+  "recoverPassword": {
+    "shared": {
+      "brand": "Store Flow",
+      "backToCode": "Back to code",
+      "backToEmail": "Back to email",
+      "backToLogin": "Back to login",
+      "bullets": [
+        "Protection for admin accounts",
+        "Temporary code by email",
+        "Guided reset in a few steps"
+      ]
+    },
+    "request": {
+      "heroTitle": "Recover access safely",
+      "heroDescription": "A clear flow to restore access without interrupting store operations.",
+      "title": "Recover password",
+      "description": "Enter the email used to access the store dashboard. We will send a temporary code to continue.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "finance@store.com",
+      "primaryAction": "Send code",
+      "secondaryAction": "Back to login"
+    },
+    "code": {
+      "heroTitle": "Confirm your identity",
+      "heroDescription": "Code verification reduces the risk of unauthorized access to the admin panel.",
+      "title": "Verify code",
+      "description": "Enter the code sent to finance@store.com. The code expires in 10 minutes.",
+      "primaryAction": "Confirm code",
+      "secondaryAction": "Resend code in 32s"
+    },
+    "reset": {
+      "heroTitle": "Set a new credential",
+      "heroDescription": "The system guides minimum requirements before returning to the dashboard.",
+      "title": "Create new password",
+      "description": "Set a strong password to protect orders, inventory, cash register and store reports.",
+      "passwordLabel": "New password",
+      "confirmPasswordLabel": "Confirm password",
+      "hint": "Use at least 8 characters with a number and an uppercase letter.",
+      "primaryAction": "Update password"
+    },
+    "success": {
+      "heroTitle": "Access restored",
+      "heroDescription": "A simple confirmation closes the flow and makes the next step clear.",
+      "title": "Password updated",
+      "description": "The new password is active. You can return to the dashboard and continue store operations.",
+      "primaryAction": "Enter dashboard",
+      "secondaryAction": "Back to login"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "profile": "Profile",
+      "address": "Address",
+      "preferences": "Preferences",
+      "completed": "Completed"
+    },
+    "profile": {
+      "title": "Store profile",
+      "description": "Enter the main store details.",
+      "action": "Save and continue",
+      "fields": {
+        "storeName": "Store name",
+        "phone": "Phone",
+        "document": "Tax ID",
+        "segment": "Segment"
+      }
+    },
+    "address": {
+      "title": "Store address",
+      "description": "Add the business address.",
+      "action": "Save address",
+      "fields": {
+        "zipCode": "ZIP code",
+        "number": "Number",
+        "street": "Street",
+        "neighborhood": "Neighborhood",
+        "complement": "Complement",
+        "city": "City",
+        "state": "State"
+      },
+      "lookupIdle": "Enter the full ZIP code to fill the address.",
+      "lookupLoading": "Searching address by ZIP code.",
+      "lookupNotFound": "ZIP code not found. Fill the address manually."
+    },
+    "preferences": {
+      "title": "Operation preferences",
+      "description": "Define the basic operation preferences.",
+      "action": "Finish preferences",
+      "helper": "Opening time must be earlier than closing time.",
+      "fields": {
+        "currency": "Currency",
+        "language": "Language",
+        "timezone": "Timezone",
+        "openingTime": "Opening",
+        "closingTime": "Closing"
+      }
+    },
+    "completed": {
+      "title": "Onboarding completed",
+      "description": "Everything is ready to start.",
+      "successTitle": "Setup completed",
+      "successDescription": "Your store is ready to use.",
+      "primaryAction": "Enter dashboard",
+      "secondaryAction": "Review data"
+    },
+    "segments": {
+      "fashion": "Fashion",
+      "accessories": "Accessories",
+      "footwear": "Footwear",
+      "mixed": "Mixed"
+    },
+    "languages": {
+      "pt-BR": "Portuguese (Brazil)",
+      "en": "English",
+      "es": "Spanish"
+    }
+  }
+}

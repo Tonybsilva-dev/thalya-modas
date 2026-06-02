@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
@@ -18,7 +19,6 @@ import {
 import { ApiRequestError } from "@/src/shared/api/http-client";
 
 import { login } from "../application/login-api";
-import { loginRouteContent } from "../domain/login-route-content";
 import { ArrowRightIcon, LockIcon, MailIcon, ShieldIcon } from "./login-icons";
 
 function FieldIcon({ children }: { children: ReactNode }) {
@@ -30,7 +30,8 @@ function FieldIcon({ children }: { children: ReactNode }) {
 }
 
 export function LoginForm() {
-  const { form } = loginRouteContent;
+  const t = useTranslations("login.form");
+  const commonErrors = useTranslations("common.errors");
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const loginMutation = useMutation({
@@ -40,11 +41,11 @@ export function LoginForm() {
     },
     onError: (error) => {
       if (error instanceof ApiRequestError) {
-        setErrorMessage(error.payload.userMessage ?? error.payload.message ?? "Sign in failed.");
+        setErrorMessage(error.payload.userMessage ?? error.payload.message ?? commonErrors("signIn"));
         return;
       }
 
-      setErrorMessage("Sign in failed.");
+      setErrorMessage(commonErrors("signIn"));
     },
   });
 
@@ -53,9 +54,9 @@ export function LoginForm() {
       <CardContent className="grid gap-6 p-8">
         <header className="grid gap-2">
           <h1 className="text-[28px] font-semibold leading-tight tracking-normal text-card-foreground">
-            {form.title}
+            {t("title")}
           </h1>
-          <p className="text-sm leading-6 text-muted-foreground">{form.description}</p>
+          <p className="text-sm leading-6 text-muted-foreground">{t("description")}</p>
         </header>
 
         <form
@@ -73,7 +74,7 @@ export function LoginForm() {
           }}
         >
           <div className="grid gap-2">
-            <Label htmlFor="email">{form.emailLabel}</Label>
+            <Label htmlFor="email">{t("emailLabel")}</Label>
             <div className="relative">
               <FieldIcon>
                 <MailIcon className="size-4" />
@@ -85,14 +86,14 @@ export function LoginForm() {
                 className="h-11 pl-10"
                 defaultValue="ana@thalyamodas.com"
                 inputMode="email"
-                placeholder={form.emailPlaceholder}
+                placeholder={t("emailPlaceholder")}
                 type="email"
               />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="password">{form.passwordLabel}</Label>
+            <Label htmlFor="password">{t("passwordLabel")}</Label>
             <div className="relative">
               <FieldIcon>
                 <LockIcon className="size-4" />
@@ -111,13 +112,13 @@ export function LoginForm() {
           <div className="flex items-center justify-between gap-4">
             <Label className="flex cursor-pointer items-center gap-2 text-sm font-normal text-foreground">
               <Checkbox defaultChecked name="rememberMe" />
-              {form.rememberLabel}
+              {t("rememberLabel")}
             </Label>
             <Link
               className="text-sm font-semibold text-primary underline-offset-4 transition-colors duration-fast ease-nitro hover:text-primary/80 hover:underline"
               href="/recover-password"
             >
-              {form.forgotPasswordLabel}
+              {t("forgotPasswordLabel")}
             </Link>
           </div>
 
@@ -132,14 +133,14 @@ export function LoginForm() {
             disabled={loginMutation.isPending}
             type="submit"
           >
-            <span>{loginMutation.isPending ? form.submittingLabel : form.submitLabel}</span>
+            <span>{loginMutation.isPending ? t("submittingLabel") : t("submitLabel")}</span>
             <ArrowRightIcon className="size-4" />
           </Button>
         </form>
 
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-border" />
-          <span className="text-xs font-medium text-muted-foreground">{form.dividerLabel}</span>
+          <span className="text-xs font-medium text-muted-foreground">{t("dividerLabel")}</span>
           <div className="h-px flex-1 bg-border" />
         </div>
 
@@ -151,16 +152,16 @@ export function LoginForm() {
           variant="outline"
         >
           <ShieldIcon className="size-4" />
-          {form.ssoLabel}
+          {t("ssoLabel")}
         </Button>
 
         <footer className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-          <span>{form.accessPrompt}</span>
+          <span>{t("accessPrompt")}</span>
           <Link
             className="font-semibold text-primary underline-offset-4 transition-colors duration-fast ease-nitro hover:text-primary/80 hover:underline"
             href="/auth/login"
           >
-            {form.accessLinkLabel}
+            {t("accessLinkLabel")}
           </Link>
         </footer>
       </CardContent>

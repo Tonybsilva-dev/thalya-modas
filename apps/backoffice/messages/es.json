@@ -1,0 +1,179 @@
+{
+  "app": {
+    "name": "Store Flow",
+    "context": "Gestion de tienda",
+    "metadataDescription": "Espacio de trabajo para gestion de tienda local."
+  },
+  "common": {
+    "errors": {
+      "generic": "No fue posible completar la accion.",
+      "signIn": "No fue posible iniciar sesion."
+    },
+    "theme": {
+      "title": "Tema",
+      "description": "Elige apariencia clara, oscura o del sistema para el backoffice.",
+      "ariaLabel": "Modo de tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    }
+  },
+  "dashboard": {
+    "navigation": {
+      "overview": "Resumen",
+      "orders": "Pedidos",
+      "inventory": "Inventario",
+      "customers": "Clientes",
+      "cashRegister": "Caja",
+      "suppliers": "Proveedores",
+      "reports": "Reportes",
+      "about": "Acerca de"
+    },
+    "shell": {
+      "openSettings": "Abrir configuracion",
+      "openNavigation": "Abrir navegacion",
+      "closeNavigation": "Cerrar navegacion",
+      "signOut": "Cerrar sesion",
+      "signingOut": "Cerrando sesion..."
+    }
+  },
+  "login": {
+    "hero": {
+      "title": "Gestiona cada detalle de la tienda antes de abrir las puertas.",
+      "description": "Ventas, inventario, proveedores, clientes y cierre de caja en un workspace enfocado para tiendas locales."
+    },
+    "form": {
+      "title": "Bienvenido de nuevo",
+      "description": "Inicia sesion para continuar al centro de comando de la tienda.",
+      "emailLabel": "Correo",
+      "emailPlaceholder": "ana@thalyamodas.com",
+      "passwordLabel": "Contrasena",
+      "rememberLabel": "Recordarme",
+      "forgotPasswordLabel": "Olvidaste tu contrasena?",
+      "submitLabel": "Entrar",
+      "submittingLabel": "Entrando",
+      "dividerLabel": "o",
+      "ssoLabel": "Continuar con SSO seguro",
+      "accessPrompt": "Necesitas acceso?",
+      "accessLinkLabel": "Habla con el admin de la tienda"
+    },
+    "status": "Sistemas online - sincronizado hace 2 min"
+  },
+  "recoverPassword": {
+    "shared": {
+      "brand": "Store Flow",
+      "backToCode": "Volver al codigo",
+      "backToEmail": "Volver al correo",
+      "backToLogin": "Volver al login",
+      "bullets": [
+        "Proteccion para cuentas administrativas",
+        "Codigo temporal por correo",
+        "Restablecimiento guiado en pocos pasos"
+      ]
+    },
+    "request": {
+      "heroTitle": "Recupera el acceso con seguridad",
+      "heroDescription": "Un flujo claro para restaurar el acceso sin interrumpir la operacion de la tienda.",
+      "title": "Recuperar contrasena",
+      "description": "Informa el correo usado para acceder al dashboard de la tienda. Enviaremos un codigo temporal para continuar.",
+      "emailLabel": "Correo",
+      "emailPlaceholder": "finanzas@tienda.com",
+      "primaryAction": "Enviar codigo",
+      "secondaryAction": "Volver al login"
+    },
+    "code": {
+      "heroTitle": "Confirma tu identidad",
+      "heroDescription": "La verificacion por codigo reduce el riesgo de acceso indebido al panel administrativo.",
+      "title": "Verificar codigo",
+      "description": "Ingresa el codigo enviado a finanzas@tienda.com. El codigo expira en 10 minutos.",
+      "primaryAction": "Confirmar codigo",
+      "secondaryAction": "Reenviar codigo en 32s"
+    },
+    "reset": {
+      "heroTitle": "Define una nueva credencial",
+      "heroDescription": "El sistema guia los requisitos minimos antes de volver al dashboard.",
+      "title": "Crear nueva contrasena",
+      "description": "Define una contrasena fuerte para proteger pedidos, inventario, caja y reportes de la tienda.",
+      "passwordLabel": "Nueva contrasena",
+      "confirmPasswordLabel": "Confirmar contrasena",
+      "hint": "Usa al menos 8 caracteres con un numero y una letra mayuscula.",
+      "primaryAction": "Actualizar contrasena"
+    },
+    "success": {
+      "heroTitle": "Acceso restaurado",
+      "heroDescription": "Una confirmacion simple cierra el flujo y deja claro el siguiente paso.",
+      "title": "Contrasena actualizada",
+      "description": "La nueva contrasena ya esta activa. Puedes volver al dashboard y continuar la operacion.",
+      "primaryAction": "Entrar al dashboard",
+      "secondaryAction": "Volver al login"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "profile": "Perfil",
+      "address": "Direccion",
+      "preferences": "Preferencias",
+      "completed": "Completado"
+    },
+    "profile": {
+      "title": "Perfil de la tienda",
+      "description": "Informa los datos principales de la tienda.",
+      "action": "Guardar y continuar",
+      "fields": {
+        "storeName": "Nombre de la tienda",
+        "phone": "Telefono",
+        "document": "Documento fiscal",
+        "segment": "Segmento"
+      }
+    },
+    "address": {
+      "title": "Direccion de la tienda",
+      "description": "Agrega la direccion comercial.",
+      "action": "Guardar direccion",
+      "fields": {
+        "zipCode": "Codigo postal",
+        "number": "Numero",
+        "street": "Calle",
+        "neighborhood": "Barrio",
+        "complement": "Complemento",
+        "city": "Ciudad",
+        "state": "Estado"
+      },
+      "lookupIdle": "Ingresa el codigo postal completo para completar la direccion.",
+      "lookupLoading": "Buscando direccion por codigo postal.",
+      "lookupNotFound": "Codigo postal no encontrado. Completa la direccion manualmente."
+    },
+    "preferences": {
+      "title": "Preferencias de operacion",
+      "description": "Define las preferencias basicas de operacion.",
+      "action": "Finalizar preferencias",
+      "helper": "La hora de apertura debe ser anterior al cierre.",
+      "fields": {
+        "currency": "Moneda",
+        "language": "Idioma",
+        "timezone": "Zona horaria",
+        "openingTime": "Apertura",
+        "closingTime": "Cierre"
+      }
+    },
+    "completed": {
+      "title": "Onboarding completado",
+      "description": "Todo esta listo para comenzar.",
+      "successTitle": "Configuracion concluida",
+      "successDescription": "Tu tienda esta lista para usar.",
+      "primaryAction": "Entrar al dashboard",
+      "secondaryAction": "Revisar datos"
+    },
+    "segments": {
+      "fashion": "Moda",
+      "accessories": "Accesorios",
+      "footwear": "Calzado",
+      "mixed": "Mixto"
+    },
+    "languages": {
+      "pt-BR": "Portugues (Brasil)",
+      "en": "Ingles",
+      "es": "Espanol"
+    }
+  }
+}

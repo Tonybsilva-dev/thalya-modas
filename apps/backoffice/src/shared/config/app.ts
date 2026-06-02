@@ -1,4 +1,4 @@
 export const appConfig = {
-  context: "Store management",
+  context: "Gestao da loja",
   name: "Store Flow",
 };

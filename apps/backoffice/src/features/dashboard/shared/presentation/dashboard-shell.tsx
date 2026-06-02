@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { SignOut } from "@phosphor-icons/react";
 import {
   Button,
@@ -72,6 +73,8 @@ function StoreSidebar({
   const router = useRouter();
   const closeMobileNavigation = useAppUiStore((state) => state.closeMobileNavigation);
   const activeStore = useAppUiStore((state) => state.activeStore);
+  const navigation = useTranslations("dashboard.navigation");
+  const shell = useTranslations("dashboard.shell");
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
@@ -105,7 +108,7 @@ function StoreSidebar({
             >
               <Link href={href}>
                 <Icon className="size-5" />
-                {item.label}
+                {navigation(item.i18nKey)}
               </Link>
             </SidebarItem>
           );
@@ -122,7 +125,7 @@ function StoreSidebar({
             <p className="truncate text-xs text-muted-foreground">{operatorRole}</p>
           </div>
           <IconButton
-            aria-label="Open settings"
+            aria-label={shell("openSettings")}
             asChild
             className={cn(
               "size-9 bg-muted text-muted-foreground",
@@ -137,14 +140,14 @@ function StoreSidebar({
         </div>
 
         <Button
-          aria-label="Sign out"
+          aria-label={shell("signOut")}
           className="h-10 w-full justify-start border-sidebar-border px-3 text-sidebar-foreground"
           disabled={logoutMutation.isPending}
           onClick={() => logoutMutation.mutate()}
           variant="outline"
         >
           <SignOut className="size-4" />
-          {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+          {logoutMutation.isPending ? shell("signingOut") : shell("signOut")}
         </Button>
       </SidebarFooter>
     </Sidebar>
@@ -154,11 +157,12 @@ function StoreSidebar({
 function MobileHeader() {
   const toggleMobileNavigation = useAppUiStore((state) => state.toggleMobileNavigation);
   const activeStore = useAppUiStore((state) => state.activeStore);
+  const shell = useTranslations("dashboard.shell");
 
   return (
     <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 lg:hidden">
       <BrandMark context={activeStore?.name ?? appConfig.context} name={appConfig.name} />
-      <IconButton aria-label="Open navigation" onClick={toggleMobileNavigation} variant="ghost">
+      <IconButton aria-label={shell("openNavigation")} onClick={toggleMobileNavigation} variant="ghost">
         <MenuIcon className="size-5" />
       </IconButton>
     </div>
@@ -173,6 +177,7 @@ function MobileNavigationDrawer({
 }: Omit<DashboardShellProps, "children">) {
   const isMobileNavigationOpen = useAppUiStore((state) => state.isMobileNavigationOpen);
   const closeMobileNavigation = useAppUiStore((state) => state.closeMobileNavigation);
+  const shell = useTranslations("dashboard.shell");
 
   if (!isMobileNavigationOpen) {
     return null;
@@ -181,7 +186,7 @@ function MobileNavigationDrawer({
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       <button
-        aria-label="Close navigation"
+        aria-label={shell("closeNavigation")}
         className="absolute inset-0 bg-black/40"
         onClick={closeMobileNavigation}
         type="button"

@@ -7,6 +7,9 @@ import {
   Card,
   CardContent,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   CheckIcon,
@@ -15,10 +18,14 @@ import {
   UsersIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { customersContent } from "../domain/customers-content";
+import { customersContentByLocale } from "../domain/customers-content";
+
+function useCustomersContent() {
+  return customersContentByLocale[normalizeLocale(useLocale())];
+}
 
 function DetailHeader() {
-  const { detail } = customersContent;
+  const { detail } = useCustomersContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -51,7 +58,7 @@ function DetailHeader() {
 }
 
 function CustomerSummary() {
-  const { detail } = customersContent;
+  const { detail } = useCustomersContent();
 
   return (
     <Card>
@@ -90,7 +97,8 @@ function CustomerSummary() {
 }
 
 function DetailTabs() {
-  const { detail } = customersContent;
+  const content = useCustomersContent();
+  const { detail, labels } = content;
 
   return (
     <div className="flex gap-2 overflow-x-auto bg-muted p-1">
@@ -104,22 +112,24 @@ function DetailTabs() {
         </Button>
       ))}
       <Button asChild className="h-9 shrink-0 px-3" variant="ghost">
-        <Link href="/manager/dashboard/customers/mariana-costa/promissory">Promissory</Link>
+        <Link href="/manager/dashboard/customers/mariana-costa/promissory">
+          {labels.promissory}
+        </Link>
       </Button>
     </div>
   );
 }
 
 function RecentOrders() {
-  const { detail } = customersContent;
+  const { detail, labels } = useCustomersContent();
 
   return (
     <Card className="min-h-[320px]">
       <CardContent className="grid gap-4 p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-foreground">Recent orders</h2>
+          <h2 className="text-lg font-semibold text-foreground">{labels.recentOrders}</h2>
           <Button className="h-8 px-0 text-primary" variant="link">
-            View all
+            {labels.viewAll}
           </Button>
         </div>
         {detail.recentOrders.map(([order, date, total, status]) => (
@@ -138,12 +148,12 @@ function RecentOrders() {
 }
 
 function RelationshipNotes() {
-  const { detail } = customersContent;
+  const { detail, labels } = useCustomersContent();
 
   return (
     <Card className="lg:w-[330px]">
       <CardContent className="grid gap-3 p-5">
-        <h2 className="text-lg font-semibold text-foreground">Relationship notes</h2>
+        <h2 className="text-lg font-semibold text-foreground">{labels.relationshipNotes}</h2>
         {detail.notes.map((note) => (
           <div key={note} className="flex gap-2">
             <CheckIcon className="mt-0.5 size-4 text-muted-foreground" />
@@ -156,13 +166,13 @@ function RelationshipNotes() {
 }
 
 function DetailRail() {
-  const { detail } = customersContent;
+  const { detail, labels } = useCustomersContent();
 
   return (
     <aside className="grid gap-4 xl:w-[340px]">
       <Card className="bg-secondary text-secondary-foreground">
         <CardContent className="grid gap-3 p-5">
-          <p className="text-xs font-semibold">Loyalty tier</p>
+          <p className="text-xs font-semibold">{labels.loyaltyTier}</p>
           <h2 className="text-2xl font-semibold">{detail.loyaltyTier.title}</h2>
           <div className="h-2 bg-white/20">
             <div className="h-full w-3/4 bg-white" />
@@ -172,7 +182,7 @@ function DetailRail() {
       </Card>
       <Card>
         <CardContent className="grid gap-3 p-4">
-          <h2 className="text-base font-semibold text-foreground">Next best actions</h2>
+          <h2 className="text-base font-semibold text-foreground">{labels.nextBestActions}</h2>
           {detail.nextActions.map((action) => (
             <div key={action} className="flex items-center gap-2 bg-background p-2.5">
               <CheckIcon className="size-4 text-muted-foreground" />
@@ -183,7 +193,7 @@ function DetailRail() {
       </Card>
       <Card>
         <CardContent className="grid gap-3 p-4">
-          <h2 className="text-base font-semibold text-foreground">Timeline</h2>
+          <h2 className="text-base font-semibold text-foreground">{labels.timeline}</h2>
           {detail.timeline.map(([title, date]) => (
             <div key={title} className="flex gap-2.5">
               <ClockIcon className="mt-0.5 size-4 text-muted-foreground" />
@@ -200,7 +210,7 @@ function DetailRail() {
 }
 
 export function CustomerDetailRoute() {
-  const { sidebar } = customersContent;
+  const { sidebar } = useCustomersContent();
 
   return (
     <DashboardShell

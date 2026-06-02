@@ -14,7 +14,10 @@ import {
   TableRow,
   cn,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
 import { useQueryState } from "nuqs";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import {
@@ -25,7 +28,7 @@ import {
   PlusIcon,
   SearchIcon,
 } from "../../overview/presentation/dashboard-icons";
-import { ordersContent } from "../domain/orders-content";
+import { ordersContentByLocale } from "../domain/orders-content";
 
 const toneStyles = {
   success: "bg-success text-success-foreground",
@@ -36,9 +39,13 @@ const toneStyles = {
 
 const metricIcons = [BoxIcon, CheckIcon, ClockIcon, ChartIcon];
 
+function useOrdersContent() {
+  return ordersContentByLocale[normalizeLocale(useLocale())];
+}
+
 function OrdersHeader() {
   const [search, setSearch] = useQueryState("q", { defaultValue: "" });
-  const { header } = ordersContent;
+  const { header } = useOrdersContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -71,9 +78,11 @@ function OrdersHeader() {
 }
 
 function OrdersMetrics() {
+  const content = useOrdersContent();
+
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {ordersContent.metrics.map(([label, value, description, tone], index) => {
+      {content.metrics.map(([label, value, description, tone], index) => {
         const Icon = metricIcons[index] ?? ChartIcon;
 
         return (
@@ -99,10 +108,11 @@ function OrdersMetrics() {
 
 function FilterBar() {
   const [status, setStatus] = useQueryState("status", { defaultValue: "all" });
+  const content = useOrdersContent();
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
-      {ordersContent.filters.map(([value, label]) => {
+      {content.filters.map(([value, label]) => {
         const active = status === value;
 
         return (
@@ -121,7 +131,18 @@ function FilterBar() {
 }
 
 function statusVariant(status: string) {
-  if (status === "Packing" || status === "Payment" || status === "Late") {
+  if (
+    [
+      "Packing",
+      "Payment",
+      "Late",
+      "Separando",
+      "Pagamento",
+      "Atrasado",
+      "Preparando",
+      "Pago",
+    ].includes(status)
+  ) {
     return "warning";
   }
 
@@ -129,7 +150,8 @@ function statusVariant(status: string) {
 }
 
 function OrdersTableCard() {
-  const { table } = ordersContent;
+  const { table } = useOrdersContent();
+  const tableHeads = "heads" in table ? table.heads : ["Order", "Customer", "Channel", "Total", "Due", "Status"];
 
   return (
     <Card className="min-h-[520px]">
@@ -147,12 +169,11 @@ function OrdersTableCard() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Order</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Channel</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Due</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              {tableHeads.map((head, index) => (
+                <TableHead key={head} className={index === tableHeads.length - 1 ? "text-right" : undefined}>
+                  {head}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -178,7 +199,7 @@ function OrdersTableCard() {
 }
 
 function OrderBulkActions() {
-  const { bulkActions } = ordersContent;
+  const { bulkActions } = useOrdersContent();
 
   return (
     <Card>
@@ -192,7 +213,12 @@ function OrderBulkActions() {
 }
 
 function OrderDetailRail() {
-  const { selectedOrder } = ordersContent;
+  const content = useOrdersContent();
+  const { selectedOrder } = content;
+  const labels =
+    "labels" in content
+      ? content.labels
+      : { nextActions: "Next actions", packingChecklist: "Packing checklist" };
 
   return (
     <aside className="grid gap-3 xl:w-[340px]">
@@ -221,8 +247,8 @@ function OrderDetailRail() {
 
       <Card>
         <CardContent className="grid gap-3 p-4">
-          <h2 className="text-base font-semibold text-foreground">Packing checklist</h2>
-          {ordersContent.packingChecklist.map(([item, checked]) => (
+          <h2 className="text-base font-semibold text-foreground">{labels.packingChecklist}</h2>
+          {content.packingChecklist.map(([item, checked]) => (
             <div key={item} className="flex items-center gap-2.5 py-0.5">
               <CheckIcon
                 className={cn(
@@ -238,8 +264,8 @@ function OrderDetailRail() {
 
       <Card>
         <CardContent className="grid gap-3 p-4">
-          <h2 className="text-base font-semibold text-foreground">Next actions</h2>
-          {ordersContent.nextActions.map(([title, description]) => (
+          <h2 className="text-base font-semibold text-foreground">{labels.nextActions}</h2>
+          {content.nextActions.map(([title, description]) => (
             <div key={title} className="flex gap-2.5 py-0.5">
               <ClockIcon className="mt-0.5 size-4 text-muted-foreground" />
               <div className="grid gap-0.5">
@@ -255,7 +281,7 @@ function OrderDetailRail() {
 }
 
 export function OrdersRoute() {
-  const { sidebar } = ordersContent;
+  const { sidebar } = useOrdersContent();
 
   return (
     <DashboardShell activeItem="Orders" operatorRole={sidebar.operatorRole} status={sidebar.status}>

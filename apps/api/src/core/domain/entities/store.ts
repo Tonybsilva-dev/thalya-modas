@@ -17,6 +17,8 @@ export enum StoreCurrency {
 
 export enum StoreLanguage {
 	PT_BR = 'pt-BR',
+	EN = 'en',
+	ES = 'es',
 }
 
 export enum StoreTimezone {

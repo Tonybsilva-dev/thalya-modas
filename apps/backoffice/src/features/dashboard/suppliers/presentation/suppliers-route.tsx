@@ -14,7 +14,10 @@ import {
   TableRow,
   cn,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
 import { useQueryState } from "nuqs";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   BoxIcon,
@@ -25,7 +28,7 @@ import {
   SearchIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { suppliersContent } from "../domain/suppliers-content";
+import { suppliersContentByLocale } from "../domain/suppliers-content";
 
 const toneStyles = {
   success: "bg-success text-success-foreground",
@@ -36,9 +39,13 @@ const toneStyles = {
 
 const metricIcons = [BoxIcon, CheckIcon, ClockIcon, ChartIcon];
 
+function useSuppliersContent() {
+  return suppliersContentByLocale[normalizeLocale(useLocale())];
+}
+
 function SuppliersHeader() {
   const [search, setSearch] = useQueryState("q", { defaultValue: "" });
-  const { header } = suppliersContent;
+  const { header } = useSuppliersContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -71,9 +78,11 @@ function SuppliersHeader() {
 }
 
 function SupplierMetrics() {
+  const content = useSuppliersContent();
+
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {suppliersContent.metrics.map(([label, value, description, tone], index) => {
+      {content.metrics.map(([label, value, description, tone], index) => {
         const Icon = metricIcons[index] ?? ChartIcon;
 
         return (
@@ -99,10 +108,11 @@ function SupplierMetrics() {
 
 function SupplierFilterBar() {
   const [filter, setFilter] = useQueryState("filter", { defaultValue: "all" });
+  const content = useSuppliersContent();
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
-      {suppliersContent.filters.map(([value, label]) => {
+      {content.filters.map(([value, label]) => {
         const active = filter === value;
 
         return (
@@ -121,11 +131,17 @@ function SupplierFilterBar() {
 }
 
 function statusVariant(status: string) {
-  return ["Delayed", "Payable"].includes(status) ? "warning" : "outline";
+  return ["Delayed", "Payable", "Atrasado", "A pagar", "Por pagar"].includes(status)
+    ? "warning"
+    : "outline";
 }
 
 function SupplierTableCard() {
-  const { table } = suppliersContent;
+  const { table } = useSuppliersContent();
+  const tableHeads =
+    "heads" in table
+      ? table.heads
+      : ["Supplier", "PO", "Delivery", "Value", "Terms", "Status"];
 
   return (
     <Card className="min-h-[520px]">
@@ -143,12 +159,11 @@ function SupplierTableCard() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Supplier</TableHead>
-              <TableHead>PO</TableHead>
-              <TableHead>Delivery</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Terms</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              {tableHeads.map((head, index) => (
+                <TableHead key={head} className={index === tableHeads.length - 1 ? "text-right" : undefined}>
+                  {head}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -174,7 +189,7 @@ function SupplierTableCard() {
 }
 
 function SupplierBulkActions() {
-  const { bulkActions } = suppliersContent;
+  const { bulkActions } = useSuppliersContent();
 
   return (
     <Card>
@@ -188,7 +203,9 @@ function SupplierBulkActions() {
 }
 
 function SupplierDetailRail() {
-  const { deliveryPlan, nextActions, selectedSupplier } = suppliersContent;
+  const content = useSuppliersContent();
+  const { deliveryPlan, nextActions, selectedSupplier } = content;
+  const labels = "labels" in content ? content.labels : { nextActions: "Next actions" };
 
   return (
     <aside className="grid gap-2 xl:w-[340px]">
@@ -226,7 +243,7 @@ function SupplierDetailRail() {
 
       <Card>
         <CardContent className="grid gap-2 p-3">
-          <h2 className="text-base font-semibold text-foreground">Next actions</h2>
+          <h2 className="text-base font-semibold text-foreground">{labels.nextActions}</h2>
           {nextActions.map((action) => (
             <div key={action} className="flex items-center gap-2 py-0.5">
               <CheckIcon className="size-4 text-muted-foreground" />
@@ -240,7 +257,7 @@ function SupplierDetailRail() {
 }
 
 export function SuppliersRoute() {
-  const { sidebar } = suppliersContent;
+  const { sidebar } = useSuppliersContent();
 
   return (
     <DashboardShell

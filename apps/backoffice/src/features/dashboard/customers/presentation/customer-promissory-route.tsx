@@ -9,6 +9,9 @@ import {
   Card,
   CardContent,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   BoxIcon,
@@ -18,10 +21,14 @@ import {
   UsersIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { customersContent } from "../domain/customers-content";
+import { customersContentByLocale } from "../domain/customers-content";
+
+function useCustomersContent() {
+  return customersContentByLocale[normalizeLocale(useLocale())];
+}
 
 function PromissoryHeader() {
-  const { promissory } = customersContent;
+  const { promissory } = useCustomersContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -54,9 +61,11 @@ function PromissoryHeader() {
 }
 
 function PromissoryMetrics() {
+  const { promissory } = useCustomersContent();
+
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {customersContent.promissory.metrics.map(([label, value, description]) => (
+      {promissory.metrics.map(([label, value, description]) => (
         <Card key={label}>
           <CardContent className="grid gap-2.5 p-4">
             <div className="flex items-center gap-2">
@@ -73,14 +82,21 @@ function PromissoryMetrics() {
 }
 
 function OpenInstallments() {
-  const { promissory } = customersContent;
+  const { promissory } = useCustomersContent();
+  const labels =
+    "labels" in promissory
+      ? promissory.labels
+      : {
+          openInstallments: "Parcelas em aberto",
+          pendingInstallments: "3 pendentes",
+        };
 
   return (
     <Card>
       <CardContent className="grid gap-3 p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-foreground">Parcelas em aberto</h2>
-          <span className="text-xs text-muted-foreground">3 pendentes</span>
+          <h2 className="text-lg font-semibold text-foreground">{labels.openInstallments}</h2>
+          <span className="text-xs text-muted-foreground">{labels.pendingInstallments}</span>
         </div>
         {promissory.installments.map(([date, due, value, status]) => (
           <div key={date} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
@@ -89,7 +105,9 @@ function OpenInstallments() {
               <p className="text-xs text-muted-foreground">{due}</p>
             </div>
             <span className="text-sm font-medium text-foreground">{value}</span>
-            <Badge variant={status === "Atrasada" ? "warning" : "outline"}>{status}</Badge>
+            <Badge variant={["Atrasada", "Overdue"].includes(status) ? "warning" : "outline"}>
+              {status}
+            </Badge>
           </div>
         ))}
       </CardContent>
@@ -98,12 +116,18 @@ function OpenInstallments() {
 }
 
 function CreditPurchaseHistory() {
-  const { promissory } = customersContent;
+  const { promissory } = useCustomersContent();
+  const labels =
+    "labels" in promissory
+      ? promissory.labels
+      : { creditPurchaseHistory: "Histórico de compras a prazo" };
 
   return (
     <Card>
       <CardContent className="grid gap-3 p-5">
-        <h2 className="text-lg font-semibold text-foreground">Histórico de compras a prazo</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          {labels.creditPurchaseHistory}
+        </h2>
         {promissory.purchases.map(([title, date, value]) => (
           <div key={title} className="flex items-center gap-3 border-b border-border py-2 last:border-0">
             <div className="min-w-0 flex-1">
@@ -119,13 +143,17 @@ function CreditPurchaseHistory() {
 }
 
 function PromissoryRail() {
-  const { promissory } = customersContent;
+  const { promissory } = useCustomersContent();
+  const labels =
+    "labels" in promissory
+      ? promissory.labels
+      : { financialTimeline: "Timeline financeira" };
 
   return (
     <aside className="grid gap-4 xl:w-[340px]">
       <Card>
         <CardContent className="grid gap-3 p-4">
-          <h2 className="text-base font-semibold text-foreground">Timeline financeira</h2>
+          <h2 className="text-base font-semibold text-foreground">{labels.financialTimeline}</h2>
           {promissory.timeline.map(([title, description]) => (
             <div key={title} className="flex gap-2.5">
               <ClockIcon className="mt-0.5 size-4 text-muted-foreground" />
@@ -152,7 +180,7 @@ function PromissoryRail() {
 }
 
 export function CustomerPromissoryRoute() {
-  const { promissory, sidebar } = customersContent;
+  const { promissory, sidebar } = useCustomersContent();
 
   return (
     <DashboardShell

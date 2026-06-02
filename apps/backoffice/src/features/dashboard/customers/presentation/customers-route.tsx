@@ -15,7 +15,10 @@ import {
   TableRow,
   cn,
 } from "@thalya-modas/ui";
+import { useLocale } from "next-intl";
 import { useQueryState } from "nuqs";
+
+import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   BoxIcon,
@@ -26,7 +29,7 @@ import {
   UsersIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { customersContent } from "../domain/customers-content";
+import { customersContentByLocale } from "../domain/customers-content";
 
 const toneStyles = {
   success: "bg-success text-success-foreground",
@@ -37,9 +40,13 @@ const toneStyles = {
 
 const metricIcons = [UsersIcon, CheckIcon, BoxIcon, ChartIcon];
 
+function useCustomersContent() {
+  return customersContentByLocale[normalizeLocale(useLocale())];
+}
+
 function CustomersHeader() {
   const [search, setSearch] = useQueryState("q", { defaultValue: "" });
-  const { header } = customersContent;
+  const { header } = useCustomersContent();
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -75,9 +82,11 @@ function CustomersHeader() {
 }
 
 function CustomersMetrics() {
+  const content = useCustomersContent();
+
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {customersContent.metrics.map(([label, value, description, tone], index) => {
+      {content.metrics.map(([label, value, description, tone], index) => {
         const Icon = metricIcons[index] ?? ChartIcon;
         return (
           <Card key={label} className="animate-nitro-scale-in">
@@ -102,10 +111,11 @@ function CustomersMetrics() {
 
 function CustomersFilterBar() {
   const [segment, setSegment] = useQueryState("segment", { defaultValue: "all" });
+  const content = useCustomersContent();
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
-      {customersContent.filters.map(([value, label]) => {
+      {content.filters.map(([value, label]) => {
         const active = segment === value;
         return (
           <Button
@@ -123,15 +133,31 @@ function CustomersFilterBar() {
 }
 
 function warningBadge(label: string) {
-  return ["VIP", "Birthday", "At risk", "Reserve dress", "Gift coupon", "WhatsApp"].includes(
-    label,
-  )
+  return [
+    "VIP",
+    "Birthday",
+    "At risk",
+    "Reserve dress",
+    "Gift coupon",
+    "WhatsApp",
+    "Aniversario",
+    "Em risco",
+    "Reservar vestido",
+    "Cupom presente",
+    "Cumpleanos",
+    "En riesgo",
+    "Cupon regalo",
+  ].includes(label)
     ? "warning"
     : "outline";
 }
 
 function CustomersTableCard() {
-  const { table } = customersContent;
+  const { table } = useCustomersContent();
+  const tableHeads =
+    "heads" in table
+      ? table.heads
+      : ["Customer", "Phone", "Last buy", "Lifetime", "Segment", "Next action"];
 
   return (
     <Card className="min-h-[560px]">
@@ -148,12 +174,11 @@ function CustomersTableCard() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Last buy</TableHead>
-              <TableHead>Lifetime</TableHead>
-              <TableHead>Segment</TableHead>
-              <TableHead className="text-right">Next action</TableHead>
+              {tableHeads.map((head, index) => (
+                <TableHead key={head} className={index === tableHeads.length - 1 ? "text-right" : undefined}>
+                  {head}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -183,7 +208,7 @@ function CustomersTableCard() {
 }
 
 function CustomerBulkActions() {
-  const { bulkActions } = customersContent;
+  const { bulkActions } = useCustomersContent();
   return (
     <Card>
       <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:gap-3">
@@ -196,7 +221,9 @@ function CustomerBulkActions() {
 }
 
 function CustomerListRail() {
-  const { rail } = customersContent;
+  const content = useCustomersContent();
+  const { rail } = content;
+  const labels = content.labels;
 
   return (
     <aside className="grid gap-2 xl:w-[340px]">
@@ -222,7 +249,7 @@ function CustomerListRail() {
 
       <Card>
         <CardContent className="grid gap-2 p-3">
-          <h2 className="text-base font-semibold text-foreground">Loyalty status</h2>
+          <h2 className="text-base font-semibold text-foreground">{labels.loyaltyStatus}</h2>
           <p className="text-xs leading-5 text-muted-foreground">{rail.loyalty}</p>
           <div className="h-2 bg-muted">
             <div className="h-full w-2/3 bg-primary" />
@@ -232,7 +259,7 @@ function CustomerListRail() {
 
       <Card>
         <CardContent className="grid gap-2 p-3">
-          <h2 className="text-base font-semibold text-foreground">Next best actions</h2>
+          <h2 className="text-base font-semibold text-foreground">{labels.nextBestActions}</h2>
           {rail.actions.map((action) => (
             <div key={action} className="flex items-center gap-2 py-0.5">
               <CheckIcon className="size-4 text-muted-foreground" />
@@ -244,7 +271,7 @@ function CustomerListRail() {
 
       <Card>
         <CardContent className="grid gap-2 p-3">
-          <h2 className="text-base font-semibold text-foreground">Recent purchases</h2>
+          <h2 className="text-base font-semibold text-foreground">{labels.recentPurchases}</h2>
           {rail.purchases.map(([item, meta]) => (
             <div key={item} className="grid gap-0.5 py-0.5">
               <span className="text-xs text-foreground">{item}</span>
@@ -258,7 +285,7 @@ function CustomerListRail() {
 }
 
 export function CustomersRoute() {
-  const { sidebar } = customersContent;
+  const { sidebar } = useCustomersContent();
   return (
     <DashboardShell activeItem="Customers" operatorRole={sidebar.operatorRole} status={sidebar.status}>
       <CustomersHeader />

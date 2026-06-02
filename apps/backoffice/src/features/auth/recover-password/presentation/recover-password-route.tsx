@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
@@ -16,10 +17,7 @@ import {
   cn,
 } from "@thalya-modas/ui";
 
-import {
-  recoverPasswordContent,
-  type RecoverPasswordStep,
-} from "../domain/recover-password-content";
+import type { RecoverPasswordStep } from "../domain/recover-password-content";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -68,7 +66,8 @@ function RecoveryShell({
   children: ReactNode;
   step: RecoverPasswordStep;
 }) {
-  const content = recoverPasswordContent[step];
+  const t = useTranslations("recoverPassword");
+  const bullets = t.raw("shared.bullets") as string[];
 
   return (
     <main className="grid min-h-screen bg-background text-foreground lg:grid-cols-[560px_minmax(0,1fr)]">
@@ -80,22 +79,22 @@ function RecoveryShell({
                 <StoreIcon className="size-[22px]" />
               </div>
               <span className="text-lg font-semibold">
-                {brandName ?? recoverPasswordContent.shared.brand}
+                {brandName ?? t("shared.brand")}
               </span>
             </div>
 
             <div className="grid max-w-[420px] gap-3">
               <h1 className="text-[34px] font-bold leading-tight text-secondary-foreground">
-                {content.heroTitle}
+                {t(`${step}.heroTitle`)}
               </h1>
               <p className="text-base leading-7 text-white/80">
-                {content.heroDescription}
+                {t(`${step}.heroDescription`)}
               </p>
             </div>
           </div>
 
           <div className="grid gap-3">
-            {recoverPasswordContent.shared.bullets.map((bullet) => (
+            {bullets.map((bullet) => (
               <div key={bullet} className="flex items-center gap-2.5">
                 <CheckIcon className="size-4 text-primary" />
                 <span className="text-sm text-white/90">{bullet}</span>
@@ -214,15 +213,15 @@ function ActionRow({
 }
 
 function RequestStep({ brandName }: { brandName?: string }) {
-  const content = recoverPasswordContent.request;
+  const t = useTranslations("recoverPassword");
 
   return (
     <RecoveryShell brandName={brandName} step="request">
       <RecoveryCard>
-        <CardIntro description={content.description} title={content.title} />
+        <CardIntro description={t("request.description")} title={t("request.title")} />
 
         <div className="grid gap-1.5">
-          <Label htmlFor="recovery-email">{content.emailLabel}</Label>
+          <Label htmlFor="recovery-email">{t("request.emailLabel")}</Label>
           <div className="relative">
             <FieldIcon>
               <MailIcon className="size-[18px]" />
@@ -231,7 +230,7 @@ function RequestStep({ brandName }: { brandName?: string }) {
               id="recovery-email"
               autoComplete="email"
               className="h-11 pl-10"
-              defaultValue={content.emailPlaceholder}
+              defaultValue={t("request.emailPlaceholder")}
               inputMode="email"
               type="email"
             />
@@ -240,10 +239,10 @@ function RequestStep({ brandName }: { brandName?: string }) {
 
         <ActionRow
           backHref={previousHref.request ?? "/auth/login"}
-          backLabel={recoverPasswordContent.shared.backToLogin}
+          backLabel={t("shared.backToLogin")}
         >
           <LinkButton href={nextHref.request}>
-            {content.primaryAction}
+            {t("request.primaryAction")}
             <ArrowRightIcon className="size-4" />
           </LinkButton>
         </ActionRow>
@@ -253,15 +252,16 @@ function RequestStep({ brandName }: { brandName?: string }) {
 }
 
 function CodeStep({ brandName }: { brandName?: string }) {
-  const content = recoverPasswordContent.code;
+  const t = useTranslations("recoverPassword");
+  const code = ["4", "8", "1", "2", "", ""];
 
   return (
     <RecoveryShell brandName={brandName} step="code">
       <RecoveryCard>
-        <CardIntro description={content.description} title={content.title} />
+        <CardIntro description={t("code.description")} title={t("code.title")} />
 
         <div className="grid grid-cols-6 gap-2.5">
-          {content.code.map((digit, index) => (
+          {code.map((digit, index) => (
             <div
               key={`${digit}-${index}`}
               className={cn(
@@ -276,15 +276,15 @@ function CodeStep({ brandName }: { brandName?: string }) {
 
         <ActionRow
           backHref={previousHref.code ?? "/recover-password"}
-          backLabel={recoverPasswordContent.shared.backToEmail}
+          backLabel={t("shared.backToEmail")}
         >
           <LinkButton href={nextHref.code}>
-            {content.primaryAction}
+            {t("code.primaryAction")}
             <ArrowRightIcon className="size-4" />
           </LinkButton>
         </ActionRow>
         <Button className="h-11 w-full justify-center" variant="outline">
-          {content.secondaryAction}
+          {t("code.secondaryAction")}
         </Button>
       </RecoveryCard>
     </RecoveryShell>
@@ -292,16 +292,16 @@ function CodeStep({ brandName }: { brandName?: string }) {
 }
 
 function ResetStep({ brandName }: { brandName?: string }) {
-  const content = recoverPasswordContent.reset;
+  const t = useTranslations("recoverPassword");
 
   return (
     <RecoveryShell brandName={brandName} step="reset">
       <RecoveryCard>
-        <CardIntro description={content.description} title={content.title} />
+        <CardIntro description={t("reset.description")} title={t("reset.title")} />
 
         {[
-          [content.passwordLabel, "new-password", LockIcon],
-          [content.confirmPasswordLabel, "confirm-password", LockIcon],
+          [t("reset.passwordLabel"), "new-password", LockIcon],
+          [t("reset.confirmPasswordLabel"), "confirm-password", LockIcon],
         ].map(([label, id, Icon]) => (
           <div key={id as string} className="grid gap-1.5">
             <Label htmlFor={id as string}>{label as string}</Label>
@@ -313,7 +313,7 @@ function ResetStep({ brandName }: { brandName?: string }) {
                 id={id as string}
                 autoComplete="new-password"
                 className="h-11 pl-10"
-                defaultValue={content.passwordValue}
+                defaultValue="••••••••••"
                 type="password"
               />
             </div>
@@ -322,15 +322,15 @@ function ResetStep({ brandName }: { brandName?: string }) {
 
         <div className="flex gap-2.5 border border-border bg-muted p-3">
           <ShieldIcon className="mt-0.5 size-[18px] shrink-0 text-primary" />
-          <p className="text-sm leading-5 text-muted-foreground">{content.hint}</p>
+          <p className="text-sm leading-5 text-muted-foreground">{t("reset.hint")}</p>
         </div>
 
         <ActionRow
           backHref={previousHref.reset ?? "/recover-password/code"}
-          backLabel={recoverPasswordContent.shared.backToCode}
+          backLabel={t("shared.backToCode")}
         >
           <LinkButton href={nextHref.reset}>
-            {content.primaryAction}
+            {t("reset.primaryAction")}
             <ArrowRightIcon className="size-4" />
           </LinkButton>
         </ActionRow>
@@ -340,7 +340,7 @@ function ResetStep({ brandName }: { brandName?: string }) {
 }
 
 function SuccessStep({ brandName }: { brandName?: string }) {
-  const content = recoverPasswordContent.success;
+  const t = useTranslations("recoverPassword");
 
   return (
     <RecoveryShell brandName={brandName} step="success">
@@ -349,15 +349,15 @@ function SuccessStep({ brandName }: { brandName?: string }) {
           <div className="grid size-16 shrink-0 place-items-center border border-success-foreground bg-success text-success-foreground">
             <CheckIcon className="size-[30px]" />
           </div>
-          <CardIntro description={content.description} title={content.title} />
+          <CardIntro description={t("success.description")} title={t("success.title")} />
         </div>
 
         <ActionRow
           backHref={previousHref.success ?? "/auth/login"}
-          backLabel={content.secondaryAction}
+          backLabel={t("success.secondaryAction")}
         >
           <LinkButton href={nextHref.success}>
-            {content.primaryAction}
+            {t("success.primaryAction")}
             <ArrowRightIcon className="size-4" />
           </LinkButton>
         </ActionRow>

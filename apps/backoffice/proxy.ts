@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { authSessionCookieName } from "@/src/shared/auth/session-cookie";
+import { localeCookieName } from "@/src/shared/i18n/locale-cookie";
+import { defaultLocale, normalizeLocale } from "@/src/shared/i18n/locales";
 import { lastStoreCookieName } from "@/src/shared/store/last-store-cookie";
 
 type ApiOnboardingStep =
@@ -16,6 +18,9 @@ type OnboardingProgress = {
   store?: {
     id: string;
     name: string;
+    preferences?: {
+      language?: string;
+    };
   };
 };
 
@@ -101,12 +106,22 @@ function redirectTo(request: NextRequest, pathname: string) {
 function withLastStore(response: NextResponse, progress: OnboardingProgress) {
   if (!progress.store) return response;
 
+  const language = normalizeLocale(progress.store.preferences?.language ?? defaultLocale);
+
   response.cookies.set({
     name: lastStoreCookieName,
     value: JSON.stringify({
       id: progress.store.id,
+      language,
       name: progress.store.name,
     }),
+    maxAge: 31536000,
+    path: "/",
+    sameSite: "lax",
+  });
+  response.cookies.set({
+    name: localeCookieName,
+    value: language,
     maxAge: 31536000,
     path: "/",
     sameSite: "lax",

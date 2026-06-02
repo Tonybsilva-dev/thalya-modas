@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import {
   Button,
@@ -37,6 +38,7 @@ import {
 
 import { lookupAddressByCep } from "@/src/shared/api/cep-client";
 import { ApiRequestError } from "@/src/shared/api/http-client";
+import type { AppLocale } from "@/src/shared/i18n/locales";
 import { useAppUiStore } from "@/src/shared/state/app-ui-store";
 import { MaskedInput } from "@/src/shared/ui/masked-input";
 
@@ -48,7 +50,6 @@ import {
 } from "../application/onboarding-api";
 import { useOnboardingStore } from "../application/onboarding-store";
 import {
-  onboardingContent,
   onboardingRoutes,
   onboardingStepOrder,
   storeCurrencies,
@@ -75,13 +76,6 @@ type FieldIconProps = {
   icon: ComponentType<{ className?: string }>;
 };
 
-const stepLabel: Record<OnboardingStep, string> = {
-  address: "Endereco",
-  completed: "Concluido",
-  preferences: "Preferencias",
-  profile: "Perfil",
-};
-
 function FieldIcon({ icon: Icon }: FieldIconProps) {
   return (
     <span className="pointer-events-none absolute left-3 top-1/2 flex size-[18px] -translate-y-1/2 items-center justify-center text-muted-foreground">
@@ -97,7 +91,7 @@ function OnboardingShell({
   children: ReactNode;
   step: OnboardingStep;
 }) {
-  const content = onboardingContent[step];
+  const t = useTranslations(`onboarding.${step}`);
 
   return (
     <main className="grid min-h-screen place-items-center bg-muted/70 px-5 py-10 text-foreground sm:px-8 lg:px-16">
@@ -112,10 +106,10 @@ function OnboardingShell({
               </div>
               <div className="grid min-w-0 gap-1">
                 <h1 className="text-2xl font-bold leading-tight text-foreground">
-                  {content.title}
+                  {t("title")}
                 </h1>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  {content.description}
+                  {t("description")}
                 </p>
               </div>
             </header>
@@ -130,6 +124,7 @@ function OnboardingShell({
 
 function StepIndicator({ step }: { step: OnboardingStep }) {
   const activeIndex = onboardingStepOrder.indexOf(step);
+  const t = useTranslations("onboarding.steps");
 
   return (
     <div className="flex w-full justify-end gap-2" aria-label="Onboarding progress">
@@ -141,7 +136,7 @@ function StepIndicator({ step }: { step: OnboardingStep }) {
             index <= activeIndex && "border-primary bg-primary",
             index === activeIndex ? "w-14" : "w-[34px]",
           )}
-          title={stepLabel[item]}
+          title={t(item)}
         />
       ))}
     </div>
@@ -298,7 +293,8 @@ function getApiErrorMessage(error: unknown) {
 
 function StoreProfileStep() {
   const router = useRouter();
-  const content = onboardingContent.profile;
+  const t = useTranslations("onboarding.profile");
+  const segmentLabels = useTranslations("onboarding.segments");
   const profile = useOnboardingStore((state) => state.profile);
   const setProfile = useOnboardingStore((state) => state.setProfile);
   const [segment, setSegment] = useState<StoreProfileInput["segment"]>(profile.segment);
@@ -338,7 +334,7 @@ function StoreProfileStep() {
             defaultValue={profile.storeName}
             error={errors.storeName}
             icon={StorefrontIcon}
-            label={content.fields.storeName}
+            label={t("fields.storeName")}
             name="storeName"
           />
           <Field
@@ -346,7 +342,7 @@ function StoreProfileStep() {
             error={errors.phone}
             icon={PhoneIcon}
             inputMode="tel"
-            label={content.fields.phone}
+            label={t("fields.phone")}
             mask={[{ mask: "(00) 0000-0000" }, { mask: "(00) 00000-0000" }]}
             name="phone"
           />
@@ -357,23 +353,26 @@ function StoreProfileStep() {
           error={errors.document}
           icon={SealCheckIcon}
           inputMode="numeric"
-          label={content.fields.document}
+          label={t("fields.document")}
           mask={[{ mask: "000.000.000-00" }, { mask: "00.000.000/0000-00" }]}
           name="document"
         />
 
         <SelectField
           error={errors.segment}
-          label={content.fields.segment}
+          label={t("fields.segment")}
           name="segment"
           onValueChange={(value) => setSegment(value as StoreProfileInput["segment"])}
-          options={storeSegments}
+          options={storeSegments.map((item) => ({
+            label: segmentLabels(item.value),
+            value: item.value,
+          }))}
           value={segment}
         />
 
         {formError ? <FormError>{formError}</FormError> : null}
 
-        <SubmitButton isPending={mutation.isPending}>{content.action}</SubmitButton>
+        <SubmitButton isPending={mutation.isPending}>{t("action")}</SubmitButton>
       </form>
     </OnboardingShell>
   );
@@ -381,7 +380,7 @@ function StoreProfileStep() {
 
 function StoreAddressStep() {
   const router = useRouter();
-  const content = onboardingContent.address;
+  const t = useTranslations("onboarding.address");
   const address = useOnboardingStore((state) => state.address);
   const setAddress = useOnboardingStore((state) => state.setAddress);
   const [cepQuery, setCepQuery] = useQueryState("cep", {
@@ -470,10 +469,10 @@ function StoreAddressStep() {
 
   const lookupMessage =
     lookupStatus === "loading"
-      ? content.lookupLoading
+      ? t("lookupLoading")
       : lookupStatus === "not-found"
-        ? content.lookupNotFound
-        : content.lookupIdle;
+        ? t("lookupNotFound")
+        : t("lookupIdle");
 
   return (
     <OnboardingShell step="address">
@@ -483,7 +482,7 @@ function StoreAddressStep() {
             error={errors.zipCode}
             icon={MapPinIcon}
             inputMode="numeric"
-            label={content.fields.zipCode}
+            label={t("fields.zipCode")}
             mask="00000-000"
             name="zipCode"
             onChange={(value) => updateValue("zipCode", value)}
@@ -493,7 +492,7 @@ function StoreAddressStep() {
             error={errors.number}
             icon={HashIcon}
             inputMode="numeric"
-            label={content.fields.number}
+            label={t("fields.number")}
             name="number"
             onChange={(value) => updateValue("number", value)}
             value={address.number}
@@ -512,7 +511,7 @@ function StoreAddressStep() {
         <Field
           error={errors.street}
           icon={NavigationArrowIcon}
-          label={content.fields.street}
+          label={t("fields.street")}
           name="street"
           onChange={(value) => updateValue("street", value)}
           value={address.street}
@@ -522,7 +521,7 @@ function StoreAddressStep() {
           <Field
             error={errors.neighborhood}
             icon={MapPinIcon}
-            label={content.fields.neighborhood}
+            label={t("fields.neighborhood")}
             name="neighborhood"
             onChange={(value) => updateValue("neighborhood", value)}
             value={address.neighborhood}
@@ -530,7 +529,7 @@ function StoreAddressStep() {
           <Field
             error={errors.complement}
             icon={PlusIcon}
-            label={content.fields.complement}
+            label={t("fields.complement")}
             name="complement"
             onChange={(value) => updateValue("complement", value)}
             value={address.complement ?? ""}
@@ -541,7 +540,7 @@ function StoreAddressStep() {
           <Field
             error={errors.city}
             icon={BuildingsIcon}
-            label={content.fields.city}
+            label={t("fields.city")}
             name="city"
             onChange={(value) => updateValue("city", value)}
             value={address.city}
@@ -549,7 +548,7 @@ function StoreAddressStep() {
           <Field
             error={errors.state}
             icon={MapPinIcon}
-            label={content.fields.state}
+            label={t("fields.state")}
             name="state"
             onChange={(value) => updateValue("state", value)}
             value={address.state}
@@ -558,7 +557,7 @@ function StoreAddressStep() {
 
         {formError ? <FormError>{formError}</FormError> : null}
 
-        <SubmitButton isPending={mutation.isPending}>{content.action}</SubmitButton>
+        <SubmitButton isPending={mutation.isPending}>{t("action")}</SubmitButton>
       </form>
     </OnboardingShell>
   );
@@ -566,10 +565,12 @@ function StoreAddressStep() {
 
 function StorePreferencesStep() {
   const router = useRouter();
-  const content = onboardingContent.preferences;
+  const t = useTranslations("onboarding.preferences");
+  const languageLabels = useTranslations("onboarding.languages");
   const preferences = useOnboardingStore((state) => state.preferences);
   const setPreferences = useOnboardingStore((state) => state.setPreferences);
   const setActiveStore = useAppUiStore((state) => state.setActiveStore);
+  const setLocale = useAppUiStore((state) => state.setLocale);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -579,9 +580,12 @@ function StorePreferencesStep() {
       return completeOnboarding();
     },
     onSuccess: (progress) => {
+      setLocale(preferences.language);
+
       if (progress.store) {
         setActiveStore({
           id: progress.store.id,
+          language: preferences.language,
           name: progress.store.name,
         });
       }
@@ -618,7 +622,7 @@ function StorePreferencesStep() {
         <div className="grid gap-3 sm:grid-cols-2">
           <SelectField
             error={errors.currency}
-            label={content.fields.currency}
+            label={t("fields.currency")}
             name="currency"
             onValueChange={(value) => setPreferences({ currency: value as "BRL" })}
             options={storeCurrencies}
@@ -626,17 +630,20 @@ function StorePreferencesStep() {
           />
           <SelectField
             error={errors.language}
-            label={content.fields.language}
+            label={t("fields.language")}
             name="language"
-            onValueChange={(value) => setPreferences({ language: value as "pt-BR" })}
-            options={storeLanguages}
+            onValueChange={(value) => setPreferences({ language: value as AppLocale })}
+            options={storeLanguages.map((item) => ({
+              label: languageLabels(item.value),
+              value: item.value,
+            }))}
             value={preferences.language}
           />
         </div>
 
         <SelectField
           error={errors.timezone}
-          label={content.fields.timezone}
+          label={t("fields.timezone")}
           name="timezone"
           onValueChange={(value) =>
             setPreferences({
@@ -651,7 +658,7 @@ function StorePreferencesStep() {
           <Field
             error={errors.openingTime}
             icon={CalendarBlankIcon}
-            label={content.fields.openingTime}
+            label={t("fields.openingTime")}
             name="openingTime"
             onChange={(value) => setPreferences({ openingTime: value })}
             type="time"
@@ -660,7 +667,7 @@ function StorePreferencesStep() {
           <Field
             error={errors.closingTime}
             icon={ClockIcon}
-            label={content.fields.closingTime}
+            label={t("fields.closingTime")}
             name="closingTime"
             onChange={(value) => setPreferences({ closingTime: value })}
             type="time"
@@ -670,19 +677,19 @@ function StorePreferencesStep() {
 
         <div className="flex gap-2.5 border border-border bg-muted p-3 text-sm text-muted-foreground">
           <InfoIcon className="mt-0.5 size-[18px] shrink-0 text-primary" />
-          <span>{content.helper}</span>
+          <span>{t("helper")}</span>
         </div>
 
         {formError ? <FormError>{formError}</FormError> : null}
 
-        <SubmitButton isPending={mutation.isPending}>{content.action}</SubmitButton>
+        <SubmitButton isPending={mutation.isPending}>{t("action")}</SubmitButton>
       </form>
     </OnboardingShell>
   );
 }
 
 function CompletedStep() {
-  const content = onboardingContent.completed;
+  const t = useTranslations("onboarding.completed");
 
   return (
     <OnboardingShell step="completed">
@@ -692,16 +699,16 @@ function CompletedStep() {
             <CheckIcon className="size-7" weight="bold" />
           </div>
           <div className="grid gap-1">
-            <h2 className="text-lg font-bold">{content.successTitle}</h2>
-            <p className="text-sm leading-6">{content.successDescription}</p>
+            <h2 className="text-lg font-bold">{t("successTitle")}</h2>
+            <p className="text-sm leading-6">{t("successDescription")}</p>
           </div>
         </div>
 
         <Button asChild className="h-11 w-full justify-center">
-          <Link href={onboardingRoutes.dashboard}>{content.primaryAction}</Link>
+          <Link href={onboardingRoutes.dashboard}>{t("primaryAction")}</Link>
         </Button>
         <Button asChild className="h-11 w-full justify-center" variant="outline">
-          <Link href={onboardingRoutes.profile}>{content.secondaryAction}</Link>
+          <Link href={onboardingRoutes.profile}>{t("secondaryAction")}</Link>
         </Button>
       </div>
     </OnboardingShell>

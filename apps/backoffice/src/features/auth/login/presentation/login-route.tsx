@@ -1,6 +1,8 @@
-import { BrandMark } from "@/src/shared/ui/brand-mark";
+"use client";
 
-import { loginRouteContent } from "../domain/login-route-content";
+import { BrandMark } from "@/src/shared/ui/brand-mark";
+import { useTranslations } from "next-intl";
+
 import { LoginForm } from "./login-form";
 
 type LoginRouteProps = {
@@ -11,6 +13,8 @@ const backgroundImage =
   "https://images.unsplash.com/photo-1567966374914-fcf38ba2bd8d?auto=format&fit=crop&q=80&w=1800";
 
 export function LoginRoute({ brandName }: LoginRouteProps) {
+  const t = useTranslations("login");
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div
@@ -26,10 +30,10 @@ export function LoginRoute({ brandName }: LoginRouteProps) {
 
           <div className="max-w-[520px] animate-nitro-slide-up text-white">
             <h2 className="text-4xl font-semibold leading-[1.08] tracking-normal md:text-[44px]">
-              {loginRouteContent.hero.title}
+              {t("hero.title")}
             </h2>
             <p className="mt-4 max-w-[500px] text-base leading-7 text-white/80">
-              {loginRouteContent.hero.description}
+              {t("hero.description")}
             </p>
           </div>
 
@@ -38,7 +42,7 @@ export function LoginRoute({ brandName }: LoginRouteProps) {
               <span className="absolute inline-flex size-full animate-ping bg-[#ddf0c9]/40" />
               <span className="relative inline-flex size-2.5 bg-[#ddf0c9]" />
             </span>
-            {loginRouteContent.status}
+            {t("status")}
           </div>
         </div>
 
