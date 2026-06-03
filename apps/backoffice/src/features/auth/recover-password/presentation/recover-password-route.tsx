@@ -224,8 +224,8 @@ function RequestStep({ brandName }: { brandName?: string }) {
               id="recovery-email"
               autoComplete="email"
               className="h-11 pl-10"
-              defaultValue={t("request.emailPlaceholder")}
               inputMode="email"
+              placeholder={t("request.emailPlaceholder")}
               type="email"
             />
           </div>
@@ -247,7 +247,7 @@ function RequestStep({ brandName }: { brandName?: string }) {
 
 function CodeStep({ brandName }: { brandName?: string }) {
   const t = useTranslations("recoverPassword");
-  const code = ["4", "8", "1", "2", "", ""];
+  const code = Array.from({ length: 6 }, (_, index) => index);
 
   return (
     <RecoveryShell brandName={brandName} step="code">
@@ -255,16 +255,11 @@ function CodeStep({ brandName }: { brandName?: string }) {
         <CardIntro description={t("code.description")} title={t("code.title")} />
 
         <div className="grid grid-cols-6 gap-2.5">
-          {code.map((digit, index) => (
+          {code.map((index) => (
             <div
-              key={`${digit}-${index}`}
-              className={cn(
-                "grid h-14 place-items-center border bg-card text-xl font-semibold text-foreground",
-                digit ? "border-primary" : "border-input",
-              )}
-            >
-              {digit}
-            </div>
+              key={index}
+              className="grid h-14 place-items-center border border-input bg-card text-xl font-semibold text-foreground"
+            />
           ))}
         </div>
 
@@ -307,7 +302,7 @@ function ResetStep({ brandName }: { brandName?: string }) {
                 id={id as string}
                 autoComplete="new-password"
                 className="h-11 pl-10"
-                defaultValue="••••••••••"
+                placeholder={t("reset.passwordPlaceholder")}
                 type="password"
               />
             </div>

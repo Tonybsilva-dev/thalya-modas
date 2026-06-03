@@ -48,7 +48,7 @@ export const recoverPasswordContent = {
       "Defina uma senha forte para proteger pedidos, estoque, caixa e relatórios da loja.",
     passwordLabel: "Nova senha",
     confirmPasswordLabel: "Confirmar senha",
-    passwordValue: "••••••••••",
+    passwordPlaceholder: "••••••••••",
     hint: "Use pelo menos 8 caracteres com número e letra maiúscula.",
     primaryAction: "Atualizar senha",
   },

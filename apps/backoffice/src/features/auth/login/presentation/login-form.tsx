@@ -84,7 +84,6 @@ export function LoginForm() {
                 name="email"
                 autoComplete="email"
                 className="h-11 pl-10"
-                defaultValue="ana@thalyamodas.com"
                 inputMode="email"
                 placeholder={t("emailPlaceholder")}
                 type="email"
@@ -103,7 +102,7 @@ export function LoginForm() {
                 name="password"
                 autoComplete="current-password"
                 className="h-11 pl-10"
-                defaultValue="Password123"
+                placeholder={t("passwordPlaceholder")}
                 type="password"
               />
             </div>

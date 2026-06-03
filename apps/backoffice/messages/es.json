@@ -162,6 +162,7 @@
       "emailLabel": "Correo",
       "emailPlaceholder": "ana@thalyamodas.com",
       "passwordLabel": "Contrasena",
+      "passwordPlaceholder": "Ingresa tu contrasena",
       "rememberLabel": "Recordarme",
       "forgotPasswordLabel": "Olvidaste tu contrasena?",
       "submitLabel": "Entrar",
@@ -210,6 +211,7 @@
       "description": "Define una contrasena fuerte para proteger pedidos, inventario, caja y reportes de la tienda.",
       "passwordLabel": "Nueva contrasena",
       "confirmPasswordLabel": "Confirmar contrasena",
+      "passwordPlaceholder": "••••••••••",
       "hint": "Usa al menos 8 caracteres con un numero y una letra mayuscula.",
       "primaryAction": "Actualizar contrasena"
     },
@@ -238,6 +240,11 @@
         "phone": "Telefono",
         "document": "Documento fiscal",
         "segment": "Segmento"
+      },
+      "placeholders": {
+        "storeName": "Tienda Centro",
+        "phone": "(85) 99999-1234",
+        "document": "12.345.678/0001-90"
       }
     },
     "address": {
@@ -252,6 +259,15 @@
         "complement": "Complemento",
         "city": "Ciudad",
         "state": "Estado"
+      },
+      "placeholders": {
+        "zipCode": "60123-456",
+        "number": "128",
+        "street": "Rua das Flores",
+        "neighborhood": "Centro",
+        "complement": "Sala 03",
+        "city": "Fortaleza",
+        "state": "CE"
       },
       "lookupIdle": "Ingresa el codigo postal completo para completar la direccion.",
       "lookupLoading": "Buscando direccion por codigo postal.",

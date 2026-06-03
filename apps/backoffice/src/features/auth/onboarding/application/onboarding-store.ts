@@ -21,14 +21,14 @@ type OnboardingStore = OnboardingDraft & {
 
 const defaultDraft: OnboardingDraft = {
   address: {
-    city: "Fortaleza",
-    complement: "Sala 03",
+    city: "",
+    complement: "",
     country: "BR",
-    neighborhood: "Centro",
-    number: "128",
-    state: "CE",
-    street: "Rua das Flores",
-    zipCode: "60123456",
+    neighborhood: "",
+    number: "",
+    state: "",
+    street: "",
+    zipCode: "",
   },
   preferences: {
     closingTime: "18:00",
@@ -38,10 +38,10 @@ const defaultDraft: OnboardingDraft = {
     timezone: "America/Fortaleza",
   },
   profile: {
-    document: "12.345.678/0001-90",
-    phone: "(85) 99999-1234",
+    document: "",
+    phone: "",
     segment: "fashion",
-    storeName: "Loja Centro",
+    storeName: "",
   },
 };
 

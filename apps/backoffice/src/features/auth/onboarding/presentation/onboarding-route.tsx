@@ -183,12 +183,13 @@ function Field({
             name={name}
             autoComplete={autoComplete}
             className={inputClassName}
+            defaultValue={value === undefined ? defaultValue : undefined}
             inputMode={inputMode}
             mask={mask}
             onValueChange={onChange}
             placeholder={placeholder}
             type={type}
-            value={value ?? defaultValue}
+            value={value}
           />
         ) : (
           <Input
@@ -336,6 +337,7 @@ function StoreProfileStep() {
             icon={StorefrontIcon}
             label={t("fields.storeName")}
             name="storeName"
+            placeholder={t("placeholders.storeName")}
           />
           <Field
             defaultValue={profile.phone}
@@ -345,6 +347,7 @@ function StoreProfileStep() {
             label={t("fields.phone")}
             mask={[{ mask: "(00) 0000-0000" }, { mask: "(00) 00000-0000" }]}
             name="phone"
+            placeholder={t("placeholders.phone")}
           />
         </div>
 
@@ -356,6 +359,7 @@ function StoreProfileStep() {
           label={t("fields.document")}
           mask={[{ mask: "000.000.000-00" }, { mask: "00.000.000/0000-00" }]}
           name="document"
+          placeholder={t("placeholders.document")}
         />
 
         <SelectField
@@ -486,6 +490,7 @@ function StoreAddressStep() {
             mask="00000-000"
             name="zipCode"
             onChange={(value) => updateValue("zipCode", value)}
+            placeholder={t("placeholders.zipCode")}
             value={address.zipCode}
           />
           <Field
@@ -495,6 +500,7 @@ function StoreAddressStep() {
             label={t("fields.number")}
             name="number"
             onChange={(value) => updateValue("number", value)}
+            placeholder={t("placeholders.number")}
             value={address.number}
           />
         </div>
@@ -514,6 +520,7 @@ function StoreAddressStep() {
           label={t("fields.street")}
           name="street"
           onChange={(value) => updateValue("street", value)}
+          placeholder={t("placeholders.street")}
           value={address.street}
         />
 
@@ -524,6 +531,7 @@ function StoreAddressStep() {
             label={t("fields.neighborhood")}
             name="neighborhood"
             onChange={(value) => updateValue("neighborhood", value)}
+            placeholder={t("placeholders.neighborhood")}
             value={address.neighborhood}
           />
           <Field
@@ -532,6 +540,7 @@ function StoreAddressStep() {
             label={t("fields.complement")}
             name="complement"
             onChange={(value) => updateValue("complement", value)}
+            placeholder={t("placeholders.complement")}
             value={address.complement ?? ""}
           />
         </div>
@@ -543,6 +552,7 @@ function StoreAddressStep() {
             label={t("fields.city")}
             name="city"
             onChange={(value) => updateValue("city", value)}
+            placeholder={t("placeholders.city")}
             value={address.city}
           />
           <Field
@@ -551,6 +561,7 @@ function StoreAddressStep() {
             label={t("fields.state")}
             name="state"
             onChange={(value) => updateValue("state", value)}
+            placeholder={t("placeholders.state")}
             value={address.state}
           />
         </div>

@@ -162,6 +162,7 @@
       "emailLabel": "Email",
       "emailPlaceholder": "ana@thalyamodas.com",
       "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
       "rememberLabel": "Remember me",
       "forgotPasswordLabel": "Forgot password?",
       "submitLabel": "Sign in",
@@ -210,6 +211,7 @@
       "description": "Set a strong password to protect orders, inventory, cash register and store reports.",
       "passwordLabel": "New password",
       "confirmPasswordLabel": "Confirm password",
+      "passwordPlaceholder": "••••••••••",
       "hint": "Use at least 8 characters with a number and an uppercase letter.",
       "primaryAction": "Update password"
     },
@@ -238,6 +240,11 @@
         "phone": "Phone",
         "document": "Tax ID",
         "segment": "Segment"
+      },
+      "placeholders": {
+        "storeName": "Downtown Store",
+        "phone": "(85) 99999-1234",
+        "document": "12.345.678/0001-90"
       }
     },
     "address": {
@@ -252,6 +259,15 @@
         "complement": "Complement",
         "city": "City",
         "state": "State"
+      },
+      "placeholders": {
+        "zipCode": "60123-456",
+        "number": "128",
+        "street": "Rua das Flores",
+        "neighborhood": "Centro",
+        "complement": "Suite 03",
+        "city": "Fortaleza",
+        "state": "CE"
       },
       "lookupIdle": "Enter the full ZIP code to fill the address.",
       "lookupLoading": "Searching address by ZIP code.",

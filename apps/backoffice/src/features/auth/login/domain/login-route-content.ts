@@ -10,6 +10,7 @@ export const loginRouteContent = {
     emailLabel: "Email",
     emailPlaceholder: "ana@thalyamodas.com",
     passwordLabel: "Password",
+    passwordPlaceholder: "Enter your password",
     rememberLabel: "Remember me",
     forgotPasswordLabel: "Forgot password?",
     submitLabel: "Sign in",

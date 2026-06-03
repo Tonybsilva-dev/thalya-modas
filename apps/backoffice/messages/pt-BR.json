@@ -162,6 +162,7 @@
       "emailLabel": "E-mail",
       "emailPlaceholder": "ana@thalyamodas.com",
       "passwordLabel": "Senha",
+      "passwordPlaceholder": "Digite sua senha",
       "rememberLabel": "Lembrar de mim",
       "forgotPasswordLabel": "Esqueceu a senha?",
       "submitLabel": "Entrar",
@@ -210,6 +211,7 @@
       "description": "Defina uma senha forte para proteger pedidos, estoque, caixa e relatorios da loja.",
       "passwordLabel": "Nova senha",
       "confirmPasswordLabel": "Confirmar senha",
+      "passwordPlaceholder": "••••••••••",
       "hint": "Use pelo menos 8 caracteres com numero e letra maiuscula.",
       "primaryAction": "Atualizar senha"
     },
@@ -238,6 +240,11 @@
         "phone": "Telefone",
         "document": "CPF ou CNPJ",
         "segment": "Segmento"
+      },
+      "placeholders": {
+        "storeName": "Loja Centro",
+        "phone": "(85) 99999-1234",
+        "document": "12.345.678/0001-90"
       }
     },
     "address": {
@@ -252,6 +259,15 @@
         "complement": "Complemento",
         "city": "Cidade",
         "state": "UF"
+      },
+      "placeholders": {
+        "zipCode": "60123-456",
+        "number": "128",
+        "street": "Rua das Flores",
+        "neighborhood": "Centro",
+        "complement": "Sala 03",
+        "city": "Fortaleza",
+        "state": "CE"
       },
       "lookupIdle": "Digite o CEP completo para preencher o endereco.",
       "lookupLoading": "Buscando endereco pelo CEP.",
