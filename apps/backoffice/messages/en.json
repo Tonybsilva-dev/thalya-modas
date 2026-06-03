@@ -35,6 +35,120 @@
       "closeNavigation": "Close navigation",
       "signOut": "Sign out",
       "signingOut": "Signing out..."
+    },
+    "suppliers": {
+      "flow": {
+        "breadcrumbCreate": "Suppliers / Create supplier",
+        "breadcrumbEdit": "Suppliers / Edit supplier",
+        "breadcrumbDelete": "Suppliers / Delete supplier",
+        "createTitle": "Create supplier",
+        "editTitle": "Edit supplier",
+        "createDescription": "Register business data, contact and purchase terms.",
+        "editDescription": "Update registration, contact and commercial terms.",
+        "cancel": "Cancel",
+        "saveSupplier": "Save supplier",
+        "saveChanges": "Save changes",
+        "saving": "Saving...",
+        "dataTitle": "Supplier data",
+        "dataDescription": "Tax data and main commercial contact.",
+        "commercialTitle": "Commercial terms",
+        "commercialDescription": "Default terms used in purchase orders and receiving.",
+        "notesTitle": "Notes",
+        "notesDescription": "Internal notes visible to purchasing, receiving and finance.",
+        "fields": {
+          "name": "Trade name",
+          "document": "Tax ID",
+          "contactName": "Responsible",
+          "phone": "Phone",
+          "email": "Email",
+          "category": "Category",
+          "deliveryTerm": "Delivery term",
+          "paymentTerm": "Payment term",
+          "minimumOrder": "Minimum order",
+          "status": "Initial status",
+          "notes": "Internal notes"
+        },
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "categories": {
+          "women_fashion": "Women's fashion",
+          "accessories": "Accessories",
+          "footwear": "Footwear",
+          "mens_fashion": "Men's fashion",
+          "packaging": "Packaging"
+        },
+        "terms": {
+          "+3": "+3 days",
+          "+5": "+5 days",
+          "+7": "+7 days",
+          "+15": "+15 days",
+          "+30": "+30 days",
+          "+45": "+45 days"
+        },
+        "summary": {
+          "badge": "New supplier",
+          "checklist": "Checklist",
+          "fiscal": "Tax data complete",
+          "contact": "Main contact defined",
+          "terms": "Purchase terms reviewed",
+          "responsibles": "Responsible contacts",
+          "none": "None registered",
+          "addResponsible": "Add responsible"
+        },
+        "performance": {
+          "onTime": "On-time rate",
+          "leadTime": "Lead time",
+          "openOrders": "Open orders",
+          "openValue": "Open value",
+          "manageResponsibles": "Manage responsibles",
+          "deleteSupplier": "Delete supplier"
+        },
+        "deleteModal": {
+          "title": "Delete supplier?",
+          "description": "This action removes the supplier from the active list.",
+          "supplierName": "Moda Brasil Wholesale",
+          "warning": "Open purchase orders must be reviewed before deletion.",
+          "confirm": "Delete supplier",
+          "pageDescription": "Active supplier with open orders and purchase history."
+        },
+        "responsibleModal": {
+          "title": "Add responsible",
+          "listTitle": "Registered responsibles",
+          "listDescription": "Contacts linked only to this supplier.",
+          "editTitle": "Edit responsible",
+          "description": "Add a contact for orders, deliveries or finance.",
+          "addNew": "New responsible",
+          "empty": "No responsible contact registered.",
+          "assigned": "Main responsible",
+          "close": "Close",
+          "supplierName": "Moda Brasil Wholesale",
+          "supplierDescription": "Active supplier - women's fashion",
+          "name": "Responsible name",
+          "namePlaceholder": "Ex.: Camila Santos",
+          "role": "Role",
+          "rolePlaceholder": "Ex.: Commercial",
+          "phone": "Phone",
+          "phonePlaceholder": "(85) 9 9999-9999",
+          "email": "Email",
+          "emailPlaceholder": "contact@supplier.com",
+          "contactType": "Contact type",
+          "orders": "Orders",
+          "delivery": "Deliveries",
+          "financial": "Financial",
+          "status": "Status",
+          "primary": "Use as main responsible",
+          "primaryDescription": "This contact appears first in supplier quick actions.",
+          "count": "2 responsibles registered",
+          "edit": "Edit",
+          "delete": "Delete",
+          "save": "Save responsible"
+        },
+        "errors": {
+          "save": "Could not save."
+        }
+      }
     }
   },
   "login": {

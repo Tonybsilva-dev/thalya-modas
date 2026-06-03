@@ -35,6 +35,120 @@
       "closeNavigation": "Cerrar navegacion",
       "signOut": "Cerrar sesion",
       "signingOut": "Cerrando sesion..."
+    },
+    "suppliers": {
+      "flow": {
+        "breadcrumbCreate": "Proveedores / Crear proveedor",
+        "breadcrumbEdit": "Proveedores / Editar proveedor",
+        "breadcrumbDelete": "Proveedores / Eliminar proveedor",
+        "createTitle": "Crear proveedor",
+        "editTitle": "Editar proveedor",
+        "createDescription": "Registra datos comerciales, contacto y condiciones de compra.",
+        "editDescription": "Actualiza registro, contacto y condiciones comerciales.",
+        "cancel": "Cancelar",
+        "saveSupplier": "Guardar proveedor",
+        "saveChanges": "Guardar cambios",
+        "saving": "Guardando...",
+        "dataTitle": "Datos del proveedor",
+        "dataDescription": "Datos fiscales y contacto comercial principal.",
+        "commercialTitle": "Condiciones comerciales",
+        "commercialDescription": "Condiciones predeterminadas usadas en ordenes de compra y recepcion.",
+        "notesTitle": "Observaciones",
+        "notesDescription": "Notas internas visibles para compras, recepcion y finanzas.",
+        "fields": {
+          "name": "Nombre comercial",
+          "document": "Documento fiscal",
+          "contactName": "Responsable",
+          "phone": "Telefono",
+          "email": "E-mail",
+          "category": "Categoria",
+          "deliveryTerm": "Plazo de entrega",
+          "paymentTerm": "Plazo de pago",
+          "minimumOrder": "Pedido minimo",
+          "status": "Estado inicial",
+          "notes": "Observaciones internas"
+        },
+        "status": {
+          "active": "Activo",
+          "inactive": "Inactivo"
+        },
+        "categories": {
+          "women_fashion": "Moda femenina",
+          "accessories": "Accesorios",
+          "footwear": "Calzado",
+          "mens_fashion": "Moda masculina",
+          "packaging": "Embalajes"
+        },
+        "terms": {
+          "+3": "+3 dias",
+          "+5": "+5 dias",
+          "+7": "+7 dias",
+          "+15": "+15 dias",
+          "+30": "+30 dias",
+          "+45": "+45 dias"
+        },
+        "summary": {
+          "badge": "Nuevo proveedor",
+          "checklist": "Checklist",
+          "fiscal": "Datos fiscales completos",
+          "contact": "Contacto principal definido",
+          "terms": "Condiciones de compra revisadas",
+          "responsibles": "Responsables",
+          "none": "Ninguno registrado",
+          "addResponsible": "Agregar responsable"
+        },
+        "performance": {
+          "onTime": "Puntualidad",
+          "leadTime": "Lead time",
+          "openOrders": "Ordenes abiertas",
+          "openValue": "Valor abierto",
+          "manageResponsibles": "Gestionar responsables",
+          "deleteSupplier": "Eliminar proveedor"
+        },
+        "deleteModal": {
+          "title": "Eliminar proveedor?",
+          "description": "Esta accion elimina el proveedor de la lista activa.",
+          "supplierName": "Moda Brasil Mayorista",
+          "warning": "Las ordenes abiertas deben revisarse antes de eliminar.",
+          "confirm": "Eliminar proveedor",
+          "pageDescription": "Proveedor activo con ordenes abiertas e historial de compras."
+        },
+        "responsibleModal": {
+          "title": "Agregar responsable",
+          "listTitle": "Responsables registrados",
+          "listDescription": "Contactos vinculados solo a este proveedor.",
+          "editTitle": "Editar responsable",
+          "description": "Agrega un contacto para pedidos, entregas o finanzas.",
+          "addNew": "Nuevo responsable",
+          "empty": "Ningun responsable registrado.",
+          "assigned": "Responsable principal",
+          "close": "Cerrar",
+          "supplierName": "Moda Brasil Mayorista",
+          "supplierDescription": "Proveedor activo - moda femenina",
+          "name": "Nombre del responsable",
+          "namePlaceholder": "Ej.: Camila Santos",
+          "role": "Cargo",
+          "rolePlaceholder": "Ej.: Comercial",
+          "phone": "Telefono",
+          "phonePlaceholder": "(85) 9 9999-9999",
+          "email": "E-mail",
+          "emailPlaceholder": "contacto@proveedor.com",
+          "contactType": "Tipo de contacto",
+          "orders": "Pedidos",
+          "delivery": "Entregas",
+          "financial": "Financiero",
+          "status": "Estado",
+          "primary": "Usar como responsable principal",
+          "primaryDescription": "Este contacto aparece primero en las acciones rapidas del proveedor.",
+          "count": "2 responsables registrados",
+          "edit": "Editar",
+          "delete": "Eliminar",
+          "save": "Guardar responsable"
+        },
+        "errors": {
+          "save": "No fue posible guardar."
+        }
+      }
     }
   },
   "login": {

@@ -1,4 +1,5 @@
 export * from './dashboard';
+export * from './catalog';
 export * from './onboarding';
 export * from './password-recovery';
 export * from './store';

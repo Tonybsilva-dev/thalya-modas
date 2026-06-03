@@ -6,6 +6,7 @@ import swaggerUI from '@fastify/swagger-ui';
 import fastify from 'fastify';
 import {
 	InMemoryOnboardingRepository,
+	InMemoryCatalogRepository,
 	InMemoryDashboardRepository,
 	InMemoryPasswordRecoveryRepository,
 	InMemoryStoreRepository,
@@ -26,6 +27,7 @@ import { errorHandler } from './middlewares/error-handler';
 import performancePlugin from './middlewares/performance';
 import traceIdPlugin from './middlewares/trace-id';
 import { authRoutes } from './routes/auth.routes';
+import { catalogRoutes } from './routes/catalog.routes';
 import { dashboardRoutes } from './routes/dashboard.routes';
 import { errorExampleRoutes } from './routes/error-example.routes';
 import { internalMetricsRoutes } from './routes/internal-metrics.routes';
@@ -113,6 +115,7 @@ async function build() {
 	await server.register(healthcheckRoutes);
 
 	const container = new AppContainer();
+	container.setCatalogRepository(new InMemoryCatalogRepository());
 	container.setDashboardRepository(new InMemoryDashboardRepository());
 
 	if (env.PERSISTENCE_DRIVER === 'postgres') {
@@ -135,6 +138,7 @@ async function build() {
 	}
 
 	await server.register(authRoutes, { container });
+	await server.register(catalogRoutes, { container });
 	await server.register(dashboardRoutes, { container });
 	await server.register(onboardingRoutes, { container });
 	await server.register(userRoutes, { container });

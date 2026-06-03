@@ -28,6 +28,7 @@ describe('env validation', () => {
 		expect(env.API_TITLE).toBe('Fastify Boilerplate API');
 		expect(env.JWT_EXPIRES_IN).toBe('7d');
 		expect(env.API_LICENSE_NAME).toBe('ISC');
+		expect(env.FEATURE_CATALOG_ENABLED).toBe(true);
 	});
 
 	it('deve validar NODE_ENV como enum', async () => {

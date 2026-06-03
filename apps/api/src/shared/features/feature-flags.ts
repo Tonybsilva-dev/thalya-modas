@@ -5,6 +5,7 @@ export type FeatureKey =
 	| 'auth.login'
 	| 'auth.register'
 	| 'auth.sso'
+	| 'catalog'
 	| 'dashboard'
 	| 'dashboard.cashRegister'
 	| 'dashboard.customers'
@@ -30,6 +31,7 @@ export class FeatureFlagService {
 			'auth.login': env.FEATURE_AUTH_LOGIN_ENABLED,
 			'auth.register': env.FEATURE_AUTH_REGISTER_ENABLED,
 			'auth.sso': env.FEATURE_AUTH_SSO_ENABLED,
+			catalog: env.FEATURE_CATALOG_ENABLED,
 			dashboard: env.FEATURE_DASHBOARD_ENABLED,
 			'dashboard.cashRegister': env.FEATURE_DASHBOARD_CASH_REGISTER_ENABLED,
 			'dashboard.customers': env.FEATURE_DASHBOARD_CUSTOMERS_ENABLED,

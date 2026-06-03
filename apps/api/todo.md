@@ -99,6 +99,7 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 | `FEATURE_DASHBOARD_CASH_REGISTER_ENABLED` | `GET /dashboard/cash-register` | Retorna caixa, formas de pagamento e venda atual. | Cash register retorna `403`. |
 | `FEATURE_DASHBOARD_SUPPLIERS_ENABLED` | `GET /dashboard/suppliers` | Retorna fornecedores e recebimentos. | Suppliers retorna `403`. |
 | `FEATURE_DASHBOARD_REPORTS_ENABLED` | `GET /dashboard/reports` | Retorna relatórios e séries. | Reports retorna `403`. |
+| `FEATURE_CATALOG_ENABLED` | `/suppliers`, `/products`, `/inventory/*` | Permite cadastrar fornecedores, produtos, preparar imagens e movimentar estoque. | Catálogo retorna `403`; nenhum fornecedor, produto, asset ou movimento é criado. |
 | `FEATURE_PASSWORD_RECOVERY_ENABLED` | Todas `/auth/password-recovery/*` | Fluxo completo pode executar conforme switches específicos. | Todas as rotas de recuperação retornam `403`; nenhum código/token é criado. |
 | `FEATURE_PASSWORD_RECOVERY_REQUEST_ENABLED` | `POST /auth/password-recovery/request` | Gera código temporário quando aplicável. | Retorna `403`; não cria nem invalida códigos. |
 | `FEATURE_PASSWORD_RECOVERY_VERIFY_CODE_ENABLED` | `POST /auth/password-recovery/verify-code` | Valida código e emite `resetToken`. | Retorna `403`; não consome tentativas. |
@@ -116,6 +117,7 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 - [x] Quando `FEATURE_PASSWORD_RECOVERY_RESET_ENABLED=false`, reset retorna `403` e não altera a senha.
 - [x] Quando `FEATURE_DASHBOARD_ENABLED=false`, rotas de dashboard retornam `403`.
 - [x] Quando um kill switch individual do dashboard está desligado, somente a rota correspondente retorna `403`.
+- [x] Quando `FEATURE_CATALOG_ENABLED=false`, rotas de catálogo e estoque retornam `403`.
 
 ## Rotas protegidas do dashboard
 
@@ -145,8 +147,203 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 
 - [x] Mapear e implementar detalhes de cliente: `GET /dashboard/customers/:customerId`.
 - [x] Mapear e implementar promissória do cliente: `GET /dashboard/customers/:customerId/promissory`.
-- [ ] Mapear ações de escrita para pedidos, estoque, caixa, fornecedores e relatórios.
+- [x] Mapear primeira leva de ações de escrita para fornecedores, produtos, assets e estoque.
+- [ ] Mapear ações de escrita para pedidos, caixa e relatórios.
 - [x] Definir contratos de paginação/filtros com `page`, `perPage`, `q`, `status` e período.
+
+## Catálogo, produtos, fornecedores e estoque
+
+### Estratégia inicial
+
+- [x] Implementar primeiro in-memory com testes antes de Prisma/Postgres.
+- [x] Criar módulo protegido separado do read model de dashboard.
+- [x] Validar autenticação por `Authorization: Bearer <token>` ou cookie `@thalya-modas:session`.
+- [x] Criar kill switch global `FEATURE_CATALOG_ENABLED`.
+- [x] Documentar contratos no Swagger via schemas das rotas.
+- [x] Preparar contrato de upload direto para R2 exigindo `image/webp`.
+- [x] Criar util compartilhado no backoffice para converter imagens para WebP antes do upload.
+- [ ] Implementar adapter Cloudflare R2 com URL assinada.
+- [ ] Levar fornecedores, produtos, assets e movimentos para Prisma/Postgres.
+
+### API implementada in-memory
+
+- [x] `GET /suppliers`
+- [x] `POST /suppliers`
+- [x] `GET /suppliers/:id`
+- [x] `PATCH /suppliers/:id`
+- [x] `GET /products`
+- [x] `POST /products`
+- [x] `GET /products/:id`
+- [x] `PATCH /products/:id`
+- [x] `POST /products/:productId/assets/upload`
+- [x] `POST /inventory/adjustments`
+- [x] `GET /inventory/movements`
+
+### Validações implementadas
+
+- [x] Nome de fornecedor obrigatório com mínimo de 2 caracteres.
+- [x] Documento de fornecedor único por usuário/loja.
+- [x] Produto exige nome e SKU.
+- [x] SKU único por usuário/loja.
+- [x] Produto não pode vincular fornecedor inexistente.
+- [x] Ajuste de estoque não permite saldo negativo.
+- [x] Upload de asset aceita apenas `image/webp` e arquivo `.webp`.
+- [x] Tamanho máximo inicial de imagem: 5MB.
+
+### Fluxo recomendado para imagens no R2
+
+1. Backoffice converte o arquivo selecionado para `.webp` com `convertImageFileToWebp`.
+2. Backoffice chama `POST /products/:productId/assets/upload` com `fileName`, `contentType=image/webp` e `size`.
+3. API valida produto, contrato e permissão.
+4. API gera URL assinada do R2.
+5. Backoffice faz `PUT` direto no R2.
+6. API mantém metadados do asset vinculados ao produto.
+
+### Mapeamento dos formulários a partir das telas atuais
+
+#### Tela `dashboard-local-store-management--inventory-route`
+
+Sinais visuais existentes:
+
+- Botão principal: `Adicionar item`.
+- Botão secundário: `Escanear`.
+- Busca por `SKU`, produto e código de barras.
+- Tabela: `Item`, `SKU`, `Em mãos`, `Reservado`, `Canal`, `Status`.
+- Filtros: todos, baixo estoque, para contar, novidades, listados online, atraso fornecedor.
+- Ações em massa: imprimir etiquetas, transferir unidades, criar pedido de compra.
+- Painel lateral: item selecionado com imagem, SKU, tamanho e cor.
+- Plano de reposição: mínimo, em mãos, reservado e compra sugerida.
+
+Formulário recomendado: cadastro/edição de produto.
+
+Campos:
+
+- `name`: nome base do produto.
+- `sku`: SKU único.
+- `barcode`: código de barras, opcional.
+- `description`: descrição interna, opcional.
+- `supplierId`: fornecedor padrão, opcional.
+- `category`: categoria, opcional.
+- `brand`: marca, opcional.
+- `size`: tamanho/grade, opcional na primeira versão.
+- `color`: cor, opcional na primeira versão.
+- `channel`: loja, web ou loja + web.
+- `currentStock`: estoque em mãos.
+- `reservedStock`: estoque reservado.
+- `minimumStock`: regra de reposição.
+- `costPrice`: custo.
+- `salePrice`: preço de venda.
+- `status`: ativo, inativo, baixo estoque, contagem, atraso fornecedor.
+- `images`: assets WebP vinculados ao produto.
+
+Formulário recomendado: ajuste de estoque.
+
+Campos:
+
+- `productId`: produto.
+- `type`: entrada, saída ou correção.
+- `quantity`: quantidade.
+- `reason`: motivo.
+- `reference`: referência opcional, como nota, pedido ou contagem.
+
+Formulário recomendado: criação de pedido de compra a partir do plano de reposição.
+
+Campos:
+
+- `supplierId`: fornecedor.
+- `items[]`: produtos e quantidades sugeridas.
+- `expectedDeliveryAt`: previsão de entrega.
+- `notes`: observações.
+
+#### Tela `dashboard-local-store-management--suppliers-route`
+
+Sinais visuais existentes:
+
+- Botão principal: `Novo pedido`.
+- Busca por fornecedor, pedido e nota.
+- Tabela: fornecedor, pedido, entrega, valor, termos e status.
+- Filtros: todos fornecedores, vence hoje, atrasados, a pagar, mais vendidos, novo fornecedor.
+- Ações em massa: agendar recebimento, exportar notas, pedir novos termos.
+- Painel lateral: fornecedor selecionado, pontualidade, valor aberto e lead time.
+- Plano de entrega: ETA, caixas, recebedor e doca.
+- Próximas ações: confirmar janela, conferir nota, etiquetar SKUs urgentes.
+
+Formulário recomendado: cadastro/edição de fornecedor.
+
+Campos:
+
+- `name`: nome do fornecedor.
+- `document`: CPF/CNPJ ou documento fiscal.
+- `email`: e-mail comercial.
+- `phone`: telefone/WhatsApp.
+- `contactName`: contato principal.
+- `category`: tipo de fornecimento, opcional.
+- `leadTimeDays`: prazo médio.
+- `paymentTerms`: termos padrão, exemplo à vista, 15, 30 ou 45 dias.
+- `status`: ativo ou inativo.
+- `notes`: observações internas.
+
+Formulário recomendado: novo pedido de compra.
+
+Campos:
+
+- `supplierId`: fornecedor.
+- `items[]`: produto, SKU, quantidade, custo unitário.
+- `expectedDeliveryAt`: data/hora prevista.
+- `paymentTerms`: termos negociados.
+- `invoiceNumber`: nota fiscal, opcional na criação.
+- `notes`: observações.
+
+Formulário recomendado: recebimento de pedido.
+
+Campos:
+
+- `purchaseOrderId`: pedido de compra.
+- `invoiceNumber`: nota fiscal.
+- `receivedAt`: data/hora de recebimento.
+- `receiverName`: responsável.
+- `dock`: local de recebimento.
+- `boxes`: volumes.
+- `items[]`: quantidade esperada, recebida e divergência por SKU.
+- `notes`: observações de conferência.
+
+#### Tela `dashboard-local-store-management--orders-route`
+
+Sinais visuais existentes:
+
+- Botão principal: `Novo pedido`.
+- Busca por pedido, cliente e SKU.
+- Tabela: pedido, cliente, canal, total, prazo e status.
+- Filtros: retirada pronta, separação, pagamento pendente, entrega e atrasados.
+- Ações: imprimir recibo, marcar pronto e avisar cliente.
+- Checklist de separação por item.
+
+Este fluxo depende do catálogo de produtos já existir.
+
+Formulário recomendado: novo pedido.
+
+Campos:
+
+- `customerId` ou dados rápidos do cliente.
+- `channel`: loja, web, Pix, entrega.
+- `items[]`: produto, SKU, quantidade e preço.
+- `discount`: desconto opcional.
+- `paymentMethod`: forma de pagamento.
+- `pickupOrDelivery`: retirada ou entrega.
+- `dueAt`: prazo/SLA.
+- `notes`: observações.
+
+### Lacunas entre telas e API atual
+
+- [x] API in-memory já cobre cadastro básico de fornecedores.
+- [x] API in-memory já cobre cadastro básico de produtos.
+- [x] API in-memory já cobre ajuste simples de estoque.
+- [x] API in-memory já prepara upload WebP de produto.
+- [ ] API ainda precisa adicionar `barcode`, `reservedStock`, `channel`, `category`, `brand`, `size`, `color`, `contactName`, `leadTimeDays`, `paymentTerms` e `notes`.
+- [ ] API ainda precisa modelar pedido de compra (`PurchaseOrder`).
+- [ ] API ainda precisa modelar recebimento de pedido de compra (`Receiving`).
+- [ ] API ainda precisa modelar pedido/venda operacional (`Order`) usando produtos reais.
+- [ ] Backoffice ainda precisa criar os drawers/formulários conectados aos botões atuais.
 
 ## Estratégia Prisma/Postgres
 

@@ -94,6 +94,7 @@ const envSchema = z.object({
 	FEATURE_AUTH_LOGIN_ENABLED: booleanFlag(true),
 	FEATURE_AUTH_REGISTER_ENABLED: booleanFlag(true),
 	FEATURE_AUTH_SSO_ENABLED: booleanFlag(false),
+	FEATURE_CATALOG_ENABLED: booleanFlag(true),
 	FEATURE_DASHBOARD_ENABLED: booleanFlag(true),
 	FEATURE_DASHBOARD_OVERVIEW_ENABLED: booleanFlag(true),
 	FEATURE_DASHBOARD_ORDERS_ENABLED: booleanFlag(true),

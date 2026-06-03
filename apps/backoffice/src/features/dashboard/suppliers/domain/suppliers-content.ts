@@ -8,7 +8,7 @@ export const suppliersContent = {
     description:
       "Manage purchase orders, delivery windows, supplier performance, and payment commitments.",
     searchPlaceholder: "Search supplier, PO, invoice",
-    actionLabel: "New PO",
+    actionLabel: "New supplier",
   },
   metrics: [
     ["Open POs", "18", "R$ 42.7k committed", "info"],
@@ -77,7 +77,7 @@ export const suppliersContentByLocale = {
       description:
         "Gerencie pedidos de compra, janelas de entrega, performance e compromissos de pagamento.",
       searchPlaceholder: "Buscar fornecedor, pedido, nota",
-      actionLabel: "Novo pedido",
+      actionLabel: "Novo fornecedor",
     },
     metrics: [
       ["Pedidos abertos", "18", "R$ 42,7 mil comprometidos", "info"],
@@ -142,7 +142,7 @@ export const suppliersContentByLocale = {
       description:
         "Gestiona ordenes de compra, ventanas de entrega, performance y compromisos de pago.",
       searchPlaceholder: "Buscar proveedor, orden, factura",
-      actionLabel: "Nueva orden",
+      actionLabel: "Nuevo proveedor",
     },
     metrics: [
       ["Ordenes abiertas", "18", "R$ 42,7 mil comprometidos", "info"],

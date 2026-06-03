@@ -1,3 +1,4 @@
+export * from './catalog-repository';
 export * from './dashboard-repository';
 export * from './onboarding-repository';
 export * from './password-recovery-repository';
