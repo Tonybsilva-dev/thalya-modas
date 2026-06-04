@@ -142,9 +142,9 @@ describe('Catalog - Integração', () => {
 
 		expect(list.statusCode).toBe(200);
 		expect(responsibles).toHaveLength(2);
-		expect(responsibles.filter((responsible) => responsible.isPrimary)).toEqual([
-			expect.objectContaining({ id: secondId }),
-		]);
+		expect(responsibles.filter((responsible) => responsible.isPrimary)).toEqual(
+			[expect.objectContaining({ id: secondId })],
+		);
 
 		const remove = await makeRequest(server, {
 			headers: { authorization: `Bearer ${token}` },
@@ -153,6 +153,120 @@ describe('Catalog - Integração', () => {
 		});
 
 		expect(remove.statusCode).toBe(204);
+	});
+
+	it('deve aplicar busca, status e paginação em fornecedores', async () => {
+		const token = await registerAndGetToken();
+		await createSupplier(token, {
+			name: 'Alpha Moda Teste',
+			status: 'active',
+		});
+		const inactive = await createSupplier(token, {
+			name: 'Beta Calçados Teste',
+			status: 'inactive',
+		});
+		await createSupplier(token, {
+			name: 'Gamma Acessórios Teste',
+			status: 'active',
+		});
+
+		const searchResponse = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			query: { q: 'beta', status: 'inactive' },
+			url: '/suppliers',
+		});
+		expect(searchResponse.statusCode).toBe(200);
+		expect(searchResponse.body).toEqual([
+			expect.objectContaining({
+				id: (inactive.body as { id: string }).id,
+				name: 'Beta Calçados Teste',
+				status: 'inactive',
+			}),
+		]);
+
+		const paginatedResponse = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			query: { page: '2', perPage: '1', status: 'active' },
+			url: '/suppliers',
+		});
+		expect(paginatedResponse.statusCode).toBe(200);
+		expect(paginatedResponse.body).toHaveLength(1);
+	});
+
+	it('deve rejeitar atualização de fornecedor com documento duplicado', async () => {
+		const token = await registerAndGetToken();
+		const firstDocument = randomUUID().replaceAll('-', '').slice(0, 14);
+		const secondDocument = randomUUID().replaceAll('-', '').slice(0, 14);
+		await createSupplier(token, {
+			document: firstDocument,
+			name: 'Fornecedor Documento A',
+		});
+		const second = await createSupplier(token, {
+			document: secondDocument,
+			name: 'Fornecedor Documento B',
+		});
+
+		const response = await makeRequest(server, {
+			body: { document: firstDocument },
+			headers: { authorization: `Bearer ${token}` },
+			method: 'PATCH',
+			url: `/suppliers/${(second.body as { id: string }).id}`,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.body).toMatchObject({ code: 'TM-DOM-400' });
+	});
+
+	it('deve remover responsáveis vinculados ao excluir fornecedor', async () => {
+		const token = await registerAndGetToken();
+		const supplier = await createSupplier(token);
+		const supplierId = (supplier.body as { id: string }).id;
+		await createResponsible(token, supplierId, {
+			email: 'remove-responsible@thalya.test',
+			isPrimary: true,
+			name: 'Responsável Removido',
+		});
+
+		const removeSupplier = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'DELETE',
+			url: `/suppliers/${supplierId}`,
+		});
+		expect(removeSupplier.statusCode).toBe(204);
+
+		const responsibles = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			url: `/suppliers/${supplierId}/responsibles`,
+		});
+		expect(responsibles.statusCode).toBe(404);
+	});
+
+	it('deve retornar 404 ao alterar responsável de outro fornecedor', async () => {
+		const token = await registerAndGetToken();
+		const firstSupplier = await createSupplier(token);
+		const secondSupplier = await createSupplier(token);
+		const firstSupplierId = (firstSupplier.body as { id: string }).id;
+		const secondSupplierId = (secondSupplier.body as { id: string }).id;
+		const responsible = await createResponsible(token, firstSupplierId);
+		const responsibleId = (responsible.body as { id: string }).id;
+
+		const updateFromWrongSupplier = await makeRequest(server, {
+			body: { isPrimary: true },
+			headers: { authorization: `Bearer ${token}` },
+			method: 'PATCH',
+			url: `/suppliers/${secondSupplierId}/responsibles/${responsibleId}`,
+		});
+		const deleteFromWrongSupplier = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'DELETE',
+			url: `/suppliers/${secondSupplierId}/responsibles/${responsibleId}`,
+		});
+
+		expect(updateFromWrongSupplier.statusCode).toBe(404);
+		expect(deleteFromWrongSupplier.statusCode).toBe(404);
 	});
 
 	it('deve preparar upload apenas para imagem WebP', async () => {
@@ -218,18 +332,40 @@ describe('Catalog - Integração', () => {
 		});
 	});
 
-	async function createSupplier(token: string) {
-		return makeRequest(server, {
+	async function createSupplier(
+		token: string,
+		overrides: Partial<{
+			document: string;
+			email: string;
+			name: string;
+			phone: string;
+			status: 'active' | 'inactive';
+		}> = {},
+	) {
+		const response = await makeRequest(server, {
 			body: {
-				document: randomUUID().replaceAll('-', '').slice(0, 14),
-				email: `supplier-${randomUUID()}@thalya.test`,
-				name: 'Moda Bella Distribuidora',
-				phone: '85999998888',
+				document:
+					overrides.document ?? randomUUID().replaceAll('-', '').slice(0, 14),
+				email: overrides.email ?? `supplier-${randomUUID()}@thalya.test`,
+				name: overrides.name ?? 'Moda Bella Distribuidora',
+				phone: overrides.phone ?? '85999998888',
 			},
 			headers: { authorization: `Bearer ${token}` },
 			method: 'POST',
 			url: '/suppliers',
 		});
+
+		if (overrides.status && response.statusCode === 201) {
+			const supplierId = (response.body as { id: string }).id;
+			return makeRequest(server, {
+				body: { status: overrides.status },
+				headers: { authorization: `Bearer ${token}` },
+				method: 'PATCH',
+				url: `/suppliers/${supplierId}`,
+			});
+		}
+
+		return response;
 	}
 
 	async function createProduct(token: string) {

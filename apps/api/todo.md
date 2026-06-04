@@ -1,8 +1,8 @@
-# TODO - Funcionalidades públicas do Backoffice
+# TODO - Funcionalidades do Backoffice e API
 
-Este arquivo mapeia as rotas públicas existentes em `apps/backoffice` e traduz cada tela em funcionalidades para implementar em `apps/api` usando persistência in-memory e testes automatizados.
+Este arquivo mapeia as rotas existentes em `apps/backoffice` e traduz cada tela em funcionalidades para implementar em `apps/api` usando persistência in-memory, testes automatizados e, depois, Prisma/Postgres.
 
-Escopo inicial: rotas públicas do backoffice. Rotas protegidas do dashboard foram iniciadas em seção própria abaixo.
+Escopo inicial: rotas públicas do backoffice. Rotas protegidas do dashboard e o fluxo de catálogo/fornecedores foram iniciados em seções próprias abaixo.
 
 ## Convenções
 
@@ -162,8 +162,9 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 - [x] Documentar contratos no Swagger via schemas das rotas.
 - [x] Preparar contrato de upload direto para R2 exigindo `image/webp`.
 - [x] Criar util compartilhado no backoffice para converter imagens para WebP antes do upload.
-- [ ] Implementar adapter Cloudflare R2 com URL assinada.
-- [ ] Levar fornecedores, produtos, assets e movimentos para Prisma/Postgres.
+- [x] Implementar adapter Cloudflare R2 com URL assinada no formato virtual-hosted bucket e `x-id=PutObject`.
+- [ ] Validar upload real ponta a ponta contra o bucket R2 em ambiente local.
+- [x] Levar fornecedores, produtos, assets e movimentos para Prisma/Postgres.
 
 ### API implementada in-memory
 
@@ -171,6 +172,11 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 - [x] `POST /suppliers`
 - [x] `GET /suppliers/:id`
 - [x] `PATCH /suppliers/:id`
+- [x] `DELETE /suppliers/:id`
+- [x] `GET /suppliers/:id/responsibles`
+- [x] `POST /suppliers/:id/responsibles`
+- [x] `PATCH /suppliers/:id/responsibles/:responsibleId`
+- [x] `DELETE /suppliers/:id/responsibles/:responsibleId`
 - [x] `GET /products`
 - [x] `POST /products`
 - [x] `GET /products/:id`
@@ -183,6 +189,16 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 
 - [x] Nome de fornecedor obrigatório com mínimo de 2 caracteres.
 - [x] Documento de fornecedor único por usuário/loja.
+- [x] Documento de fornecedor normalizado no backoffice para dígitos antes de enviar.
+- [x] Telefone de fornecedor normalizado no backoffice para dígitos antes de enviar.
+- [x] Categoria de fornecedor usa enum reutilizável: `women_fashion`, `accessories`, `footwear`, `mens_fashion`, `packaging`.
+- [x] Prazos comerciais usam enum reutilizável: `+3`, `+5`, `+7`, `+15`, `+30`, `+45`.
+- [x] Status de fornecedor limitado a `active` ou `inactive`.
+- [x] Responsável de fornecedor exige nome, cargo, telefone, e-mail, tipo de contato, principal e status.
+- [x] Tipo de contato do responsável limitado a `orders`, `delivery` ou `financial`.
+- [x] Apenas um responsável principal permanece ativo por fornecedor.
+- [x] Excluir fornecedor remove também seus responsáveis in-memory.
+- [x] Excluir responsável remove apenas o contato vinculado ao fornecedor correspondente.
 - [x] Produto exige nome e SKU.
 - [x] SKU único por usuário/loja.
 - [x] Produto não pode vincular fornecedor inexistente.
@@ -198,6 +214,76 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 4. API gera URL assinada do R2.
 5. Backoffice faz `PUT` direto no R2.
 6. API mantém metadados do asset vinculados ao produto.
+
+### Fluxo de fornecedores validado em 2026-06-03
+
+#### Backoffice implementado
+
+- [x] Tela principal `/manager/dashboard/suppliers` consome `GET /suppliers` via React Query.
+- [x] Filtros da tela principal usam `nuqs` e enviam query para a API.
+- [x] Listagem aplica `q`, `status`, `page` e `perPage` no contrato de catálogo.
+- [x] Métricas da tela principal são derivadas dos fornecedores retornados pela API.
+- [x] Empty state para ausência de fornecedores.
+- [x] Botão principal corrigido para `Novo fornecedor`.
+- [x] Tela de cadastro `/manager/dashboard/suppliers/create`.
+- [x] Tela de edição `/manager/dashboard/suppliers/:supplierId/edit`.
+- [x] Modal de exclusão controlado por query string (`modal=delete`).
+- [x] Modal de responsáveis controlado por query string (`modal=responsible`).
+- [x] Responsáveis em fornecedor persistido usam API (`GET/POST/PATCH/DELETE /suppliers/:id/responsibles`).
+- [x] Responsáveis antes do fornecedor existir usam Zustand e são enviados após criar o fornecedor.
+- [x] Formulários usam Zod no cliente antes de chamar a API.
+- [x] Categorias e prazos são selects reutilizáveis, não campos digitáveis.
+- [x] Campo de responsável no formulário aparece apenas quando há responsável atribuído.
+- [x] Lista de responsáveis abre no modal e cada responsável abre formulário de edição.
+- [x] É possível excluir responsável pelo modal.
+- [x] `React Query`, `Zustand` e `nuqs` estão presentes no fluxo.
+- [x] Traduções adicionadas para português, inglês e espanhol no fluxo de fornecedores.
+
+#### API validada
+
+- [x] Autenticação obrigatória nas rotas de catálogo.
+- [x] Cookie `@thalya-modas:session` ou `Authorization: Bearer` aceitos pelo middleware.
+- [x] Kill switch `FEATURE_CATALOG_ENABLED` bloqueia catálogo com `403`.
+- [x] Swagger documenta fornecedores, responsáveis, produtos, upload e estoque.
+- [x] Testes de integração cobrem criação de fornecedor, produto, ajuste de estoque, responsáveis, upload WebP e kill switch.
+- [x] Teste valida que ao tornar o segundo responsável principal, o primeiro deixa de ser principal.
+- [x] Teste valida exclusão de responsável.
+- [x] Repositório Prisma/Postgres cobre fornecedores, responsáveis, produtos, assets WebP e movimentos de estoque.
+
+#### Validação executada
+
+- [x] `pnpm --filter @thalya-modas/api test -- tests/integration/catalog/catalog.routes.spec.ts`
+  - Resultado observado: suíte da API executada com 34 arquivos passando, 356 testes passando e 2 testes Prisma opt-in pulados.
+- [x] `pnpm --filter @thalya-modas/api exec biome check src/app/http/server.ts src/core/infra/persistence/in-memory/in-memory-catalog-repository.ts src/core/infra/storage/r2-presigned-upload.ts src/shared/env/env.ts scripts/validate-r2-upload.ts tests/unit/core/infra/storage/r2-presigned-upload.spec.ts tests/unit/shared/env/env.spec.ts package.json`
+  - Resultado observado: passou.
+- [x] `pnpm --filter @thalya-modas/api build:check`
+  - Resultado observado: passou.
+- [x] `pnpm --filter @thalya-modas/api db:deploy`
+  - Resultado observado: passou com Postgres local; 2 migrations registradas e nenhuma migration pendente.
+- [x] `RUN_PRISMA_INTEGRATION_TESTS=true pnpm --filter @thalya-modas/api exec vitest run --fileParallelism=false tests/integration/catalog/catalog-prisma.spec.ts`
+  - Resultado observado: 2 testes Prisma/Postgres de catálogo passaram contra o banco local.
+- [x] `pnpm --filter @thalya-modas/backoffice lint`
+  - Resultado observado: passou.
+- [ ] `pnpm --filter @thalya-modas/api r2:validate`
+  - Resultado observado: `PUT` real retornou `403 AccessDenied` em 2026-06-03. O signer local está coberto por teste unitário e alinhado ao exemplo oficial do Cloudflare R2; a próxima verificação deve focar permissão do token, bucket selecionado, endpoint/account id e política de escrita do R2.
+
+#### Lacunas do fluxo de fornecedores
+
+- [x] Persistência Prisma/Postgres para catálogo (`Supplier`, `SupplierResponsible`, `Product`, `ProductImageAsset`, `InventoryMovement`).
+- [x] Adapter Cloudflare R2 com URL assinada sem dependência externa.
+- [ ] Validar upload real ponta a ponta usando `PUT` direto para a URL assinada retornada pela API.
+- [ ] Tela principal de fornecedores ainda não possui dados reais de pedidos de compra, recebimentos, notas fiscais, atrasos e valores em aberto.
+- [ ] Modelar `PurchaseOrder` para substituir os textos operacionais de plano de entrega.
+- [ ] Modelar `Receiving` para recebimentos, doca, volumes, recebedor, divergências e nota fiscal.
+- [ ] Modelar financeiro de fornecedor para pendências de pagamento, atrasos e valor aberto.
+- [ ] Conectar ações em massa da tela principal: agendar recebimento, exportar notas e pedir novos termos.
+- [ ] Conectar botão/fluxo de novo pedido de compra quando o módulo de compras existir.
+- [x] Adicionar testes específicos para `GET /suppliers` com `q`, `status`, `page` e `perPage`.
+- [x] Adicionar testes específicos para `PATCH /suppliers/:id` com documento duplicado.
+- [x] Adicionar testes específicos para `DELETE /suppliers/:id` removendo responsáveis vinculados.
+- [x] Adicionar testes específicos para responsáveis de outro fornecedor/usuário retornarem `404`.
+- [ ] Adicionar estados de loading/error específicos no backoffice para create/edit/delete/responsibles além do fallback atual.
+- [ ] Substituir IDs técnicos na tabela por códigos comerciais quando existir modelo de pedido/fornecedor mais rico.
 
 ### Mapeamento dos formulários a partir das telas atuais
 
@@ -336,14 +422,20 @@ Campos:
 ### Lacunas entre telas e API atual
 
 - [x] API in-memory já cobre cadastro básico de fornecedores.
+- [x] API in-memory já cobre edição e exclusão de fornecedores.
+- [x] API in-memory já cobre responsáveis de fornecedores.
 - [x] API in-memory já cobre cadastro básico de produtos.
 - [x] API in-memory já cobre ajuste simples de estoque.
 - [x] API in-memory já prepara upload WebP de produto.
-- [ ] API ainda precisa adicionar `barcode`, `reservedStock`, `channel`, `category`, `brand`, `size`, `color`, `contactName`, `leadTimeDays`, `paymentTerms` e `notes`.
+- [x] API já cobre `category`, `paymentTerm`, `deliveryTerm` e `notes` para fornecedor.
+- [x] `contactName` foi substituído por `SupplierResponsible` reutilizável.
+- [ ] API ainda precisa adicionar em produtos/estoque: `barcode`, `reservedStock`, `channel`, `category`, `brand`, `size` e `color`.
+- [ ] API ainda precisa adicionar indicadores operacionais de fornecedor: `leadTimeDays`, pontualidade, valor aberto, atrasos e próximas entregas reais.
 - [ ] API ainda precisa modelar pedido de compra (`PurchaseOrder`).
 - [ ] API ainda precisa modelar recebimento de pedido de compra (`Receiving`).
 - [ ] API ainda precisa modelar pedido/venda operacional (`Order`) usando produtos reais.
-- [ ] Backoffice ainda precisa criar os drawers/formulários conectados aos botões atuais.
+- [x] Backoffice já criou formulários de fornecedor e modal de responsáveis conectados à API.
+- [ ] Backoffice ainda precisa criar drawers/formulários conectados para pedido de compra, recebimento e ações em massa.
 
 ## Estratégia Prisma/Postgres
 

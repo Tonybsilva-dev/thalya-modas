@@ -20,6 +20,11 @@ model User {
   stores                    Store[]
   onboardings               Onboarding[]
   passwordRecoveryRequests  PasswordRecoveryRequest[]
+  suppliers                 Supplier[]
+  supplierResponsibles      SupplierResponsible[]
+  products                  Product[]
+  productImageAssets        ProductImageAsset[]
+  inventoryMovements        InventoryMovement[]
 
   @@map("users")
 }
@@ -81,4 +86,115 @@ model PasswordRecoveryRequest {
   @@index([email])
   @@index([userId])
   @@map("password_recovery_requests")
+}
+
+model Supplier {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  name          String
+  category      String?
+  document      String?
+  deliveryTerm  String?  @map("delivery_term")
+  email         String?
+  minimumOrder  String?  @map("minimum_order")
+  notes         String?
+  paymentTerm   String?  @map("payment_term")
+  phone         String?
+  status        String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responsibles  SupplierResponsible[]
+  products      Product[]
+
+  @@unique([userId, document])
+  @@index([userId])
+  @@map("suppliers")
+}
+
+model SupplierResponsible {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  supplierId  String   @map("supplier_id")
+  name        String
+  role        String
+  phone       String
+  email       String
+  contactType String   @map("contact_type")
+  isPrimary   Boolean  @default(false) @map("is_primary")
+  status      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier  Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([supplierId])
+  @@map("supplier_responsibles")
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  supplierId    String?  @map("supplier_id")
+  name          String
+  sku           String
+  description   String?
+  costPrice     Float?   @map("cost_price")
+  salePrice     Float?   @map("sale_price")
+  currentStock  Int      @default(0) @map("current_stock")
+  minimumStock  Int      @default(0) @map("minimum_stock")
+  status        String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier   Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  images     ProductImageAsset[]
+  movements  InventoryMovement[]
+
+  @@unique([userId, sku])
+  @@index([userId])
+  @@index([supplierId])
+  @@map("products")
+}
+
+model ProductImageAsset {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  productId   String   @map("product_id")
+  fileName    String   @map("file_name")
+  contentType String   @map("content_type")
+  key         String
+  publicUrl   String?  @map("public_url")
+  size        Int
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+  @@map("product_image_assets")
+}
+
+model InventoryMovement {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  productId     String   @map("product_id")
+  type          String
+  quantity      Int
+  previousStock Int      @map("previous_stock")
+  currentStock  Int      @map("current_stock")
+  reason        String
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+  @@map("inventory_movements")
 }

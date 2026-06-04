@@ -5,25 +5,31 @@ import type {
 	CatalogListQuery,
 	CreateInventoryAdjustmentInput,
 	CreateProductInput,
-	CreateSupplierResponsibleInput,
 	CreateSupplierInput,
+	CreateSupplierResponsibleInput,
 	InventoryMovement,
-	PrepareProductImageUploadInput,
 	PreparedProductImageUpload,
+	PrepareProductImageUploadInput,
 	Product,
 	Supplier,
 	SupplierResponsible,
 	UpdateProductInput,
-	UpdateSupplierResponsibleInput,
 	UpdateSupplierInput,
+	UpdateSupplierResponsibleInput,
 } from '../../../domain/entities/catalog';
 import type { CatalogRepository } from '../../../domain/repositories/catalog-repository';
+import {
+	createR2PresignedUpload,
+	type R2StorageConfig,
+} from '../../storage/r2-presigned-upload';
 
 export class InMemoryCatalogRepository implements CatalogRepository {
 	private readonly movements = new Map<string, InventoryMovement>();
 	private readonly products = new Map<string, Product>();
 	private readonly responsibles = new Map<string, SupplierResponsible>();
 	private readonly suppliers = new Map<string, Supplier>();
+
+	constructor(private readonly r2StorageConfig?: R2StorageConfig) {}
 
 	async createSupplier(input: CreateSupplierInput): Promise<Supplier> {
 		if (input.document) {
@@ -82,9 +88,17 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		query: CatalogListQuery = {},
 	): Promise<Supplier[]> {
 		return filterAndPaginate(
-			Array.from(this.suppliers.values()).filter((item) => item.userId === userId),
+			Array.from(this.suppliers.values()).filter(
+				(item) => item.userId === userId,
+			),
 			query,
-			(item) => [item.name, item.document, item.email, item.phone, item.category],
+			(item) => [
+				item.name,
+				item.document,
+				item.email,
+				item.phone,
+				item.category,
+			],
 		).map((supplier) => this.hydrateSupplier(supplier));
 	}
 
@@ -131,7 +145,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 
 		this.suppliers.delete(supplierId);
 		for (const responsible of this.responsibles.values()) {
-			if (responsible.supplierId === supplierId && responsible.userId === userId) {
+			if (
+				responsible.supplierId === supplierId &&
+				responsible.userId === userId
+			) {
 				this.responsibles.delete(responsible.id);
 			}
 		}
@@ -185,7 +202,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	): Promise<SupplierResponsible[]> {
 		await this.ensureSupplier(userId, supplierId);
 		return Array.from(this.responsibles.values())
-			.filter((item) => item.userId === userId && item.supplierId === supplierId)
+			.filter(
+				(item) => item.userId === userId && item.supplierId === supplierId,
+			)
 			.map(clone);
 	}
 
@@ -225,7 +244,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		}
 
 		if (input.supplierId) {
-			const supplier = await this.findSupplierById(input.userId, input.supplierId);
+			const supplier = await this.findSupplierById(
+				input.userId,
+				input.supplierId,
+			);
 			if (!supplier) {
 				throw new NotFoundError('Fornecedor não encontrado.');
 			}
@@ -273,7 +295,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		query: CatalogListQuery = {},
 	): Promise<Product[]> {
 		return filterAndPaginate(
-			Array.from(this.products.values()).filter((item) => item.userId === userId),
+			Array.from(this.products.values()).filter(
+				(item) => item.userId === userId,
+			),
 			query,
 			(item) => [item.name, item.sku, item.description],
 		).map(clone);
@@ -293,7 +317,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		}
 
 		if (input.supplierId) {
-			const supplier = await this.findSupplierById(input.userId, input.supplierId);
+			const supplier = await this.findSupplierById(
+				input.userId,
+				input.supplierId,
+			);
 			if (!supplier) {
 				throw new NotFoundError('Fornecedor não encontrado.');
 			}
@@ -366,7 +393,8 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		return Array.from(this.movements.values())
 			.filter(
 				(item) =>
-					item.userId === userId && (!productId || item.productId === productId),
+					item.userId === userId &&
+					(!productId || item.productId === productId),
 			)
 			.map(clone);
 	}
@@ -381,6 +409,18 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 
 		const createdAt = new Date().toISOString();
 		const key = `products/${input.userId}/${input.productId}/${randomUUID()}.webp`;
+		const upload = this.r2StorageConfig
+			? createR2PresignedUpload(this.r2StorageConfig, {
+					contentType: input.contentType,
+					key,
+				})
+			: {
+					headers: { 'content-type': 'image/webp' },
+					key,
+					method: 'PUT' as const,
+					publicUrl: `r2://store-flow/${key}`,
+					url: `https://r2.local.test/${key}`,
+				};
 		const asset = {
 			contentType: input.contentType,
 			createdAt,
@@ -388,7 +428,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 			id: randomUUID(),
 			key,
 			productId: input.productId,
-			publicUrl: `r2://store-flow/${key}`,
+			publicUrl: upload.publicUrl,
 			size: input.size,
 			userId: input.userId,
 		} as const;
@@ -401,12 +441,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 
 		return {
 			asset: clone(asset),
-			upload: {
-				headers: { 'content-type': 'image/webp' },
-				key,
-				method: 'PUT',
-				url: `https://r2.local.test/${key}`,
-			},
+			upload,
 		};
 	}
 
@@ -423,7 +458,8 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		return clone({
 			...supplier,
 			responsibles: Array.from(this.responsibles.values()).filter(
-				(item) => item.userId === supplier.userId && item.supplierId === supplier.id,
+				(item) =>
+					item.userId === supplier.userId && item.supplierId === supplier.id,
 			),
 		});
 	}
@@ -456,9 +492,7 @@ function filterAndPaginate<T>(
 	const filtered = items.filter((item) => {
 		const matchesSearch =
 			!q ||
-			getSearchFields(item).some((field) =>
-				field?.toLowerCase().includes(q),
-			);
+			getSearchFields(item).some((field) => field?.toLowerCase().includes(q));
 		const matchesStatus =
 			!status ||
 			status === 'all' ||

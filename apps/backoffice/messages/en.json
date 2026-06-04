@@ -33,6 +33,16 @@
       "openSettings": "Open settings",
       "openNavigation": "Open navigation",
       "closeNavigation": "Close navigation",
+      "userFallback": "User",
+      "roles": {
+        "admin": "Admin",
+        "company": "Company owner",
+        "customer": "Customer",
+        "default": "Authenticated user",
+        "manager": "Manager",
+        "operator": "Operator",
+        "super_admin": "Super admin"
+      },
       "signOut": "Sign out",
       "signingOut": "Signing out..."
     },

@@ -138,6 +138,38 @@ describe('env validation', () => {
 		expect(env.API_EXTERNAL_DOCS_URL).toBe('https://docs.example.com');
 	});
 
+	it('deve validar configuração opcional do Cloudflare R2', async () => {
+		process.env.R2_ENDPOINT = 'https://account.r2.cloudflarestorage.com';
+		process.env.R2_ACCESS_KEY = 'access-key';
+		process.env.R2_SECRET_KEY = 'secret-key';
+		process.env.R2_BUCKET_NAME = 'store-flow';
+		process.env.R2_PUBLIC_URL = 'https://cdn.example.com';
+
+		const { env } = await import('../../../../src/shared/env/env');
+
+		expect(env.R2_ENDPOINT).toBe('https://account.r2.cloudflarestorage.com');
+		expect(env.R2_ACCESS_KEY).toBe('access-key');
+		expect(env.R2_SECRET_KEY).toBe('secret-key');
+		expect(env.R2_BUCKET_NAME).toBe('store-flow');
+		expect(env.R2_PUBLIC_URL).toBe('https://cdn.example.com');
+	});
+
+	it('deve transformar strings vazias do Cloudflare R2 em undefined', async () => {
+		process.env.R2_ENDPOINT = '';
+		process.env.R2_ACCESS_KEY = '';
+		process.env.R2_SECRET_KEY = '';
+		process.env.R2_BUCKET_NAME = '';
+		process.env.R2_PUBLIC_URL = '';
+
+		const { env } = await import('../../../../src/shared/env/env');
+
+		expect(env.R2_ENDPOINT).toBeUndefined();
+		expect(env.R2_ACCESS_KEY).toBeUndefined();
+		expect(env.R2_SECRET_KEY).toBeUndefined();
+		expect(env.R2_BUCKET_NAME).toBeUndefined();
+		expect(env.R2_PUBLIC_URL).toBeUndefined();
+	});
+
 	it('deve transformar strings vazias em undefined para campos opcionais', async () => {
 		process.env.API_CONTACT_NAME = '';
 		process.env.API_CONTACT_EMAIL = '';

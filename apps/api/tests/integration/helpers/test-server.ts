@@ -10,14 +10,15 @@ import { authRoutes } from '../../../src/app/http/routes/auth.routes';
 import { catalogRoutes } from '../../../src/app/http/routes/catalog.routes';
 import { dashboardRoutes } from '../../../src/app/http/routes/dashboard.routes';
 import { onboardingRoutes } from '../../../src/app/http/routes/onboarding.routes';
+import type { CatalogRepository } from '../../../src/core/domain/repositories/catalog-repository';
 import type { OnboardingRepository } from '../../../src/core/domain/repositories/onboarding-repository';
 import type { PasswordRecoveryRepository } from '../../../src/core/domain/repositories/password-recovery-repository';
 import type { StoreRepository } from '../../../src/core/domain/repositories/store-repository';
 import type { UserRepository } from '../../../src/core/domain/repositories/user-repository';
 import {
-	InMemoryOnboardingRepository,
 	InMemoryCatalogRepository,
 	InMemoryDashboardRepository,
+	InMemoryOnboardingRepository,
 	InMemoryPasswordRecoveryRepository,
 	InMemoryStoreRepository,
 } from '../../../src/core/infra/persistence';
@@ -38,6 +39,7 @@ export async function createTestServer(
 	userRepository?: UserRepository,
 	options: {
 		featureFlags?: Partial<FeatureFlagMap>;
+		catalogRepository?: CatalogRepository;
 		onboardingRepository?: OnboardingRepository;
 		passwordRecoveryRepository?: PasswordRecoveryRepository;
 		storeRepository?: StoreRepository;
@@ -82,7 +84,9 @@ export async function createTestServer(
 	// Usa o repositório fornecido ou cria um mock
 	const repository = userRepository ?? new MockUserRepository();
 	container.setUserRepository(repository);
-	container.setCatalogRepository(new InMemoryCatalogRepository());
+	container.setCatalogRepository(
+		options.catalogRepository ?? new InMemoryCatalogRepository(),
+	);
 	container.setDashboardRepository(new InMemoryDashboardRepository());
 	container.setPasswordRecoveryRepository(
 		options.passwordRecoveryRepository ??

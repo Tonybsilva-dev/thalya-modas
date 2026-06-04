@@ -33,6 +33,16 @@
       "openSettings": "Abrir configuracion",
       "openNavigation": "Abrir navegacion",
       "closeNavigation": "Cerrar navegacion",
+      "userFallback": "Usuario",
+      "roles": {
+        "admin": "Administrador",
+        "company": "Propietario de la empresa",
+        "customer": "Cliente",
+        "default": "Usuario autenticado",
+        "manager": "Gerente",
+        "operator": "Operador",
+        "super_admin": "Super administrador"
+      },
       "signOut": "Cerrar sesion",
       "signingOut": "Cerrando sesion..."
     },

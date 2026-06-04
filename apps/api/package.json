@@ -14,6 +14,7 @@
 		"db:studio": "prisma studio --schema prisma/schema.prisma",
 		"openapi:generate": "tsx scripts/generate-openapi-spec.ts",
 		"openapi:changes": "tsx scripts/detect-route-changes.ts",
+		"r2:validate": "tsx scripts/validate-r2-upload.ts",
 		"test": "vitest",
 		"test:ui": "vitest --ui",
 		"test:changed": "vitest related --changed --run",

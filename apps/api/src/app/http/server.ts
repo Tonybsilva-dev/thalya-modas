@@ -5,12 +5,13 @@ import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 import fastify from 'fastify';
 import {
-	InMemoryOnboardingRepository,
 	InMemoryCatalogRepository,
 	InMemoryDashboardRepository,
+	InMemoryOnboardingRepository,
 	InMemoryPasswordRecoveryRepository,
 	InMemoryStoreRepository,
 	InMemoryUserRepository,
+	PrismaCatalogRepository,
 	PrismaOnboardingRepository,
 	PrismaPasswordRecoveryRepository,
 	PrismaStoreRepository,
@@ -18,6 +19,7 @@ import {
 	prisma,
 	seedPreviewUser,
 } from '../../core/infra/persistence';
+import type { R2StorageConfig } from '../../core/infra/storage/r2-presigned-upload';
 import { env } from '../../shared/env';
 import { getSwaggerConfig } from './config/swagger.config';
 import { getSwaggerUIConfig } from './config/swagger-ui.config';
@@ -115,10 +117,13 @@ async function build() {
 	await server.register(healthcheckRoutes);
 
 	const container = new AppContainer();
-	container.setCatalogRepository(new InMemoryCatalogRepository());
+	const r2StorageConfig = getR2StorageConfig();
 	container.setDashboardRepository(new InMemoryDashboardRepository());
 
 	if (env.PERSISTENCE_DRIVER === 'postgres') {
+		container.setCatalogRepository(
+			new PrismaCatalogRepository(prisma, r2StorageConfig),
+		);
 		container.setUserRepository(new PrismaUserRepository(prisma));
 		container.setPasswordRecoveryRepository(
 			new PrismaPasswordRecoveryRepository(prisma),
@@ -129,6 +134,9 @@ async function build() {
 			await seedPreviewUser(prisma);
 		}
 	} else {
+		container.setCatalogRepository(
+			new InMemoryCatalogRepository(r2StorageConfig),
+		);
 		container.setUserRepository(new InMemoryUserRepository());
 		container.setPasswordRecoveryRepository(
 			new InMemoryPasswordRecoveryRepository(),
@@ -214,3 +222,22 @@ if (require.main === module) {
 }
 
 export { build, start };
+
+function getR2StorageConfig(): R2StorageConfig | undefined {
+	if (
+		!env.R2_ENDPOINT ||
+		!env.R2_ACCESS_KEY ||
+		!env.R2_SECRET_KEY ||
+		!env.R2_BUCKET_NAME
+	) {
+		return undefined;
+	}
+
+	return {
+		accessKeyId: env.R2_ACCESS_KEY,
+		bucketName: env.R2_BUCKET_NAME,
+		endpoint: env.R2_ENDPOINT,
+		publicUrl: env.R2_PUBLIC_URL,
+		secretAccessKey: env.R2_SECRET_KEY,
+	};
+}

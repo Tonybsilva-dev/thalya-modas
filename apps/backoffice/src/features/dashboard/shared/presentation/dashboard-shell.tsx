@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { SignOut } from "@phosphor-icons/react";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@thalya-modas/ui";
 
 import { logout } from "@/src/features/auth/logout/application/logout-api";
+import { getCurrentUser } from "@/src/features/auth/session/application/current-user-api";
 import { appConfig } from "@/src/shared/config/app";
 import { useAppUiStore } from "@/src/shared/state/app-ui-store";
 import { BrandMark } from "@/src/shared/ui/brand-mark";
@@ -62,6 +63,31 @@ function useDashboardBasePath() {
   return `/${role}/dashboard`;
 }
 
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts.at(-1)?.[0] : "";
+
+  return `${first}${last}`.toUpperCase() || "SF";
+}
+
+function getRoleTranslationKey(role?: string) {
+  const normalizedRole = role?.replace(/^ROLE_/, "").toLowerCase();
+
+  if (
+    normalizedRole === "admin" ||
+    normalizedRole === "company" ||
+    normalizedRole === "customer" ||
+    normalizedRole === "manager" ||
+    normalizedRole === "operator" ||
+    normalizedRole === "super_admin"
+  ) {
+    return normalizedRole;
+  }
+
+  return "default";
+}
+
 function StoreSidebar({
   activeItem,
   className,
@@ -75,6 +101,12 @@ function StoreSidebar({
   const activeStore = useAppUiStore((state) => state.activeStore);
   const navigation = useTranslations("dashboard.navigation");
   const shell = useTranslations("dashboard.shell");
+  const currentUserQuery = useQuery({
+    queryFn: getCurrentUser,
+    queryKey: ["auth", "current-user"],
+    retry: false,
+    staleTime: 1000 * 60 * 5,
+  });
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
@@ -82,6 +114,11 @@ function StoreSidebar({
       router.push("/auth/login");
     },
   });
+  const currentUser = currentUserQuery.data;
+  const operatorName = currentUser?.name ?? shell("userFallback");
+  const resolvedOperatorRole = currentUser
+    ? shell(`roles.${getRoleTranslationKey(currentUser.role)}`)
+    : operatorRole;
 
   return (
     <Sidebar className={cn("shrink-0", className)}>
@@ -118,11 +155,11 @@ function StoreSidebar({
       <SidebarFooter className="grid gap-3 p-6">
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center bg-muted text-sm font-semibold text-foreground">
-            AR
+            {getInitials(operatorName)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">Ana Ribeiro</p>
-            <p className="truncate text-xs text-muted-foreground">{operatorRole}</p>
+            <p className="truncate text-sm font-medium text-foreground">{operatorName}</p>
+            <p className="truncate text-xs text-muted-foreground">{resolvedOperatorRole}</p>
           </div>
           <IconButton
             aria-label={shell("openSettings")}

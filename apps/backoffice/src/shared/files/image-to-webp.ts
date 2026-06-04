@@ -7,7 +7,7 @@ export type ConvertImageToWebpOptions = {
 const defaultOptions = {
 	maxHeight: 1600,
 	maxWidth: 1600,
-	quality: 0.82,
+	quality: 0.7,
 } satisfies Required<ConvertImageToWebpOptions>;
 
 export async function convertImageFileToWebp(

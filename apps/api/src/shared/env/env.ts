@@ -80,6 +80,21 @@ const envSchema = z.object({
 		.string()
 		.optional()
 		.transform((val) => (val === '' ? undefined : val)),
+	// Object storage / Cloudflare R2
+	R2_ENDPOINT: optionalUrl(),
+	R2_ACCESS_KEY: z
+		.string()
+		.optional()
+		.transform((val) => (val === '' ? undefined : val)),
+	R2_SECRET_KEY: z
+		.string()
+		.optional()
+		.transform((val) => (val === '' ? undefined : val)),
+	R2_BUCKET_NAME: z
+		.string()
+		.optional()
+		.transform((val) => (val === '' ? undefined : val)),
+	R2_PUBLIC_URL: optionalUrl(),
 	// JWT Configuration
 	JWT_SECRET: z
 		.string()
