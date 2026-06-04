@@ -2,12 +2,16 @@ import type {
 	CatalogListQuery,
 	CreateInventoryAdjustmentInput,
 	CreateProductInput,
-	CreateSupplierResponsibleInput,
+	CreatePurchaseOrderInput,
+	CreateReceivingInput,
 	CreateSupplierInput,
+	CreateSupplierResponsibleInput,
 	PrepareProductImageUploadInput,
 	UpdateProductInput,
-	UpdateSupplierResponsibleInput,
+	UpdatePurchaseOrderInput,
+	UpdateReceivingInput,
 	UpdateSupplierInput,
+	UpdateSupplierResponsibleInput,
 } from '../../domain/entities/catalog';
 import type { CatalogRepository } from '../../domain/repositories/catalog-repository';
 
@@ -50,7 +54,10 @@ export class DeleteSupplierUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
 	execute(input: { userId: string; supplierId: string }) {
-		return this.catalogRepository.deleteSupplier(input.userId, input.supplierId);
+		return this.catalogRepository.deleteSupplier(
+			input.userId,
+			input.supplierId,
+		);
 	}
 }
 
@@ -84,7 +91,11 @@ export class UpdateSupplierResponsibleUseCase {
 export class DeleteSupplierResponsibleUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; supplierId: string; responsibleId: string }) {
+	execute(input: {
+		userId: string;
+		supplierId: string;
+		responsibleId: string;
+	}) {
 		return this.catalogRepository.deleteSupplierResponsible(
 			input.userId,
 			input.supplierId,
@@ -113,7 +124,10 @@ export class GetProductUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
 	execute(input: { userId: string; productId: string }) {
-		return this.catalogRepository.findProductById(input.userId, input.productId);
+		return this.catalogRepository.findProductById(
+			input.userId,
+			input.productId,
+		);
 	}
 }
 
@@ -141,6 +155,54 @@ export class ListInventoryMovementsUseCase {
 			input.userId,
 			input.productId,
 		);
+	}
+}
+
+export class ListPurchaseOrdersUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: { userId: string; query?: CatalogListQuery }) {
+		return this.catalogRepository.listPurchaseOrders(input.userId, input.query);
+	}
+}
+
+export class CreatePurchaseOrderUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: CreatePurchaseOrderInput) {
+		return this.catalogRepository.createPurchaseOrder(input);
+	}
+}
+
+export class UpdatePurchaseOrderUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: UpdatePurchaseOrderInput) {
+		return this.catalogRepository.updatePurchaseOrder(input);
+	}
+}
+
+export class ListReceivingsUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: { userId: string; query?: CatalogListQuery }) {
+		return this.catalogRepository.listReceivings(input.userId, input.query);
+	}
+}
+
+export class CreateReceivingUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: CreateReceivingInput) {
+		return this.catalogRepository.createReceiving(input);
+	}
+}
+
+export class UpdateReceivingUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: UpdateReceivingInput) {
+		return this.catalogRepository.updateReceiving(input);
 	}
 }
 

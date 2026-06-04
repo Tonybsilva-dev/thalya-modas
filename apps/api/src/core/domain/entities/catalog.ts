@@ -6,11 +6,27 @@ export type SupplierCategory =
 	| 'mens_fashion'
 	| 'packaging';
 export type SupplierTerm = '+3' | '+5' | '+7' | '+15' | '+30' | '+45';
-export type SupplierResponsibleContactType = 'orders' | 'delivery' | 'financial';
+export type SupplierResponsibleContactType =
+	| 'orders'
+	| 'delivery'
+	| 'financial';
 
 export type ProductStatus = 'active' | 'inactive';
 
 export type InventoryAdjustmentType = 'in' | 'out' | 'correction';
+export type PurchaseOrderStatus =
+	| 'draft'
+	| 'confirmed'
+	| 'receiving'
+	| 'completed'
+	| 'cancelled'
+	| 'delayed'
+	| 'payable';
+export type ReceivingStatus =
+	| 'scheduled'
+	| 'checking'
+	| 'completed'
+	| 'delayed';
 
 export type Supplier = {
 	id: string;
@@ -86,6 +102,52 @@ export type InventoryMovement = {
 	createdAt: string;
 };
 
+export type PurchaseOrderItem = {
+	id: string;
+	purchaseOrderId: string;
+	productId?: string;
+	name: string;
+	sku: string;
+	quantity: number;
+	unitCost: number;
+	totalCost: number;
+};
+
+export type PurchaseOrder = {
+	id: string;
+	userId: string;
+	supplierId: string;
+	code: string;
+	expectedDeliveryAt: string;
+	invoiceNumber?: string;
+	items: PurchaseOrderItem[];
+	notes?: string;
+	paymentTerm?: SupplierTerm;
+	status: PurchaseOrderStatus;
+	totalCost: number;
+	totalItems: number;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type Receiving = {
+	id: string;
+	userId: string;
+	supplierId: string;
+	purchaseOrderId?: string;
+	invoiceNumber: string;
+	expectedAt: string;
+	receivedAt?: string;
+	volumes: number;
+	dock?: string;
+	receiverName?: string;
+	discrepancies?: string;
+	status: ReceivingStatus;
+	itemsCount: number;
+	createdAt: string;
+	updatedAt: string;
+};
+
 export type CreateSupplierInput = {
 	userId: string;
 	name: string;
@@ -151,6 +213,53 @@ export type CreateInventoryAdjustmentInput = {
 	type: InventoryAdjustmentType;
 	quantity: number;
 	reason: string;
+};
+
+export type CreatePurchaseOrderInput = {
+	userId: string;
+	supplierId: string;
+	expectedDeliveryAt: string;
+	invoiceNumber?: string;
+	items: Array<{
+		productId?: string;
+		name: string;
+		sku: string;
+		quantity: number;
+		unitCost: number;
+	}>;
+	notes?: string;
+	paymentTerm?: SupplierTerm;
+	status?: PurchaseOrderStatus;
+};
+
+export type UpdatePurchaseOrderInput = Partial<
+	Omit<CreatePurchaseOrderInput, 'userId' | 'supplierId' | 'items'>
+> & {
+	id: string;
+	userId: string;
+	status?: PurchaseOrderStatus;
+};
+
+export type CreateReceivingInput = {
+	userId: string;
+	supplierId: string;
+	purchaseOrderId?: string;
+	invoiceNumber: string;
+	expectedAt: string;
+	receivedAt?: string;
+	volumes: number;
+	dock?: string;
+	receiverName?: string;
+	discrepancies?: string;
+	status?: ReceivingStatus;
+};
+
+export type UpdateReceivingInput = Partial<
+	Omit<CreateReceivingInput, 'userId' | 'supplierId' | 'purchaseOrderId'>
+> & {
+	id: string;
+	userId: string;
+	status?: ReceivingStatus;
 };
 
 export type PrepareProductImageUploadInput = {

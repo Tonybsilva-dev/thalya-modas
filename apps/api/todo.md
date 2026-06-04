@@ -184,6 +184,12 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 - [x] `POST /products/:productId/assets/upload`
 - [x] `POST /inventory/adjustments`
 - [x] `GET /inventory/movements`
+- [x] `GET /purchase-orders`
+- [x] `POST /purchase-orders`
+- [x] `PATCH /purchase-orders/:id`
+- [x] `GET /receivings`
+- [x] `POST /receivings`
+- [x] `PATCH /receivings/:id`
 
 ### Validações implementadas
 
@@ -203,6 +209,11 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 - [x] SKU único por usuário/loja.
 - [x] Produto não pode vincular fornecedor inexistente.
 - [x] Ajuste de estoque não permite saldo negativo.
+- [x] Pedido de compra exige fornecedor existente.
+- [x] Pedido de compra rejeita produto inexistente quando `productId` é informado.
+- [x] Pedido de compra calcula `totalItems` e `totalCost` automaticamente.
+- [x] Recebimento exige fornecedor existente.
+- [x] Recebimento rejeita pedido de compra inexistente quando `purchaseOrderId` é informado.
 - [x] Upload de asset aceita apenas `image/webp` e arquivo `.webp`.
 - [x] Tamanho máximo inicial de imagem: 5MB.
 
@@ -282,6 +293,9 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 - [x] Adicionar testes específicos para `PATCH /suppliers/:id` com documento duplicado.
 - [x] Adicionar testes específicos para `DELETE /suppliers/:id` removendo responsáveis vinculados.
 - [x] Adicionar testes específicos para responsáveis de outro fornecedor/usuário retornarem `404`.
+- [x] Modelar `PurchaseOrder` in-memory para substituir os textos operacionais de plano de entrega.
+- [x] Modelar `Receiving` in-memory para recebimentos, doca, volumes, recebedor, divergências e nota fiscal.
+- [x] Persistir `PurchaseOrder` e `Receiving` no Prisma/Postgres.
 - [ ] Adicionar estados de loading/error específicos no backoffice para create/edit/delete/responsibles além do fallback atual.
 - [ ] Substituir IDs técnicos na tabela por códigos comerciais quando existir modelo de pedido/fornecedor mais rico.
 
@@ -431,8 +445,10 @@ Campos:
 - [x] `contactName` foi substituído por `SupplierResponsible` reutilizável.
 - [ ] API ainda precisa adicionar em produtos/estoque: `barcode`, `reservedStock`, `channel`, `category`, `brand`, `size` e `color`.
 - [ ] API ainda precisa adicionar indicadores operacionais de fornecedor: `leadTimeDays`, pontualidade, valor aberto, atrasos e próximas entregas reais.
-- [ ] API ainda precisa modelar pedido de compra (`PurchaseOrder`).
-- [ ] API ainda precisa modelar recebimento de pedido de compra (`Receiving`).
+- [x] API in-memory já modela pedido de compra (`PurchaseOrder`).
+- [x] API in-memory já modela recebimento de pedido de compra (`Receiving`).
+- [x] API Prisma/Postgres já persiste pedido de compra (`PurchaseOrder`).
+- [x] API Prisma/Postgres já persiste recebimento de pedido de compra (`Receiving`).
 - [ ] API ainda precisa modelar pedido/venda operacional (`Order`) usando produtos reais.
 - [x] Backoffice já criou formulários de fornecedor e modal de responsáveis conectados à API.
 - [ ] Backoffice ainda precisa criar drawers/formulários conectados para pedido de compra, recebimento e ações em massa.

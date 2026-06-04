@@ -6,6 +6,8 @@ import type {
 	CatalogListQuery,
 	CreateInventoryAdjustmentInput,
 	CreateProductInput,
+	CreatePurchaseOrderInput,
+	CreateReceivingInput,
 	CreateSupplierInput,
 	CreateSupplierResponsibleInput,
 	InventoryAdjustmentType,
@@ -15,6 +17,11 @@ import type {
 	Product,
 	ProductImageAsset,
 	ProductStatus,
+	PurchaseOrder,
+	PurchaseOrderItem,
+	PurchaseOrderStatus,
+	Receiving,
+	ReceivingStatus,
 	Supplier,
 	SupplierCategory,
 	SupplierResponsible,
@@ -22,6 +29,8 @@ import type {
 	SupplierStatus,
 	SupplierTerm,
 	UpdateProductInput,
+	UpdatePurchaseOrderInput,
+	UpdateReceivingInput,
 	UpdateSupplierInput,
 	UpdateSupplierResponsibleInput,
 } from '../../../domain/entities/catalog';
@@ -37,6 +46,10 @@ type PrismaSupplierWithResponsibles = Prisma.SupplierGetPayload<{
 
 type PrismaProductWithImages = Prisma.ProductGetPayload<{
 	include: { images: true };
+}>;
+
+type PrismaPurchaseOrderWithItems = Prisma.PurchaseOrderGetPayload<{
+	include: { items: true };
 }>;
 
 export class PrismaCatalogRepository implements CatalogRepository {
@@ -406,6 +419,171 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		return movements.map(toDomainInventoryMovement);
 	}
 
+	async createPurchaseOrder(
+		input: CreatePurchaseOrderInput,
+	): Promise<PurchaseOrder> {
+		await this.ensureSupplier(input.userId, input.supplierId);
+
+		for (const item of input.items) {
+			if (item.productId) {
+				const product = await this.findProductById(
+					input.userId,
+					item.productId,
+				);
+				if (!product) {
+					throw new NotFoundError('Produto não encontrado.');
+				}
+			}
+		}
+
+		const totalCost = input.items.reduce(
+			(total, item) => total + item.quantity * item.unitCost,
+			0,
+		);
+		const totalItems = input.items.reduce(
+			(total, item) => total + item.quantity,
+			0,
+		);
+		const orderCount = await this.prisma.purchaseOrder.count({
+			where: { userId: input.userId },
+		});
+
+		const order = await this.prisma.purchaseOrder.create({
+			data: {
+				code: `PO-${String(orderCount + 1).padStart(4, '0')}`,
+				expectedDeliveryAt: new Date(input.expectedDeliveryAt),
+				invoiceNumber: input.invoiceNumber,
+				items: {
+					create: input.items.map((item) => ({
+						name: item.name,
+						productId: item.productId,
+						quantity: item.quantity,
+						sku: item.sku,
+						totalCost: item.quantity * item.unitCost,
+						unitCost: item.unitCost,
+						userId: input.userId,
+					})),
+				},
+				notes: input.notes,
+				paymentTerm: input.paymentTerm,
+				status: input.status ?? 'confirmed',
+				supplierId: input.supplierId,
+				totalCost,
+				totalItems,
+				userId: input.userId,
+			},
+			include: { items: true },
+		});
+
+		return toDomainPurchaseOrder(order);
+	}
+
+	async listPurchaseOrders(
+		userId: string,
+		query: CatalogListQuery = {},
+	): Promise<PurchaseOrder[]> {
+		const where: Prisma.PurchaseOrderWhereInput = {
+			userId,
+			...getStatusWhere(query.status),
+			...getPurchaseOrderSearchWhere(query.q),
+		};
+		const orders = await this.prisma.purchaseOrder.findMany({
+			where,
+			include: { items: true },
+			orderBy: { createdAt: 'desc' },
+			...getPaginationArgs(query),
+		});
+
+		return orders.map(toDomainPurchaseOrder);
+	}
+
+	async updatePurchaseOrder(
+		input: UpdatePurchaseOrderInput,
+	): Promise<PurchaseOrder> {
+		const order = await this.prisma.purchaseOrder.findFirst({
+			where: { id: input.id, userId: input.userId },
+		});
+		if (!order) {
+			throw new NotFoundError('Pedido de compra não encontrado.');
+		}
+
+		const updated = await this.prisma.purchaseOrder.update({
+			where: { id: input.id },
+			data: getPurchaseOrderUpdateData(input),
+			include: { items: true },
+		});
+
+		return toDomainPurchaseOrder(updated);
+	}
+
+	async createReceiving(input: CreateReceivingInput): Promise<Receiving> {
+		await this.ensureSupplier(input.userId, input.supplierId);
+
+		let itemsCount = 0;
+		if (input.purchaseOrderId) {
+			const order = await this.prisma.purchaseOrder.findFirst({
+				where: { id: input.purchaseOrderId, userId: input.userId },
+			});
+			if (!order) {
+				throw new NotFoundError('Pedido de compra não encontrado.');
+			}
+			itemsCount = order.totalItems;
+		}
+
+		const receiving = await this.prisma.receiving.create({
+			data: {
+				discrepancies: input.discrepancies,
+				dock: input.dock,
+				expectedAt: new Date(input.expectedAt),
+				invoiceNumber: input.invoiceNumber,
+				itemsCount,
+				purchaseOrderId: input.purchaseOrderId,
+				receivedAt: input.receivedAt ? new Date(input.receivedAt) : undefined,
+				receiverName: input.receiverName,
+				status: input.status ?? 'scheduled',
+				supplierId: input.supplierId,
+				userId: input.userId,
+				volumes: input.volumes,
+			},
+		});
+
+		return toDomainReceiving(receiving);
+	}
+
+	async listReceivings(
+		userId: string,
+		query: CatalogListQuery = {},
+	): Promise<Receiving[]> {
+		const where: Prisma.ReceivingWhereInput = {
+			userId,
+			...getStatusWhere(query.status),
+			...getReceivingSearchWhere(query.q),
+		};
+		const receivings = await this.prisma.receiving.findMany({
+			where,
+			orderBy: { createdAt: 'desc' },
+			...getPaginationArgs(query),
+		});
+
+		return receivings.map(toDomainReceiving);
+	}
+
+	async updateReceiving(input: UpdateReceivingInput): Promise<Receiving> {
+		const receiving = await this.prisma.receiving.findFirst({
+			where: { id: input.id, userId: input.userId },
+		});
+		if (!receiving) {
+			throw new NotFoundError('Recebimento não encontrado.');
+		}
+
+		const updated = await this.prisma.receiving.update({
+			where: { id: input.id },
+			data: getReceivingUpdateData(input),
+		});
+
+		return toDomainReceiving(updated);
+	}
+
 	async prepareProductImageUpload(
 		input: PrepareProductImageUploadInput,
 	): Promise<PreparedProductImageUpload> {
@@ -505,6 +683,56 @@ function getProductSearchWhere(
 	};
 }
 
+function getPurchaseOrderSearchWhere(
+	q: string | undefined,
+): Prisma.PurchaseOrderWhereInput {
+	const search = q?.trim();
+	if (!search) {
+		return {};
+	}
+
+	return {
+		OR: [
+			{ code: { contains: search, mode: Prisma.QueryMode.insensitive } },
+			{
+				invoiceNumber: {
+					contains: search,
+					mode: Prisma.QueryMode.insensitive,
+				},
+			},
+			{ status: { contains: search, mode: Prisma.QueryMode.insensitive } },
+		],
+	};
+}
+
+function getReceivingSearchWhere(
+	q: string | undefined,
+): Prisma.ReceivingWhereInput {
+	const search = q?.trim();
+	if (!search) {
+		return {};
+	}
+
+	return {
+		OR: [
+			{
+				invoiceNumber: {
+					contains: search,
+					mode: Prisma.QueryMode.insensitive,
+				},
+			},
+			{ status: { contains: search, mode: Prisma.QueryMode.insensitive } },
+			{ dock: { contains: search, mode: Prisma.QueryMode.insensitive } },
+			{
+				receiverName: {
+					contains: search,
+					mode: Prisma.QueryMode.insensitive,
+				},
+			},
+		],
+	};
+}
+
 function getStatusWhere(status: string | undefined) {
 	const normalizedStatus = status?.trim();
 	return !normalizedStatus || normalizedStatus === 'all'
@@ -568,6 +796,49 @@ function getProductUpdateData(
 			? { connect: { id: input.supplierId } }
 			: { disconnect: true };
 	}
+	return data;
+}
+
+function getPurchaseOrderUpdateData(
+	input: UpdatePurchaseOrderInput,
+): Prisma.PurchaseOrderUpdateInput {
+	const data: Prisma.PurchaseOrderUpdateInput = {};
+	if (Object.hasOwn(input, 'expectedDeliveryAt')) {
+		data.expectedDeliveryAt = input.expectedDeliveryAt
+			? new Date(input.expectedDeliveryAt)
+			: undefined;
+	}
+	if (Object.hasOwn(input, 'invoiceNumber')) {
+		data.invoiceNumber = input.invoiceNumber;
+	}
+	if (Object.hasOwn(input, 'notes')) data.notes = input.notes;
+	if (Object.hasOwn(input, 'paymentTerm')) data.paymentTerm = input.paymentTerm;
+	if (Object.hasOwn(input, 'status')) data.status = input.status;
+	return data;
+}
+
+function getReceivingUpdateData(
+	input: UpdateReceivingInput,
+): Prisma.ReceivingUpdateInput {
+	const data: Prisma.ReceivingUpdateInput = {};
+	if (Object.hasOwn(input, 'discrepancies')) {
+		data.discrepancies = input.discrepancies;
+	}
+	if (Object.hasOwn(input, 'dock')) data.dock = input.dock;
+	if (Object.hasOwn(input, 'expectedAt')) {
+		data.expectedAt = input.expectedAt ? new Date(input.expectedAt) : undefined;
+	}
+	if (Object.hasOwn(input, 'invoiceNumber')) {
+		data.invoiceNumber = input.invoiceNumber;
+	}
+	if (Object.hasOwn(input, 'receivedAt')) {
+		data.receivedAt = input.receivedAt ? new Date(input.receivedAt) : null;
+	}
+	if (Object.hasOwn(input, 'receiverName')) {
+		data.receiverName = input.receiverName;
+	}
+	if (Object.hasOwn(input, 'status')) data.status = input.status;
+	if (Object.hasOwn(input, 'volumes')) data.volumes = input.volumes;
 	return data;
 }
 
@@ -658,5 +929,63 @@ function toDomainInventoryMovement(
 		reason: movement.reason,
 		type: movement.type as InventoryAdjustmentType,
 		userId: movement.userId,
+	};
+}
+
+function toDomainPurchaseOrder(
+	order: PrismaPurchaseOrderWithItems,
+): PurchaseOrder {
+	return {
+		code: order.code,
+		createdAt: order.createdAt.toISOString(),
+		expectedDeliveryAt: order.expectedDeliveryAt.toISOString(),
+		id: order.id,
+		invoiceNumber: order.invoiceNumber ?? undefined,
+		items: order.items.map(toDomainPurchaseOrderItem),
+		notes: order.notes ?? undefined,
+		paymentTerm: order.paymentTerm as SupplierTerm | undefined,
+		status: order.status as PurchaseOrderStatus,
+		supplierId: order.supplierId,
+		totalCost: order.totalCost,
+		totalItems: order.totalItems,
+		updatedAt: order.updatedAt.toISOString(),
+		userId: order.userId,
+	};
+}
+
+function toDomainPurchaseOrderItem(
+	item: Prisma.PurchaseOrderItemGetPayload<object>,
+): PurchaseOrderItem {
+	return {
+		id: item.id,
+		name: item.name,
+		productId: item.productId ?? undefined,
+		purchaseOrderId: item.purchaseOrderId,
+		quantity: item.quantity,
+		sku: item.sku,
+		totalCost: item.totalCost,
+		unitCost: item.unitCost,
+	};
+}
+
+function toDomainReceiving(
+	receiving: Prisma.ReceivingGetPayload<object>,
+): Receiving {
+	return {
+		createdAt: receiving.createdAt.toISOString(),
+		discrepancies: receiving.discrepancies ?? undefined,
+		dock: receiving.dock ?? undefined,
+		expectedAt: receiving.expectedAt.toISOString(),
+		id: receiving.id,
+		invoiceNumber: receiving.invoiceNumber,
+		itemsCount: receiving.itemsCount,
+		purchaseOrderId: receiving.purchaseOrderId ?? undefined,
+		receivedAt: receiving.receivedAt?.toISOString(),
+		receiverName: receiving.receiverName ?? undefined,
+		status: receiving.status as ReceivingStatus,
+		supplierId: receiving.supplierId,
+		updatedAt: receiving.updatedAt.toISOString(),
+		userId: receiving.userId,
+		volumes: receiving.volumes,
 	};
 }

@@ -151,6 +151,59 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		});
 		expect(persistedProduct?.images).toHaveLength(1);
 		expect(persistedProduct?.movements).toHaveLength(1);
+
+		const purchaseOrder = await makeRequest(server, {
+			body: {
+				expectedDeliveryAt: '2026-06-05T15:00:00.000Z',
+				invoiceNumber: 'NF-PRISMA-PO',
+				items: [
+					{
+						name: 'Vestido prisma',
+						productId,
+						quantity: 2,
+						sku: 'PRISMA-VD-001',
+						unitCost: 77.5,
+					},
+				],
+				supplierId,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/purchase-orders',
+		});
+		expect(purchaseOrder.statusCode).toBe(201);
+		expect(purchaseOrder.body).toMatchObject({
+			code: 'PO-0001',
+			totalCost: 155,
+			totalItems: 2,
+		});
+
+		const purchaseOrderId = (purchaseOrder.body as { id: string }).id;
+		const receiving = await makeRequest(server, {
+			body: {
+				expectedAt: '2026-06-05T15:00:00.000Z',
+				invoiceNumber: 'NF-PRISMA-REC',
+				purchaseOrderId,
+				supplierId,
+				volumes: 3,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/receivings',
+		});
+		expect(receiving.statusCode).toBe(201);
+		expect(receiving.body).toMatchObject({
+			itemsCount: 2,
+			purchaseOrderId,
+			status: 'scheduled',
+		});
+
+		const persistedPurchaseOrder = await prisma.purchaseOrder.findUnique({
+			where: { id: purchaseOrderId },
+			include: { items: true, receivings: true },
+		});
+		expect(persistedPurchaseOrder?.items).toHaveLength(1);
+		expect(persistedPurchaseOrder?.receivings).toHaveLength(1);
 	});
 
 	it('deve impedir documento e SKU duplicados por usuário', async () => {

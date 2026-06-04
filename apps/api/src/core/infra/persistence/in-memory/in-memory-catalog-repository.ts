@@ -5,15 +5,22 @@ import type {
 	CatalogListQuery,
 	CreateInventoryAdjustmentInput,
 	CreateProductInput,
+	CreatePurchaseOrderInput,
+	CreateReceivingInput,
 	CreateSupplierInput,
 	CreateSupplierResponsibleInput,
 	InventoryMovement,
 	PreparedProductImageUpload,
 	PrepareProductImageUploadInput,
 	Product,
+	PurchaseOrder,
+	PurchaseOrderItem,
+	Receiving,
 	Supplier,
 	SupplierResponsible,
 	UpdateProductInput,
+	UpdatePurchaseOrderInput,
+	UpdateReceivingInput,
 	UpdateSupplierInput,
 	UpdateSupplierResponsibleInput,
 } from '../../../domain/entities/catalog';
@@ -26,6 +33,8 @@ import {
 export class InMemoryCatalogRepository implements CatalogRepository {
 	private readonly movements = new Map<string, InventoryMovement>();
 	private readonly products = new Map<string, Product>();
+	private readonly purchaseOrders = new Map<string, PurchaseOrder>();
+	private readonly receivings = new Map<string, Receiving>();
 	private readonly responsibles = new Map<string, SupplierResponsible>();
 	private readonly suppliers = new Map<string, Supplier>();
 
@@ -397,6 +406,164 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 					(!productId || item.productId === productId),
 			)
 			.map(clone);
+	}
+
+	async createPurchaseOrder(
+		input: CreatePurchaseOrderInput,
+	): Promise<PurchaseOrder> {
+		await this.ensureSupplier(input.userId, input.supplierId);
+
+		for (const item of input.items) {
+			if (item.productId) {
+				const product = await this.findProductById(
+					input.userId,
+					item.productId,
+				);
+				if (!product) {
+					throw new NotFoundError('Produto não encontrado.');
+				}
+			}
+		}
+
+		const now = new Date().toISOString();
+		const id = randomUUID();
+		const items = input.items.map(
+			(item): PurchaseOrderItem => ({
+				id: randomUUID(),
+				name: item.name,
+				productId: item.productId,
+				purchaseOrderId: id,
+				quantity: item.quantity,
+				sku: item.sku,
+				totalCost: item.quantity * item.unitCost,
+				unitCost: item.unitCost,
+			}),
+		);
+		const order: PurchaseOrder = {
+			code: `PO-${String(this.purchaseOrders.size + 1).padStart(4, '0')}`,
+			createdAt: now,
+			expectedDeliveryAt: input.expectedDeliveryAt,
+			id,
+			invoiceNumber: input.invoiceNumber,
+			items,
+			notes: input.notes,
+			paymentTerm: input.paymentTerm,
+			status: input.status ?? 'confirmed',
+			supplierId: input.supplierId,
+			totalCost: items.reduce((total, item) => total + item.totalCost, 0),
+			totalItems: items.reduce((total, item) => total + item.quantity, 0),
+			updatedAt: now,
+			userId: input.userId,
+		};
+
+		this.purchaseOrders.set(order.id, order);
+		return clone(order);
+	}
+
+	async listPurchaseOrders(
+		userId: string,
+		query: CatalogListQuery = {},
+	): Promise<PurchaseOrder[]> {
+		return filterAndPaginate(
+			Array.from(this.purchaseOrders.values()).filter(
+				(item) => item.userId === userId,
+			),
+			query,
+			(item) => [item.code, item.invoiceNumber, item.status],
+		).map(clone);
+	}
+
+	async updatePurchaseOrder(
+		input: UpdatePurchaseOrderInput,
+	): Promise<PurchaseOrder> {
+		const order = this.purchaseOrders.get(input.id);
+		if (!order || order.userId !== input.userId) {
+			throw new NotFoundError('Pedido de compra não encontrado.');
+		}
+
+		const updated: PurchaseOrder = {
+			...order,
+			expectedDeliveryAt: input.expectedDeliveryAt ?? order.expectedDeliveryAt,
+			invoiceNumber: input.invoiceNumber ?? order.invoiceNumber,
+			notes: input.notes ?? order.notes,
+			paymentTerm: input.paymentTerm ?? order.paymentTerm,
+			status: input.status ?? order.status,
+			updatedAt: new Date().toISOString(),
+		};
+
+		this.purchaseOrders.set(updated.id, updated);
+		return clone(updated);
+	}
+
+	async createReceiving(input: CreateReceivingInput): Promise<Receiving> {
+		await this.ensureSupplier(input.userId, input.supplierId);
+
+		let itemsCount = 0;
+		if (input.purchaseOrderId) {
+			const order = this.purchaseOrders.get(input.purchaseOrderId);
+			if (!order || order.userId !== input.userId) {
+				throw new NotFoundError('Pedido de compra não encontrado.');
+			}
+			itemsCount = order.totalItems;
+		}
+
+		const now = new Date().toISOString();
+		const receiving: Receiving = {
+			createdAt: now,
+			discrepancies: input.discrepancies,
+			dock: input.dock,
+			expectedAt: input.expectedAt,
+			id: randomUUID(),
+			invoiceNumber: input.invoiceNumber,
+			itemsCount,
+			purchaseOrderId: input.purchaseOrderId,
+			receivedAt: input.receivedAt,
+			receiverName: input.receiverName,
+			status: input.status ?? 'scheduled',
+			supplierId: input.supplierId,
+			updatedAt: now,
+			userId: input.userId,
+			volumes: input.volumes,
+		};
+
+		this.receivings.set(receiving.id, receiving);
+		return clone(receiving);
+	}
+
+	async listReceivings(
+		userId: string,
+		query: CatalogListQuery = {},
+	): Promise<Receiving[]> {
+		return filterAndPaginate(
+			Array.from(this.receivings.values()).filter(
+				(item) => item.userId === userId,
+			),
+			query,
+			(item) => [item.invoiceNumber, item.status, item.dock, item.receiverName],
+		).map(clone);
+	}
+
+	async updateReceiving(input: UpdateReceivingInput): Promise<Receiving> {
+		const receiving = this.receivings.get(input.id);
+		if (!receiving || receiving.userId !== input.userId) {
+			throw new NotFoundError('Recebimento não encontrado.');
+		}
+
+		const updated: Receiving = {
+			...receiving,
+			discrepancies: input.discrepancies ?? receiving.discrepancies,
+			dock: input.dock ?? receiving.dock,
+			expectedAt: input.expectedAt ?? receiving.expectedAt,
+			invoiceNumber: input.invoiceNumber ?? receiving.invoiceNumber,
+			receivedAt: input.receivedAt ?? receiving.receivedAt,
+			receiverName: input.receiverName ?? receiving.receiverName,
+			status: input.status ?? receiving.status,
+			updatedAt: new Date().toISOString(),
+			volumes: input.volumes ?? receiving.volumes,
+		};
+
+		this.receivings.set(updated.id, updated);
+		return clone(updated);
 	}
 
 	async prepareProductImageUpload(

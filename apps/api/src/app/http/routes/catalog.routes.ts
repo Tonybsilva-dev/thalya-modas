@@ -3,6 +3,8 @@ import { z } from 'zod';
 import {
 	CreateInventoryAdjustmentUseCase,
 	CreateProductUseCase,
+	CreatePurchaseOrderUseCase,
+	CreateReceivingUseCase,
 	CreateSupplierResponsibleUseCase,
 	CreateSupplierUseCase,
 	DeleteSupplierResponsibleUseCase,
@@ -11,19 +13,23 @@ import {
 	GetSupplierUseCase,
 	ListInventoryMovementsUseCase,
 	ListProductsUseCase,
+	ListPurchaseOrdersUseCase,
+	ListReceivingsUseCase,
 	ListSupplierResponsiblesUseCase,
 	ListSuppliersUseCase,
 	PrepareProductImageUploadUseCase,
 	UpdateProductUseCase,
+	UpdatePurchaseOrderUseCase,
+	UpdateReceivingUseCase,
 	UpdateSupplierResponsibleUseCase,
 	UpdateSupplierUseCase,
 } from '../../../core/application/use-cases/catalog';
-import { NotFoundError } from '../errors/not-found-error';
 import {
 	createRequestSchema,
 	createResponseSchema,
 } from '../../../shared/utils/zod-to-json-schema';
 import type { AppContainer } from '../container';
+import { NotFoundError } from '../errors/not-found-error';
 import { authMiddleware } from '../middlewares/auth';
 
 const listQuerySchema = z.object({
@@ -56,6 +62,21 @@ const supplierResponsibleContactTypeSchema = z.enum([
 	'financial',
 ]);
 const productStatusSchema = z.enum(['active', 'inactive']);
+const purchaseOrderStatusSchema = z.enum([
+	'draft',
+	'confirmed',
+	'receiving',
+	'completed',
+	'cancelled',
+	'delayed',
+	'payable',
+]);
+const receivingStatusSchema = z.enum([
+	'scheduled',
+	'checking',
+	'completed',
+	'delayed',
+]);
 
 const createSupplierSchema = z.object({
 	category: supplierCategorySchema.optional(),
@@ -88,7 +109,8 @@ const createSupplierResponsibleSchema = z.object({
 	status: supplierStatusSchema,
 });
 
-const updateSupplierResponsibleSchema = createSupplierResponsibleSchema.partial();
+const updateSupplierResponsibleSchema =
+	createSupplierResponsibleSchema.partial();
 
 const supplierResponsibleSchema = createSupplierResponsibleSchema.extend({
 	createdAt: z.string(),
@@ -160,10 +182,88 @@ const inventoryMovementSchema = inventoryAdjustmentSchema.extend({
 	userId: z.string(),
 });
 
+const purchaseOrderItemInputSchema = z.object({
+	name: z.string().trim().min(2),
+	productId: z.string().uuid().optional(),
+	quantity: z.number().int().positive(),
+	sku: z.string().trim().min(2),
+	unitCost: z.number().nonnegative(),
+});
+
+const createPurchaseOrderSchema = z.object({
+	expectedDeliveryAt: z.string().datetime(),
+	invoiceNumber: z.string().trim().optional(),
+	items: z.array(purchaseOrderItemInputSchema).min(1),
+	notes: z.string().trim().optional(),
+	paymentTerm: supplierTermSchema.optional(),
+	status: purchaseOrderStatusSchema.optional(),
+	supplierId: z.string().uuid(),
+});
+
+const updatePurchaseOrderSchema = createPurchaseOrderSchema
+	.omit({ items: true, supplierId: true })
+	.partial()
+	.extend({ status: purchaseOrderStatusSchema.optional() });
+
+const purchaseOrderItemSchema = purchaseOrderItemInputSchema.extend({
+	id: z.string(),
+	purchaseOrderId: z.string(),
+	totalCost: z.number(),
+});
+
+const purchaseOrderSchema = createPurchaseOrderSchema
+	.omit({ items: true })
+	.extend({
+		code: z.string(),
+		createdAt: z.string(),
+		id: z.string(),
+		items: z.array(purchaseOrderItemSchema),
+		status: purchaseOrderStatusSchema,
+		totalCost: z.number(),
+		totalItems: z.number(),
+		updatedAt: z.string(),
+		userId: z.string(),
+	});
+
+const createReceivingSchema = z.object({
+	discrepancies: z.string().trim().optional(),
+	dock: z.string().trim().optional(),
+	expectedAt: z.string().datetime(),
+	invoiceNumber: z.string().trim().min(2),
+	purchaseOrderId: z.string().uuid().optional(),
+	receivedAt: z.string().datetime().optional(),
+	receiverName: z.string().trim().optional(),
+	status: receivingStatusSchema.optional(),
+	supplierId: z.string().uuid(),
+	volumes: z.number().int().positive(),
+});
+
+const updateReceivingSchema = createReceivingSchema
+	.omit({ purchaseOrderId: true, supplierId: true })
+	.partial()
+	.extend({ status: receivingStatusSchema.optional() });
+
+const receivingSchema = createReceivingSchema.extend({
+	createdAt: z.string(),
+	id: z.string(),
+	itemsCount: z.number(),
+	status: receivingStatusSchema,
+	updatedAt: z.string(),
+	userId: z.string(),
+});
+
 const prepareProductImageUploadSchema = z.object({
 	contentType: z.literal('image/webp'),
-	fileName: z.string().trim().min(1).regex(/\.webp$/i),
-	size: z.number().int().positive().max(5 * 1024 * 1024),
+	fileName: z
+		.string()
+		.trim()
+		.min(1)
+		.regex(/\.webp$/i),
+	size: z
+		.number()
+		.int()
+		.positive()
+		.max(5 * 1024 * 1024),
 });
 
 const preparedProductImageUploadSchema = z.object({
@@ -198,6 +298,10 @@ export async function catalogRoutes(
 			container.catalogRepository,
 		),
 		createProduct: new CreateProductUseCase(container.catalogRepository),
+		createPurchaseOrder: new CreatePurchaseOrderUseCase(
+			container.catalogRepository,
+		),
+		createReceiving: new CreateReceivingUseCase(container.catalogRepository),
 		createSupplierResponsible: new CreateSupplierResponsibleUseCase(
 			container.catalogRepository,
 		),
@@ -212,6 +316,10 @@ export async function catalogRoutes(
 			container.catalogRepository,
 		),
 		listProducts: new ListProductsUseCase(container.catalogRepository),
+		listPurchaseOrders: new ListPurchaseOrdersUseCase(
+			container.catalogRepository,
+		),
+		listReceivings: new ListReceivingsUseCase(container.catalogRepository),
 		listSupplierResponsibles: new ListSupplierResponsiblesUseCase(
 			container.catalogRepository,
 		),
@@ -220,6 +328,10 @@ export async function catalogRoutes(
 			container.catalogRepository,
 		),
 		updateProduct: new UpdateProductUseCase(container.catalogRepository),
+		updatePurchaseOrder: new UpdatePurchaseOrderUseCase(
+			container.catalogRepository,
+		),
+		updateReceiving: new UpdateReceivingUseCase(container.catalogRepository),
 		updateSupplierResponsible: new UpdateSupplierResponsibleUseCase(
 			container.catalogRepository,
 		),
@@ -238,14 +350,21 @@ export async function catalogRoutes(
 				description: 'Lista fornecedores cadastrados',
 				tags: ['suppliers'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
-				querystring: createRequestSchema({ query: listQuerySchema }).querystring,
+				querystring: createRequestSchema({ query: listQuerySchema })
+					.querystring,
 				response: {
 					200: createResponseSchema(
 						z.array(supplierSchema),
 						'Fornecedores listados',
 					),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -267,13 +386,22 @@ export async function catalogRoutes(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					201: createResponseSchema(supplierSchema, 'Fornecedor criado'),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
 		},
-		async (request: FastifyRequest, reply: { code: (status: number) => void }) => {
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
 			const user = getAuthenticatedUser(request);
 			const body = createSupplierSchema.parse(getRequestBody(request));
 			reply.code(201);
@@ -291,8 +419,14 @@ export async function catalogRoutes(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					200: createResponseSchema(supplierSchema, 'Fornecedor encontrado'),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -320,8 +454,14 @@ export async function catalogRoutes(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					200: createResponseSchema(supplierSchema, 'Fornecedor atualizado'),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -348,13 +488,22 @@ export async function catalogRoutes(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					204: { description: 'Fornecedor removido', type: 'null' },
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
 		},
-		async (request: FastifyRequest, reply: { code: (status: number) => void }) => {
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
 			const user = getAuthenticatedUser(request);
 			const params = idParamsSchema.parse(getRequestParams(request));
 			await useCases.deleteSupplier.execute({
@@ -378,8 +527,14 @@ export async function catalogRoutes(
 						z.array(supplierResponsibleSchema),
 						'Responsáveis listados',
 					),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -398,7 +553,8 @@ export async function catalogRoutes(
 		'/suppliers/:id/responsibles',
 		{
 			schema: {
-				body: createRequestSchema({ body: createSupplierResponsibleSchema }).body,
+				body: createRequestSchema({ body: createSupplierResponsibleSchema })
+					.body,
 				description: 'Cria responsável do fornecedor',
 				params: createRequestSchema({ params: idParamsSchema }).params,
 				tags: ['suppliers'],
@@ -408,16 +564,27 @@ export async function catalogRoutes(
 						supplierResponsibleSchema,
 						'Responsável criado',
 					),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
 		},
-		async (request: FastifyRequest, reply: { code: (status: number) => void }) => {
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
 			const user = getAuthenticatedUser(request);
 			const params = idParamsSchema.parse(getRequestParams(request));
-			const body = createSupplierResponsibleSchema.parse(getRequestBody(request));
+			const body = createSupplierResponsibleSchema.parse(
+				getRequestBody(request),
+			);
 			reply.code(201);
 			return useCases.createSupplierResponsible.execute({
 				...body,
@@ -431,7 +598,8 @@ export async function catalogRoutes(
 		'/suppliers/:id/responsibles/:responsibleId',
 		{
 			schema: {
-				body: createRequestSchema({ body: updateSupplierResponsibleSchema }).body,
+				body: createRequestSchema({ body: updateSupplierResponsibleSchema })
+					.body,
 				description: 'Atualiza responsável do fornecedor',
 				params: createRequestSchema({
 					params: supplierResponsibleParamsSchema,
@@ -443,8 +611,14 @@ export async function catalogRoutes(
 						supplierResponsibleSchema,
 						'Responsável atualizado',
 					),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -454,7 +628,9 @@ export async function catalogRoutes(
 			const params = supplierResponsibleParamsSchema.parse(
 				getRequestParams(request),
 			);
-			const body = updateSupplierResponsibleSchema.parse(getRequestBody(request));
+			const body = updateSupplierResponsibleSchema.parse(
+				getRequestBody(request),
+			);
 			return useCases.updateSupplierResponsible.execute({
 				...body,
 				id: params.responsibleId,
@@ -476,13 +652,22 @@ export async function catalogRoutes(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					204: { description: 'Responsável removido', type: 'null' },
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
 		},
-		async (request: FastifyRequest, reply: { code: (status: number) => void }) => {
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
 			const user = getAuthenticatedUser(request);
 			const params = supplierResponsibleParamsSchema.parse(
 				getRequestParams(request),
@@ -503,11 +688,21 @@ export async function catalogRoutes(
 				description: 'Lista produtos cadastrados',
 				tags: ['products'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
-				querystring: createRequestSchema({ query: listQuerySchema }).querystring,
+				querystring: createRequestSchema({ query: listQuerySchema })
+					.querystring,
 				response: {
-					200: createResponseSchema(z.array(productSchema), 'Produtos listados'),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					200: createResponseSchema(
+						z.array(productSchema),
+						'Produtos listados',
+					),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -529,13 +724,22 @@ export async function catalogRoutes(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					201: createResponseSchema(productSchema, 'Produto criado'),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
 		},
-		async (request: FastifyRequest, reply: { code: (status: number) => void }) => {
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
 			const user = getAuthenticatedUser(request);
 			const body = createProductSchema.parse(getRequestBody(request));
 			reply.code(201);
@@ -553,8 +757,14 @@ export async function catalogRoutes(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					200: createResponseSchema(productSchema, 'Produto encontrado'),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -582,8 +792,14 @@ export async function catalogRoutes(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
 					200: createResponseSchema(productSchema, 'Produto atualizado'),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -604,9 +820,11 @@ export async function catalogRoutes(
 		'/products/:productId/assets/upload',
 		{
 			schema: {
-				body: createRequestSchema({ body: prepareProductImageUploadSchema }).body,
+				body: createRequestSchema({ body: prepareProductImageUploadSchema })
+					.body,
 				description: 'Prepara upload direto de imagem WebP do produto',
-				params: createRequestSchema({ params: productImageParamsSchema }).params,
+				params: createRequestSchema({ params: productImageParamsSchema })
+					.params,
 				tags: ['products'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				response: {
@@ -614,20 +832,248 @@ export async function catalogRoutes(
 						preparedProductImageUploadSchema,
 						'Upload preparado',
 					),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
 		},
-		async (request: FastifyRequest, reply: { code: (status: number) => void }) => {
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
 			const user = getAuthenticatedUser(request);
 			const params = productImageParamsSchema.parse(getRequestParams(request));
-			const body = prepareProductImageUploadSchema.parse(getRequestBody(request));
+			const body = prepareProductImageUploadSchema.parse(
+				getRequestBody(request),
+			);
 			reply.code(201);
 			return useCases.prepareProductImageUpload.execute({
 				...body,
 				productId: params.productId,
+				userId: user.userId,
+			});
+		},
+	);
+
+	fastify.get(
+		'/purchase-orders',
+		{
+			schema: {
+				description: 'Lista pedidos de compra',
+				tags: ['purchase-orders'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				querystring: createRequestSchema({ query: listQuerySchema })
+					.querystring,
+				response: {
+					200: createResponseSchema(
+						z.array(purchaseOrderSchema),
+						'Pedidos de compra listados',
+					),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (request: FastifyRequest) => {
+			const user = getAuthenticatedUser(request);
+			const query = listQuerySchema.parse(getRequestQuery(request));
+			return useCases.listPurchaseOrders.execute({
+				query,
+				userId: user.userId,
+			});
+		},
+	);
+
+	fastify.post(
+		'/purchase-orders',
+		{
+			schema: {
+				body: createRequestSchema({ body: createPurchaseOrderSchema }).body,
+				description: 'Cria pedido de compra',
+				tags: ['purchase-orders'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				response: {
+					201: createResponseSchema(
+						purchaseOrderSchema,
+						'Pedido de compra criado',
+					),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
+			const user = getAuthenticatedUser(request);
+			const body = createPurchaseOrderSchema.parse(getRequestBody(request));
+			reply.code(201);
+			return useCases.createPurchaseOrder.execute({
+				...body,
+				userId: user.userId,
+			});
+		},
+	);
+
+	fastify.patch(
+		'/purchase-orders/:id',
+		{
+			schema: {
+				body: createRequestSchema({ body: updatePurchaseOrderSchema }).body,
+				description: 'Atualiza pedido de compra',
+				params: createRequestSchema({ params: idParamsSchema }).params,
+				tags: ['purchase-orders'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				response: {
+					200: createResponseSchema(
+						purchaseOrderSchema,
+						'Pedido de compra atualizado',
+					),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (request: FastifyRequest) => {
+			const user = getAuthenticatedUser(request);
+			const params = idParamsSchema.parse(getRequestParams(request));
+			const body = updatePurchaseOrderSchema.parse(getRequestBody(request));
+			return useCases.updatePurchaseOrder.execute({
+				...body,
+				id: params.id,
+				userId: user.userId,
+			});
+		},
+	);
+
+	fastify.get(
+		'/receivings',
+		{
+			schema: {
+				description: 'Lista recebimentos',
+				tags: ['receivings'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				querystring: createRequestSchema({ query: listQuerySchema })
+					.querystring,
+				response: {
+					200: createResponseSchema(
+						z.array(receivingSchema),
+						'Recebimentos listados',
+					),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (request: FastifyRequest) => {
+			const user = getAuthenticatedUser(request);
+			const query = listQuerySchema.parse(getRequestQuery(request));
+			return useCases.listReceivings.execute({ query, userId: user.userId });
+		},
+	);
+
+	fastify.post(
+		'/receivings',
+		{
+			schema: {
+				body: createRequestSchema({ body: createReceivingSchema }).body,
+				description: 'Cria recebimento de pedido de compra',
+				tags: ['receivings'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				response: {
+					201: createResponseSchema(receivingSchema, 'Recebimento criado'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
+			const user = getAuthenticatedUser(request);
+			const body = createReceivingSchema.parse(getRequestBody(request));
+			reply.code(201);
+			return useCases.createReceiving.execute({
+				...body,
+				userId: user.userId,
+			});
+		},
+	);
+
+	fastify.patch(
+		'/receivings/:id',
+		{
+			schema: {
+				body: createRequestSchema({ body: updateReceivingSchema }).body,
+				description: 'Atualiza recebimento',
+				params: createRequestSchema({ params: idParamsSchema }).params,
+				tags: ['receivings'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				response: {
+					200: createResponseSchema(receivingSchema, 'Recebimento atualizado'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (request: FastifyRequest) => {
+			const user = getAuthenticatedUser(request);
+			const params = idParamsSchema.parse(getRequestParams(request));
+			const body = updateReceivingSchema.parse(getRequestBody(request));
+			return useCases.updateReceiving.execute({
+				...body,
+				id: params.id,
 				userId: user.userId,
 			});
 		},
@@ -646,13 +1092,22 @@ export async function catalogRoutes(
 						inventoryMovementSchema,
 						'Ajuste de estoque criado',
 					),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
 		},
-		async (request: FastifyRequest, reply: { code: (status: number) => void }) => {
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
 			const user = getAuthenticatedUser(request);
 			const body = inventoryAdjustmentSchema.parse(getRequestBody(request));
 			reply.code(201);
@@ -678,8 +1133,14 @@ export async function catalogRoutes(
 						z.array(inventoryMovementSchema),
 						'Movimentações listadas',
 					),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,

@@ -269,6 +269,183 @@ describe('Catalog - Integração', () => {
 		expect(deleteFromWrongSupplier.statusCode).toBe(404);
 	});
 
+	it('deve criar, listar e atualizar pedido de compra', async () => {
+		const token = await registerAndGetToken();
+		const supplier = await createSupplier(token);
+		const product = await createProduct(token);
+		const supplierId = (supplier.body as { id: string }).id;
+		const productId = (product.body as { id: string }).id;
+
+		const createOrder = await makeRequest(server, {
+			body: {
+				expectedDeliveryAt: '2026-06-05T15:00:00.000Z',
+				invoiceNumber: 'NF-PO-1001',
+				items: [
+					{
+						name: 'Vestido compra teste',
+						productId,
+						quantity: 3,
+						sku: 'PO-VD-001',
+						unitCost: 89.9,
+					},
+				],
+				paymentTerm: '+30',
+				supplierId,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/purchase-orders',
+		});
+
+		expect(createOrder.statusCode).toBe(201);
+		expect(createOrder.body).toMatchObject({
+			code: 'PO-0001',
+			invoiceNumber: 'NF-PO-1001',
+			status: 'confirmed',
+			supplierId,
+			totalItems: 3,
+		});
+		expect((createOrder.body as { totalCost: number }).totalCost).toBeCloseTo(
+			269.7,
+		);
+
+		const listOrders = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			query: { q: 'NF-PO-1001', status: 'confirmed' },
+			url: '/purchase-orders',
+		});
+		expect(listOrders.statusCode).toBe(200);
+		expect(listOrders.body).toEqual([
+			expect.objectContaining({ invoiceNumber: 'NF-PO-1001' }),
+		]);
+
+		const orderId = (createOrder.body as { id: string }).id;
+		const updateOrder = await makeRequest(server, {
+			body: { status: 'receiving' },
+			headers: { authorization: `Bearer ${token}` },
+			method: 'PATCH',
+			url: `/purchase-orders/${orderId}`,
+		});
+		expect(updateOrder.statusCode).toBe(200);
+		expect(updateOrder.body).toMatchObject({ status: 'receiving' });
+	});
+
+	it('deve criar e atualizar recebimento vinculado a pedido de compra', async () => {
+		const token = await registerAndGetToken();
+		const supplier = await createSupplier(token);
+		const supplierId = (supplier.body as { id: string }).id;
+		const order = await createPurchaseOrder(token, supplierId);
+		const orderId = (order.body as { id: string }).id;
+
+		const createReceiving = await makeRequest(server, {
+			body: {
+				dock: 'Doca 2',
+				expectedAt: '2026-06-05T15:00:00.000Z',
+				invoiceNumber: 'NF-REC-1001',
+				purchaseOrderId: orderId,
+				receiverName: 'Ana Ribeiro',
+				supplierId,
+				volumes: 4,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/receivings',
+		});
+		expect(createReceiving.statusCode).toBe(201);
+		expect(createReceiving.body).toMatchObject({
+			dock: 'Doca 2',
+			invoiceNumber: 'NF-REC-1001',
+			itemsCount: 2,
+			purchaseOrderId: orderId,
+			status: 'scheduled',
+		});
+
+		const receivingId = (createReceiving.body as { id: string }).id;
+		const updateReceiving = await makeRequest(server, {
+			body: {
+				receivedAt: '2026-06-05T15:40:00.000Z',
+				status: 'completed',
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'PATCH',
+			url: `/receivings/${receivingId}`,
+		});
+		expect(updateReceiving.statusCode).toBe(200);
+		expect(updateReceiving.body).toMatchObject({
+			receivedAt: '2026-06-05T15:40:00.000Z',
+			status: 'completed',
+		});
+
+		const listReceivings = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			query: { q: 'NF-REC-1001', status: 'completed' },
+			url: '/receivings',
+		});
+		expect(listReceivings.statusCode).toBe(200);
+		expect(listReceivings.body).toHaveLength(1);
+	});
+
+	it('deve rejeitar pedido e recebimento com vínculos inexistentes', async () => {
+		const token = await registerAndGetToken();
+		const supplier = await createSupplier(token);
+		const supplierId = (supplier.body as { id: string }).id;
+
+		const invalidSupplierOrder = await makeRequest(server, {
+			body: {
+				expectedDeliveryAt: '2026-06-05T15:00:00.000Z',
+				items: [
+					{
+						name: 'Item invalido',
+						quantity: 1,
+						sku: 'INV-001',
+						unitCost: 10,
+					},
+				],
+				supplierId: randomUUID(),
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/purchase-orders',
+		});
+		expect(invalidSupplierOrder.statusCode).toBe(404);
+
+		const invalidProductOrder = await makeRequest(server, {
+			body: {
+				expectedDeliveryAt: '2026-06-05T15:00:00.000Z',
+				items: [
+					{
+						name: 'Item invalido',
+						productId: randomUUID(),
+						quantity: 1,
+						sku: 'INV-002',
+						unitCost: 10,
+					},
+				],
+				supplierId,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/purchase-orders',
+		});
+		expect(invalidProductOrder.statusCode).toBe(404);
+
+		const invalidReceiving = await makeRequest(server, {
+			body: {
+				expectedAt: '2026-06-05T15:00:00.000Z',
+				invoiceNumber: 'NF-INVALID',
+				purchaseOrderId: randomUUID(),
+				supplierId,
+				volumes: 1,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/receivings',
+		});
+		expect(invalidReceiving.statusCode).toBe(404);
+	});
+
 	it('deve preparar upload apenas para imagem WebP', async () => {
 		const token = await registerAndGetToken();
 		const product = await createProduct(token);
@@ -377,6 +554,26 @@ describe('Catalog - Integração', () => {
 			headers: { authorization: `Bearer ${token}` },
 			method: 'POST',
 			url: '/products',
+		});
+	}
+
+	async function createPurchaseOrder(token: string, supplierId: string) {
+		return makeRequest(server, {
+			body: {
+				expectedDeliveryAt: '2026-06-05T15:00:00.000Z',
+				items: [
+					{
+						name: 'Pedido auxiliar',
+						quantity: 2,
+						sku: 'AUX-001',
+						unitCost: 50,
+					},
+				],
+				supplierId,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/purchase-orders',
 		});
 	}
 

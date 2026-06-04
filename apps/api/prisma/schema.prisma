@@ -25,6 +25,9 @@ model User {
   products                  Product[]
   productImageAssets        ProductImageAsset[]
   inventoryMovements        InventoryMovement[]
+  purchaseOrders            PurchaseOrder[]
+  purchaseOrderItems        PurchaseOrderItem[]
+  receivings                Receiving[]
 
   @@map("users")
 }
@@ -107,6 +110,8 @@ model Supplier {
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   responsibles  SupplierResponsible[]
   products      Product[]
+  purchaseOrders PurchaseOrder[]
+  receivings     Receiving[]
 
   @@unique([userId, document])
   @@index([userId])
@@ -154,6 +159,7 @@ model Product {
   supplier   Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   images     ProductImageAsset[]
   movements  InventoryMovement[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@unique([userId, sku])
   @@index([userId])
@@ -197,4 +203,78 @@ model InventoryMovement {
   @@index([userId])
   @@index([productId])
   @@map("inventory_movements")
+}
+
+model PurchaseOrder {
+  id                 String   @id @default(uuid())
+  userId             String   @map("user_id")
+  supplierId         String   @map("supplier_id")
+  code               String
+  expectedDeliveryAt DateTime @map("expected_delivery_at")
+  invoiceNumber      String?  @map("invoice_number")
+  notes              String?
+  paymentTerm        String?  @map("payment_term")
+  status             String
+  totalCost          Float    @map("total_cost")
+  totalItems         Int      @map("total_items")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items      PurchaseOrderItem[]
+  receivings Receiving[]
+
+  @@unique([userId, code])
+  @@index([userId])
+  @@index([supplierId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(uuid())
+  userId          String  @map("user_id")
+  purchaseOrderId String  @map("purchase_order_id")
+  productId       String? @map("product_id")
+  name            String
+  sku             String
+  quantity        Int
+  unitCost        Float   @map("unit_cost")
+  totalCost       Float   @map("total_cost")
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+model Receiving {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  supplierId      String   @map("supplier_id")
+  purchaseOrderId String?  @map("purchase_order_id")
+  invoiceNumber   String   @map("invoice_number")
+  expectedAt      DateTime @map("expected_at")
+  receivedAt      DateTime? @map("received_at")
+  volumes         Int
+  dock            String?
+  receiverName    String?  @map("receiver_name")
+  discrepancies   String?
+  status          String
+  itemsCount      Int      @map("items_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([supplierId])
+  @@index([purchaseOrderId])
+  @@map("receivings")
 }
