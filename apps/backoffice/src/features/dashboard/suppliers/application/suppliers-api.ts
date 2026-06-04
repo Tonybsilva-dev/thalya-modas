@@ -29,11 +29,74 @@ export type SupplierResponsible = SupplierResponsibleInput & {
   id: string;
   supplierId: string;
   updatedAt: string;
+	userId: string;
+};
+
+export type PurchaseOrderStatus =
+  | "draft"
+  | "confirmed"
+  | "receiving"
+  | "completed"
+  | "cancelled"
+  | "delayed"
+  | "payable";
+
+export type PurchaseOrder = {
+  code: string;
+  createdAt: string;
+  expectedDeliveryAt: string;
+  id: string;
+  invoiceNumber?: string;
+  items: Array<{
+    id: string;
+    name: string;
+    productId?: string;
+    purchaseOrderId: string;
+    quantity: number;
+    sku: string;
+    totalCost: number;
+    unitCost: number;
+  }>;
+  notes?: string;
+  paymentTerm?: SupplierFormInput["paymentTerm"];
+  status: PurchaseOrderStatus;
+  supplierId: string;
+  totalCost: number;
+  totalItems: number;
+  updatedAt: string;
   userId: string;
 };
 
+export type ReceivingStatus = "scheduled" | "checking" | "completed" | "delayed";
+
+export type Receiving = {
+  createdAt: string;
+  discrepancies?: string;
+  dock?: string;
+  expectedAt: string;
+  id: string;
+  invoiceNumber: string;
+  itemsCount: number;
+  purchaseOrderId?: string;
+  receivedAt?: string;
+  receiverName?: string;
+  status: ReceivingStatus;
+  supplierId: string;
+  updatedAt: string;
+  userId: string;
+  volumes: number;
+};
+
 export function listSuppliers(query?: DashboardListQuery) {
-  return apiRequest<Supplier[]>(withCatalogQuery("/suppliers", query));
+	return apiRequest<Supplier[]>(withCatalogQuery("/suppliers", query));
+}
+
+export function listPurchaseOrders(query?: DashboardListQuery) {
+  return apiRequest<PurchaseOrder[]>(withCatalogQuery("/purchase-orders", query));
+}
+
+export function listReceivings(query?: DashboardListQuery) {
+  return apiRequest<Receiving[]>(withCatalogQuery("/receivings", query));
 }
 
 export function getSupplier(supplierId: string) {

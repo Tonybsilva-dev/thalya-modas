@@ -23,7 +23,14 @@ import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { useDashboardSuppliersQuery } from "../../shared/application/dashboard-api";
 import { useSuppliersFilters } from "../../shared/application/dashboard-filters";
-import { listSuppliers } from "../application/suppliers-api";
+import {
+  listPurchaseOrders,
+  listReceivings,
+  listSuppliers,
+  type PurchaseOrder,
+  type Receiving,
+  type Supplier,
+} from "../application/suppliers-api";
 import {
   BoxIcon,
   ChartIcon,
@@ -48,55 +55,80 @@ function useSuppliersContent() {
   const locale = normalizeLocale(useLocale());
   const fallback = suppliersContentByLocale[locale];
   const { query } = useSuppliersFilters();
+  const operationalQuery = query.q ? { q: query.q } : undefined;
   const { data: dashboardData } = useDashboardSuppliersQuery(query);
   const { data: catalogSuppliers } = useQuery({
     queryKey: ["suppliers", query],
     queryFn: () => listSuppliers(query),
   });
+  const { data: purchaseOrders } = useQuery({
+    queryKey: ["purchase-orders", operationalQuery],
+    queryFn: () => listPurchaseOrders(operationalQuery),
+  });
+  const { data: receivings } = useQuery({
+    queryKey: ["receivings", operationalQuery],
+    queryFn: () => listReceivings(operationalQuery),
+  });
 
-  if (!dashboardData && !catalogSuppliers) {
+  if (!dashboardData && !catalogSuppliers && !purchaseOrders && !receivings) {
     return {
       ...fallback,
       emptyState: getEmptyStateText(locale),
       hasSuppliers: false,
+      hasTableRows: false,
     };
   }
   const suppliers = catalogSuppliers ?? [];
+  const orders = purchaseOrders ?? [];
+  const receivingRows = receivings ?? [];
   const firstSupplier = suppliers[0];
+  const firstOrder = orders[0];
+  const firstReceiving = firstSupplier
+    ? receivingRows.find((receiving) => receiving.supplierId === firstSupplier.id)
+    : receivingRows[0];
   const activeSuppliers = suppliers.filter((supplier) => supplier.status === "active");
   const inactiveSuppliers = suppliers.filter((supplier) => supplier.status === "inactive");
+  const supplierById = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
 
   return {
     ...fallback,
     hasSuppliers: suppliers.length > 0,
+    hasTableRows: orders.length > 0,
     filters: getCatalogSupplierFilters(locale),
     metrics: getCatalogSupplierMetrics(locale, {
       active: activeSuppliers.length,
       inactive: inactiveSuppliers.length,
+      openOrders: orders.filter((order) => !["completed", "cancelled"].includes(order.status)).length,
+      payableTotal: orders
+        .filter((order) => order.status === "payable")
+        .reduce((total, order) => total + order.totalCost, 0),
+      receivingsDue: receivingRows.filter((receiving) => ["scheduled", "checking"].includes(receiving.status)).length,
+      delayed: orders.filter((order) => order.status === "delayed").length + receivingRows.filter((receiving) => receiving.status === "delayed").length,
       total: suppliers.length,
       withResponsible: suppliers.filter((supplier) => supplier.responsibles.length > 0).length,
     }),
     table: {
       ...fallback.table,
       heads: getCatalogSupplierTableHeads(locale),
-      rows: suppliers.map((supplier) => [
-        supplier.name,
-        supplier.id,
-        supplier.category ? getCategoryLabel(locale, supplier.category) : "-",
-        supplier.deliveryTerm ? getTermLabel(locale, supplier.deliveryTerm) : "-",
-        supplier.paymentTerm ? getTermLabel(locale, supplier.paymentTerm) : "-",
-        getStatusLabel(locale, supplier.status),
+      rows: orders.map((order) => [
+        supplierById.get(order.supplierId)?.name ?? getUnknownSupplierLabel(locale),
+        order.code,
+        formatDateTime(locale, order.expectedDeliveryAt),
+        formatMoney(locale, order.totalCost),
+        order.paymentTerm ? getTermLabel(locale, order.paymentTerm) : "-",
+        getPurchaseOrderStatusLabel(locale, order.status),
       ]),
     },
     selectedSupplier: {
       ...fallback.selectedSupplier,
       name: firstSupplier?.name ?? getEmptyStateText(locale).railTitle,
       description: firstSupplier
-        ? getStatusLabel(locale, firstSupplier.status)
+        ? getSupplierDescription(locale, firstSupplier, firstOrder)
         : getEmptyStateText(locale).railDescription,
       stats: [
-        [getTableLabel(locale, "deliveryTerm"), firstSupplier?.deliveryTerm ? getTermLabel(locale, firstSupplier.deliveryTerm) : "-"],
-        [getTableLabel(locale, "paymentTerm"), firstSupplier?.paymentTerm ? getTermLabel(locale, firstSupplier.paymentTerm) : "-"],
+        [getTableLabel(locale, "deliveryTerm"), firstReceiving ? formatDateTime(locale, firstReceiving.expectedAt) : firstSupplier?.deliveryTerm ? getTermLabel(locale, firstSupplier.deliveryTerm) : "-"],
+        [getTableLabel(locale, "paymentTerm"), firstOrder?.paymentTerm ? getTermLabel(locale, firstOrder.paymentTerm) : firstSupplier?.paymentTerm ? getTermLabel(locale, firstSupplier.paymentTerm) : "-"],
+        [getOperationalLabel(locale, "openValue"), firstOrder ? formatMoney(locale, firstOrder.totalCost) : "-"],
       ],
     },
     deliveryPlan: {
@@ -104,50 +136,67 @@ function useSuppliersContent() {
       rows: firstSupplier
         ? [
             [
-              getTableLabel(locale, "deliveryTerm"),
-              firstSupplier.deliveryTerm ? getTermLabel(locale, firstSupplier.deliveryTerm) : "-",
+              getOperationalLabel(locale, "eta"),
+              firstReceiving ? formatDateTime(locale, firstReceiving.expectedAt) : firstOrder ? formatDateTime(locale, firstOrder.expectedDeliveryAt) : "-",
             ],
             [
-              getTableLabel(locale, "paymentTerm"),
-              firstSupplier.paymentTerm ? getTermLabel(locale, firstSupplier.paymentTerm) : "-",
+              getOperationalLabel(locale, "invoice"),
+              firstReceiving?.invoiceNumber ?? firstOrder?.invoiceNumber ?? "-",
+            ],
+            [
+              getOperationalLabel(locale, "volumes"),
+              firstReceiving ? String(firstReceiving.volumes) : "-",
+            ],
+            [
+              getOperationalLabel(locale, "dock"),
+              firstReceiving?.dock ?? "-",
             ],
           ]
         : [],
     },
     emptyState: getEmptyStateText(locale),
     nextActions: firstSupplier
-      ? getSupplierNextActions(locale, firstSupplier.responsibles.length)
+      ? getSupplierNextActions(locale, firstSupplier.responsibles.length, firstOrder, firstReceiving)
       : [],
   };
 }
 
 function getCatalogSupplierMetrics(
   locale: string,
-  counts: { active: number; inactive: number; total: number; withResponsible: number },
+  counts: {
+    active: number;
+    delayed: number;
+    inactive: number;
+    openOrders: number;
+    payableTotal: number;
+    receivingsDue: number;
+    total: number;
+    withResponsible: number;
+  },
 ) {
   if (locale === "en") {
     return [
-      ["Registered suppliers", String(counts.total), `${counts.active} active`, "info"],
-      ["Active suppliers", String(counts.active), `${counts.inactive} inactive`, "success"],
-      ["With responsible", String(counts.withResponsible), "Contacts linked", "muted"],
-      ["Need setup", String(Math.max(counts.total - counts.withResponsible, 0)), "Missing responsible", "warning"],
+      ["Open POs", String(counts.openOrders), `${counts.active} active suppliers`, "info"],
+      ["Due deliveries", String(counts.receivingsDue), "Scheduled or checking", "success"],
+      ["Delayed items", String(counts.delayed), "Needs purchase follow-up", "warning"],
+      ["Payables", formatMoney(locale, counts.payableTotal), "Orders marked payable", "muted"],
     ] as const;
   }
 
   if (locale === "es") {
     return [
-      ["Proveedores registrados", String(counts.total), `${counts.active} activos`, "info"],
-      ["Proveedores activos", String(counts.active), `${counts.inactive} inactivos`, "success"],
-      ["Con responsable", String(counts.withResponsible), "Contactos vinculados", "muted"],
-      ["Pendientes", String(Math.max(counts.total - counts.withResponsible, 0)), "Sin responsable", "warning"],
+      ["Ordenes abiertas", String(counts.openOrders), `${counts.active} proveedores activos`, "info"],
+      ["Entregas venciendo", String(counts.receivingsDue), "Agendadas o en conferencia", "success"],
+      ["Items atrasados", String(counts.delayed), "Requiere seguimiento", "warning"],
+      ["Cuentas por pagar", formatMoney(locale, counts.payableTotal), "Ordenes por pagar", "muted"],
     ] as const;
   }
 
   return [
-    ["Fornecedores cadastrados", String(counts.total), `${counts.active} ativos`, "info"],
-    ["Fornecedores ativos", String(counts.active), `${counts.inactive} inativos`, "success"],
-    ["Com responsável", String(counts.withResponsible), "Contatos vinculados", "muted"],
-    ["Pendentes", String(Math.max(counts.total - counts.withResponsible, 0)), "Sem responsável", "warning"],
+    ["Pedidos abertos", String(counts.openOrders), `${counts.active} fornecedores ativos`, "info"],
+    ["Entregas vencendo", String(counts.receivingsDue), "Agendadas ou em conferência", "success"],
+    ["Itens atrasados", String(counts.delayed), "Acionar compras", "warning"],
+    ["Contas a pagar", formatMoney(locale, counts.payableTotal), "Pedidos a pagar", "muted"],
   ] as const;
 }
 
@@ -181,18 +230,32 @@ function getEmptyStateText(locale: string) {
   };
 }
 
-function getSupplierNextActions(locale: string, responsiblesCount: number) {
+function getSupplierNextActions(
+  locale: string,
+  responsiblesCount: number,
+  order?: PurchaseOrder,
+  receiving?: Receiving,
+) {
+  const hasDelayedFlow = order?.status === "delayed" || receiving?.status === "delayed";
+
   if (locale === "en") {
+    if (hasDelayedFlow) return ["Contact supplier", "Update receiving forecast"];
+    if (receiving?.status === "scheduled") return ["Confirm receiving window", "Prepare invoice check"];
     return responsiblesCount > 0
       ? ["Review commercial terms", "Confirm next receiving window"]
       : ["Add a responsible contact", "Review commercial terms"];
   }
 
   if (locale === "es") {
+    if (hasDelayedFlow) return ["Contactar proveedor", "Actualizar prevision de recepcion"];
+    if (receiving?.status === "scheduled") return ["Confirmar ventana de recepcion", "Preparar conferencia de factura"];
     return responsiblesCount > 0
       ? ["Revisar terminos comerciales", "Confirmar proxima ventana de recepcion"]
       : ["Agregar responsable", "Revisar terminos comerciales"];
   }
+
+  if (hasDelayedFlow) return ["Acionar fornecedor", "Atualizar previsão de recebimento"];
+  if (receiving?.status === "scheduled") return ["Confirmar janela de recebimento", "Preparar conferência da nota"];
 
   return responsiblesCount > 0
     ? ["Revisar condições comerciais", "Confirmar próxima janela de recebimento"]
@@ -225,33 +288,52 @@ function getCatalogSupplierFilters(locale: string) {
 
 function getCatalogSupplierTableHeads(locale: string) {
   if (locale === "en") {
-    return ["Supplier", "ID", "Category", "Delivery", "Payment", "Status"];
+    return ["Supplier", "PO", "Delivery", "Value", "Terms", "Status"];
   }
 
   if (locale === "es") {
-    return ["Proveedor", "ID", "Categoria", "Entrega", "Pago", "Estado"];
+    return ["Proveedor", "Orden", "Entrega", "Valor", "Terminos", "Estado"];
   }
 
-  return ["Fornecedor", "ID", "Categoria", "Entrega", "Pagamento", "Status"];
-}
-
-function getCategoryLabel(locale: string, category: string) {
-  const labels = {
-    accessories: ["Acessorios", "Accessories", "Accesorios"],
-    footwear: ["Calcados", "Footwear", "Calzado"],
-    mens_fashion: ["Moda masculina", "Men's fashion", "Moda masculina"],
-    packaging: ["Embalagens", "Packaging", "Embalajes"],
-    women_fashion: ["Moda feminina", "Women's fashion", "Moda femenina"],
-  } as const;
-  const index = locale === "en" ? 1 : locale === "es" ? 2 : 0;
-
-  return labels[category as keyof typeof labels]?.[index] ?? category;
+  return ["Fornecedor", "Pedido", "Entrega", "Valor", "Termos", "Status"];
 }
 
 function getStatusLabel(locale: string, status: string) {
   if (status === "active") return locale === "en" ? "Active" : locale === "es" ? "Activo" : "Ativo";
   if (status === "inactive") return locale === "en" ? "Inactive" : locale === "es" ? "Inactivo" : "Inativo";
   return status;
+}
+
+function getPurchaseOrderStatusLabel(locale: string, status: string) {
+  const labels = {
+    cancelled: ["Cancelado", "Cancelled", "Cancelado"],
+    completed: ["Concluído", "Completed", "Completado"],
+    confirmed: ["Confirmado", "Confirmed", "Confirmado"],
+    delayed: ["Atrasado", "Delayed", "Atrasado"],
+    draft: ["Rascunho", "Draft", "Borrador"],
+    payable: ["A pagar", "Payable", "Por pagar"],
+    receiving: ["Recebendo", "Receiving", "Recibiendo"],
+  } as const;
+  const index = locale === "en" ? 1 : locale === "es" ? 2 : 0;
+
+  return labels[status as keyof typeof labels]?.[index] ?? status;
+}
+
+function getUnknownSupplierLabel(locale: string) {
+  if (locale === "en") return "Unknown supplier";
+  if (locale === "es") return "Proveedor no encontrado";
+  return "Fornecedor não encontrado";
+}
+
+function getSupplierDescription(
+  locale: string,
+  supplier: Supplier,
+  order?: PurchaseOrder,
+) {
+  const status = getStatusLabel(locale, supplier.status);
+  if (!order) return status;
+
+  return `${status} - ${order.code}`;
 }
 
 function getTableLabel(locale: string, key: "deliveryTerm" | "paymentTerm") {
@@ -262,10 +344,43 @@ function getTableLabel(locale: string, key: "deliveryTerm" | "paymentTerm") {
   return locale === "en" ? "Payment" : locale === "es" ? "Pago" : "Pagamento";
 }
 
+function getOperationalLabel(
+  locale: string,
+  key: "dock" | "eta" | "invoice" | "openValue" | "volumes",
+) {
+  const labels = {
+    dock: ["Doca", "Dock", "Dock"],
+    eta: ["ETA", "ETA", "ETA"],
+    invoice: ["Nota", "Invoice", "Factura"],
+    openValue: ["Valor aberto", "Open value", "Valor abierto"],
+    volumes: ["Volumes", "Volumes", "Volumenes"],
+  } as const;
+  const index = locale === "en" ? 1 : locale === "es" ? 2 : 0;
+
+  return labels[key][index];
+}
+
 function getTermLabel(locale: string, term: string) {
   const suffix = locale === "en" ? "days" : "dias";
 
   return `${term} ${suffix}`;
+}
+
+function formatDateTime(locale: string, value: string) {
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+  }).format(new Date(value));
+}
+
+function formatMoney(locale: string, value: number) {
+  return new Intl.NumberFormat(locale, {
+    currency: "BRL",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(value);
 }
 
 function SuppliersHeader() {
@@ -366,7 +481,7 @@ function statusVariant(status: string) {
 
 function SupplierTableCard() {
   const content = useSuppliersContent();
-  const { emptyState, hasSuppliers, table } = content;
+  const { emptyState, hasTableRows, table } = content;
   const basePath = useSuppliersBasePath();
   const tableHeads =
     "heads" in table
@@ -386,7 +501,7 @@ function SupplierTableCard() {
           </Button>
         </div>
 
-        {hasSuppliers ? (
+        {hasTableRows ? (
           <Table>
             <TableHeader>
               <TableRow>
