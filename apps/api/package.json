@@ -4,6 +4,10 @@
 	"private": true,
 	"description": "API backend da plataforma Thalya Modas.",
 	"main": "index.js",
+	"files": [
+		"dist",
+		"prisma"
+	],
 	"scripts": {
 		"dev": "tsx watch src/app/http/server.ts",
 		"prebuild": "prisma generate --schema prisma/schema.prisma",

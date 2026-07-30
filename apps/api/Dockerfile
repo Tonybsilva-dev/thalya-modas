@@ -1,48 +1,65 @@
-# ---- Builder Stage ----
-FROM node:20-alpine AS builder
+# syntax=docker/dockerfile:1.7
 
-WORKDIR /usr/src/app
+FROM node:22-alpine AS base
 
-# Copia arquivos de dependências (incluindo package-lock.json)
-COPY package.json package-lock.json* ./
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
-# Instala todas as dependências (incluindo devDependencies para build)
-RUN npm ci
+RUN corepack enable \
+    && corepack prepare pnpm@10.33.0 --activate \
+    && pnpm config set store-dir /pnpm/store
 
-# Copia o código fonte
-COPY . .
+WORKDIR /workspace
 
-# Compila o TypeScript
-RUN npm run build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/package.json
 
-# ---- Production Stage ----
-FROM node:20-alpine
+RUN apk add --no-cache python3 make g++
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @thalya-modas/api...
 
-WORKDIR /usr/src/app
+FROM base AS development
 
-# Cria um usuário e grupo não-root para segurança
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+COPY apps/api ./apps/api
 
-# Copia apenas os artefatos necessários do estágio builder
-COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/package.json ./
-COPY --from=builder /usr/src/app/package-lock.json* ./
+WORKDIR /workspace/apps/api
 
-# Instala apenas dependências de produção (como root antes de mudar usuário)
-# --ignore-scripts evita executar scripts como 'prepare' que precisa do husky (devDependency)
-RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
-
-# Muda para o usuário não-root
-USER appuser
-
-# Expõe a porta da aplicação
 EXPOSE 3000
 
-# Define variáveis de ambiente padrão
+CMD ["pnpm", "dev"]
+
+FROM base AS build
+
+COPY apps/api ./apps/api
+
+RUN pnpm --filter @thalya-modas/api build
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm --filter @thalya-modas/api deploy \
+    --prod --legacy /opt/thalya-api
+RUN cd /opt/thalya-api \
+    && /workspace/apps/api/node_modules/.bin/prisma generate \
+    --schema prisma/schema.prisma
+
+FROM node:22-alpine AS runtime
+
+RUN apk add --no-cache dumb-init libstdc++ \
+    && addgroup -S thalya \
+    && adduser -S thalya -G thalya
+
+WORKDIR /app
+
 ENV NODE_ENV=production
-ENV PORT=3000
 ENV HOST=0.0.0.0
+ENV PORT=3000
 
-# Comando para iniciar a aplicação
-CMD ["npm", "start"]
+COPY --from=build --chown=thalya:thalya /opt/thalya-api ./
 
+USER thalya
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/health || exit 1
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/app/http/server.js"]

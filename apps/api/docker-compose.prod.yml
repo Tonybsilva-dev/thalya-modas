@@ -1,9 +1,10 @@
 services:
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: fastify-boilerplate-prod
+      context: ../..
+      target: runtime
+      dockerfile: apps/api/Dockerfile
+    container_name: thalya-api
     ports:
       - "${PORT:-3000}:3000"
     env_file:
@@ -26,4 +27,3 @@ services:
         reservations:
           cpus: '0.5'
           memory: 256M
-

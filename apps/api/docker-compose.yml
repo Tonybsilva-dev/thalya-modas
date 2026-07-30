@@ -1,18 +1,17 @@
 services:
   app:
     build:
-      context: .
-      target: builder
-      dockerfile: Dockerfile
-    container_name: fastify-boilerplate-dev
+      context: ../..
+      target: development
+      dockerfile: apps/api/Dockerfile
+    container_name: thalya-api-dev
+    working_dir: /workspace/apps/api
     volumes:
-      # Monta o código fonte para hot-reload
-      - .:/usr/src/app
-      # Evita sobrescrever node_modules do container
-      - /usr/src/app/node_modules
+      - ./src:/workspace/apps/api/src
+      - ./prisma:/workspace/apps/api/prisma
     ports:
       - "${PORT:-3000}:3000"
-    command: npm run dev
+    command: pnpm dev
     env_file:
       - .env
     environment:
@@ -24,4 +23,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-

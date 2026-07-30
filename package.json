@@ -3,6 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "@swc/core",
+      "argon2",
+      "esbuild",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ],
+    "ignoredBuiltDependencies": [
+      "core-js-pure"
+    ]
+  },
   "scripts": {
     "dev": "pnpm --filter @thalya-modas/api dev",
     "dev:api": "pnpm --filter @thalya-modas/api dev",
