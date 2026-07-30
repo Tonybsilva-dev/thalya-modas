@@ -252,6 +252,42 @@ describe('Catalog - Integração', () => {
 		expect(responsibles.statusCode).toBe(404);
 	});
 
+	it('deve preservar fornecedor e histórico ao tentar excluir com pedidos', async () => {
+		const token = await registerAndGetToken();
+		const supplier = await createSupplier(token);
+		const supplierId = (supplier.body as { id: string }).id;
+		const order = await createPurchaseOrder(token, supplierId);
+		expect(order.statusCode).toBe(201);
+
+		const removeSupplier = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'DELETE',
+			url: `/suppliers/${supplierId}`,
+		});
+		expect(removeSupplier.statusCode).toBe(400);
+		expect(removeSupplier.body).toMatchObject({
+			code: 'TM-DOM-400',
+			message:
+				'Fornecedor possui pedidos ou recebimentos e não pode ser excluído. Inative o cadastro para preservar o histórico.',
+		});
+
+		const persistedSupplier = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			url: `/suppliers/${supplierId}`,
+		});
+		const persistedOrders = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			url: '/purchase-orders',
+		});
+
+		expect(persistedSupplier.statusCode).toBe(200);
+		expect(persistedOrders.body).toEqual([
+			expect.objectContaining({ supplierId }),
+		]);
+	});
+
 	it('deve retornar 404 ao alterar responsável de outro fornecedor', async () => {
 		const token = await registerAndGetToken();
 		const firstSupplier = await createSupplier(token);
@@ -337,6 +373,73 @@ describe('Catalog - Integração', () => {
 		});
 		expect(updateOrder.statusCode).toBe(200);
 		expect(updateOrder.body).toMatchObject({ status: 'receiving' });
+	});
+
+	it('deve resumir a operação e filtrar históricos por fornecedor', async () => {
+		const token = await registerAndGetToken();
+		const firstSupplier = await createSupplier(token);
+		const secondSupplier = await createSupplier(token);
+		const firstSupplierId = (firstSupplier.body as { id: string }).id;
+		const secondSupplierId = (secondSupplier.body as { id: string }).id;
+		await createResponsible(token, firstSupplierId, { isPrimary: true });
+
+		const firstOrder = await createPurchaseOrder(token, firstSupplierId);
+		await createPurchaseOrder(token, secondSupplierId);
+		const firstOrderId = (firstOrder.body as { id: string }).id;
+		await makeRequest(server, {
+			body: { status: 'delayed' },
+			headers: { authorization: `Bearer ${token}` },
+			method: 'PATCH',
+			url: `/purchase-orders/${firstOrderId}`,
+		});
+		const receiving = await makeRequest(server, {
+			body: {
+				expectedAt: '2026-06-05T15:00:00.000Z',
+				invoiceNumber: 'NF-SUMMARY-001',
+				purchaseOrderId: firstOrderId,
+				status: 'delayed',
+				supplierId: firstSupplierId,
+				volumes: 2,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/receivings',
+		});
+		expect(receiving.statusCode).toBe(201);
+
+		const summary = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			url: '/suppliers/operational-summary',
+		});
+		expect(summary.statusCode).toBe(200);
+		expect(summary.body).toMatchObject({
+			activeSuppliers: 2,
+			delayedOrders: 1,
+			delayedReceivings: 1,
+			dueReceivings: 1,
+			openOrderValue: 200,
+			openOrders: 2,
+			suppliersWithResponsible: 1,
+			totalSuppliers: 2,
+		});
+
+		const firstSupplierOrders = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			query: { supplierId: firstSupplierId },
+			url: '/purchase-orders',
+		});
+		const secondSupplierReceivings = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			query: { supplierId: secondSupplierId },
+			url: '/receivings',
+		});
+		expect(firstSupplierOrders.body).toEqual([
+			expect.objectContaining({ supplierId: firstSupplierId }),
+		]);
+		expect(secondSupplierReceivings.body).toEqual([]);
 	});
 
 	it('deve criar e atualizar recebimento vinculado a pedido de compra', async () => {

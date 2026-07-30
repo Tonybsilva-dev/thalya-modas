@@ -267,7 +267,7 @@ model PurchaseOrder {
 
   user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   store      Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   items      PurchaseOrderItem[]
   receivings Receiving[]
 
@@ -322,7 +322,7 @@ model Receiving {
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
 
   @@index([userId])

@@ -30,7 +30,18 @@ export type SupplierResponsible = SupplierResponsibleInput & {
   id: string;
   supplierId: string;
   updatedAt: string;
-	userId: string;
+  userId: string;
+};
+
+export type SupplierOperationalSummary = {
+  activeSuppliers: number;
+  delayedOrders: number;
+  delayedReceivings: number;
+  dueReceivings: number;
+  openOrderValue: number;
+  openOrders: number;
+  suppliersWithResponsible: number;
+  totalSuppliers: number;
 };
 
 export type PurchaseOrderStatus =
@@ -88,11 +99,33 @@ export type Receiving = {
   volumes: number;
 };
 
+type SupplierCatalogListQuery = DashboardListQuery & {
+  supplierId?: string;
+};
+
 export function listSuppliers(query?: DashboardListQuery) {
-	return apiRequest<Supplier[]>(withCatalogQuery("/suppliers", query));
+  return apiRequest<Supplier[]>(withCatalogQuery("/suppliers", query));
 }
 
-export function listPurchaseOrders(query?: DashboardListQuery) {
+export async function listAllSuppliers(
+  query: Omit<DashboardListQuery, "page" | "perPage"> = {},
+) {
+  const suppliers: Supplier[] = [];
+  let page = 1;
+
+  while (true) {
+    const currentPage = await listSuppliers({ ...query, page, perPage: 100 });
+    suppliers.push(...currentPage);
+    if (currentPage.length < 100) return suppliers;
+    page += 1;
+  }
+}
+
+export function getSupplierOperationalSummary() {
+  return apiRequest<SupplierOperationalSummary>("/suppliers/operational-summary");
+}
+
+export function listPurchaseOrders(query?: SupplierCatalogListQuery) {
   return apiRequest<PurchaseOrder[]>(withCatalogQuery("/purchase-orders", query));
 }
 
@@ -117,7 +150,7 @@ export function createPurchaseOrder(input: PurchaseOrderFormInput) {
   });
 }
 
-export function listReceivings(query?: DashboardListQuery) {
+export function listReceivings(query?: SupplierCatalogListQuery) {
   return apiRequest<Receiving[]>(withCatalogQuery("/receivings", query));
 }
 
@@ -160,6 +193,16 @@ export function updateSupplier(input: SupplierFormInput & { supplierId: string }
   });
 }
 
+export function updateSupplierStatus(
+  supplierId: string,
+  status: Supplier["status"],
+) {
+  return apiRequest<Supplier>(`/suppliers/${supplierId}`, {
+    body: JSON.stringify({ status }),
+    method: "PATCH",
+  });
+}
+
 export function deleteSupplier(supplierId: string) {
   return apiRequest<void>(`/suppliers/${supplierId}`, {
     method: "DELETE",
@@ -176,8 +219,13 @@ export function createSupplierResponsible(
 ) {
   return apiRequest<SupplierResponsible>(`/suppliers/${supplierId}/responsibles`, {
     body: JSON.stringify({
-      ...input,
+      contactType: input.contactType,
+      email: input.email,
+      isPrimary: input.isPrimary,
+      name: input.name,
       phone: normalizeDigits(input.phone),
+      role: input.role,
+      status: input.status,
     }),
     method: "POST",
   });
@@ -192,8 +240,13 @@ export function updateSupplierResponsible(
     `/suppliers/${supplierId}/responsibles/${responsibleId}`,
     {
       body: JSON.stringify({
-        ...input,
+        contactType: input.contactType,
+        email: input.email,
+        isPrimary: input.isPrimary,
+        name: input.name,
         phone: normalizeDigits(input.phone),
+        role: input.role,
+        status: input.status,
       }),
       method: "PATCH",
     },

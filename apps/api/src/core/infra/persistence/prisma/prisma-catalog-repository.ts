@@ -25,6 +25,7 @@ import type {
 	ReceivingStatus,
 	Supplier,
 	SupplierCategory,
+	SupplierOperationalSummary,
 	SupplierResponsible,
 	SupplierResponsibleContactType,
 	SupplierStatus,
@@ -140,6 +141,71 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		return suppliers.map(toDomainSupplier);
 	}
 
+	async getSupplierOperationalSummary(
+		scope: CatalogScope,
+	): Promise<SupplierOperationalSummary> {
+		const supplierWhere: Prisma.SupplierWhereInput = {
+			storeId: scope.storeId,
+			userId: scope.userId,
+		};
+		const orderWhere: Prisma.PurchaseOrderWhereInput = {
+			storeId: scope.storeId,
+			userId: scope.userId,
+		};
+		const receivingWhere: Prisma.ReceivingWhereInput = {
+			storeId: scope.storeId,
+			userId: scope.userId,
+		};
+		const [
+			totalSuppliers,
+			activeSuppliers,
+			suppliersWithResponsible,
+			openOrders,
+			delayedOrders,
+			delayedReceivings,
+			dueReceivings,
+		] = await this.prisma.$transaction([
+			this.prisma.supplier.count({ where: supplierWhere }),
+			this.prisma.supplier.count({
+				where: { ...supplierWhere, status: 'active' },
+			}),
+			this.prisma.supplier.count({
+				where: { ...supplierWhere, responsibles: { some: {} } },
+			}),
+			this.prisma.purchaseOrder.aggregate({
+				where: {
+					...orderWhere,
+					status: { notIn: ['completed', 'cancelled'] },
+				},
+				_count: { _all: true },
+				_sum: { totalCost: true },
+			}),
+			this.prisma.purchaseOrder.count({
+				where: { ...orderWhere, status: 'delayed' },
+			}),
+			this.prisma.receiving.count({
+				where: { ...receivingWhere, status: 'delayed' },
+			}),
+			this.prisma.receiving.count({
+				where: {
+					...receivingWhere,
+					status: { in: ['scheduled', 'checking', 'delayed'] },
+				},
+			}),
+		]);
+
+		return {
+			activeSuppliers,
+			delayedOrders,
+			delayedReceivings,
+			dueReceivings,
+			openOrderValue: Number(openOrders._sum.totalCost ?? 0),
+			openOrders: openOrders._count._all,
+			suppliersWithResponsible,
+			totalSuppliers,
+		};
+	}
+
 	async updateSupplier(input: UpdateSupplierInput): Promise<Supplier> {
 		const supplier = await this.prisma.supplier.findFirst({
 			where: {
@@ -175,9 +241,23 @@ export class PrismaCatalogRepository implements CatalogRepository {
 				storeId: scope.storeId,
 				userId: scope.userId,
 			},
+			select: {
+				_count: {
+					select: {
+						purchaseOrders: true,
+						receivings: true,
+					},
+				},
+				id: true,
+			},
 		});
 		if (!supplier) {
 			throw new NotFoundError('Fornecedor não encontrado.');
+		}
+		if (supplier._count.purchaseOrders > 0 || supplier._count.receivings > 0) {
+			throw new DomainError(
+				'Fornecedor possui pedidos ou recebimentos e não pode ser excluído. Inative o cadastro para preservar o histórico.',
+			);
 		}
 
 		await this.prisma.supplier.delete({ where: { id: supplierId } });
@@ -539,6 +619,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	): Promise<PurchaseOrder[]> {
 		const where: Prisma.PurchaseOrderWhereInput = {
 			storeId: scope.storeId,
+			supplierId: query.supplierId,
 			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getPurchaseOrderSearchWhere(query.q),
@@ -621,6 +702,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	): Promise<Receiving[]> {
 		const where: Prisma.ReceivingWhereInput = {
 			storeId: scope.storeId,
+			supplierId: query.supplierId,
 			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getReceivingSearchWhere(query.q),

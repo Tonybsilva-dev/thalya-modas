@@ -59,6 +59,10 @@
         "saveSupplier": "Save supplier",
         "saveChanges": "Save changes",
         "saving": "Saving...",
+        "loading": "Loading supplier",
+        "loadingDescription": "We are retrieving the latest supplier data.",
+        "backToList": "Back to suppliers",
+        "tryAgain": "Try again",
         "dataTitle": "Supplier data",
         "dataDescription": "Tax data and main commercial contact.",
         "commercialTitle": "Commercial terms",
@@ -105,6 +109,7 @@
           "terms": "Purchase terms reviewed",
           "responsibles": "Responsible contacts",
           "none": "None registered",
+          "count": "{count, plural, one {# registered} other {# registered}}",
           "addResponsible": "Add responsible"
         },
         "performance": {
@@ -117,11 +122,10 @@
         },
         "deleteModal": {
           "title": "Delete supplier?",
-          "description": "This action removes the supplier from the active list.",
-          "supplierName": "Moda Brasil Wholesale",
-          "warning": "Open purchase orders must be reviewed before deletion.",
-          "confirm": "Delete supplier",
-          "pageDescription": "Active supplier with open orders and purchase history."
+          "description": "This action permanently removes the supplier record.",
+          "unknownSupplier": "Unknown supplier",
+          "warning": "Suppliers with purchase orders or receivings cannot be deleted. Inactivate the record instead to preserve its history.",
+          "confirm": "Delete supplier"
         },
         "responsibleModal": {
           "title": "Add responsible",
@@ -131,10 +135,10 @@
           "description": "Add a contact for orders, deliveries or finance.",
           "addNew": "New responsible",
           "empty": "No responsible contact registered.",
+          "loading": "Loading responsible contacts.",
           "assigned": "Main responsible",
           "close": "Close",
-          "supplierName": "Moda Brasil Wholesale",
-          "supplierDescription": "Active supplier - women's fashion",
+          "newSupplier": "New supplier",
           "name": "Responsible name",
           "namePlaceholder": "Ex.: Camila Santos",
           "role": "Role",
@@ -153,10 +157,19 @@
           "count": "2 responsibles registered",
           "edit": "Edit",
           "delete": "Delete",
-          "save": "Save responsible"
+          "deleteConfirm": "Are you sure you want to delete this responsible contact?",
+          "save": "Save responsible",
+          "saving": "Saving..."
         },
         "errors": {
-          "save": "Could not save."
+          "save": "Could not save.",
+          "load": "Could not load the supplier.",
+          "invalidId": "The supplier identifier is invalid.",
+          "notFound": "Supplier not found",
+          "delete": "Could not delete the supplier.",
+          "responsibleLoad": "Could not load responsible contacts.",
+          "responsibleSave": "Could not save the responsible contact.",
+          "responsibleDelete": "Could not delete the responsible contact."
         }
       },
       "purchaseOrder": {
@@ -166,6 +179,14 @@
         "cancel": "Cancel",
         "save": "Save order",
         "saving": "Saving...",
+        "loading": "Loading suppliers",
+        "loadingDescription": "We are preparing active suppliers for the purchase order.",
+        "loadError": "Could not load suppliers",
+        "emptySuppliers": "No active suppliers",
+        "emptySuppliersDescription": "Create or activate a supplier before creating a purchase order.",
+        "createSupplier": "Create supplier",
+        "tryAgain": "Try again",
+        "backToSuppliers": "Back to suppliers",
         "sections": {
           "details": "Details",
           "items": "Items",
@@ -215,6 +236,7 @@
           "title": "Operational summary",
           "description": "The order will be sent to the supplier board for tracking.",
           "suppliers": "Active suppliers",
+          "notSelected": "Not selected",
           "items": "Items",
           "total": "Estimated value"
         },
@@ -225,7 +247,8 @@
           "delivery": "Delivery forecast defined"
         },
         "errors": {
-          "save": "Could not save the order."
+          "save": "Could not save the order.",
+          "suppliers": "Could not load active suppliers."
         }
       }
     }

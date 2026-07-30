@@ -10,6 +10,7 @@ import {
 	DeleteSupplierResponsibleUseCase,
 	DeleteSupplierUseCase,
 	GetProductUseCase,
+	GetSupplierOperationalSummaryUseCase,
 	GetSupplierUseCase,
 	ListInventoryMovementsUseCase,
 	ListProductsUseCase,
@@ -38,6 +39,7 @@ const listQuerySchema = z.object({
 	perPage: z.coerce.number().int().positive().max(100).default(20),
 	q: z.string().trim().optional(),
 	status: z.string().trim().optional(),
+	supplierId: z.string().uuid().optional(),
 });
 
 const idParamsSchema = z.object({
@@ -128,6 +130,17 @@ const supplierSchema = createSupplierSchema.extend({
 	status: supplierStatusSchema,
 	updatedAt: z.string(),
 	userId: z.string(),
+});
+
+const supplierOperationalSummarySchema = z.object({
+	activeSuppliers: z.number().int().nonnegative(),
+	delayedOrders: z.number().int().nonnegative(),
+	delayedReceivings: z.number().int().nonnegative(),
+	dueReceivings: z.number().int().nonnegative(),
+	openOrderValue: z.number().nonnegative(),
+	openOrders: z.number().int().nonnegative(),
+	suppliersWithResponsible: z.number().int().nonnegative(),
+	totalSuppliers: z.number().int().nonnegative(),
 });
 
 const createProductSchema = z.object({
@@ -316,6 +329,9 @@ export async function catalogRoutes(
 		),
 		deleteSupplier: new DeleteSupplierUseCase(container.catalogRepository),
 		getProduct: new GetProductUseCase(container.catalogRepository),
+		getSupplierOperationalSummary: new GetSupplierOperationalSummaryUseCase(
+			container.catalogRepository,
+		),
 		getSupplier: new GetSupplierUseCase(container.catalogRepository),
 		listInventoryMovements: new ListInventoryMovementsUseCase(
 			container.catalogRepository,
@@ -417,6 +433,39 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createSupplier.execute({
 				...body,
+				storeId: user.storeId,
+				userId: user.userId,
+			});
+		},
+	);
+
+	fastify.get(
+		'/suppliers/operational-summary',
+		{
+			schema: {
+				description: 'Resume indicadores operacionais de fornecedores',
+				tags: ['suppliers'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				response: {
+					200: createResponseSchema(
+						supplierOperationalSummarySchema,
+						'Indicadores de fornecedores',
+					),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (request: FastifyRequest) => {
+			const user = getAuthenticatedUser(request);
+			return useCases.getSupplierOperationalSummary.execute({
 				storeId: user.storeId,
 				userId: user.userId,
 			});

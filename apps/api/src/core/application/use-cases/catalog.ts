@@ -24,6 +24,14 @@ export class ListSuppliersUseCase {
 	}
 }
 
+export class GetSupplierOperationalSummaryUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: CatalogScope) {
+		return this.catalogRepository.getSupplierOperationalSummary(input);
+	}
+}
+
 export class CreateSupplierUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 

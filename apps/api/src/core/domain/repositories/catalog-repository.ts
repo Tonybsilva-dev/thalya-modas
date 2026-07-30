@@ -14,6 +14,7 @@ import type {
 	PurchaseOrder,
 	Receiving,
 	Supplier,
+	SupplierOperationalSummary,
 	SupplierResponsible,
 	UpdateProductInput,
 	UpdatePurchaseOrderInput,
@@ -36,6 +37,9 @@ export interface CatalogRepository {
 		scope: CatalogScope,
 		query?: CatalogListQuery,
 	): Promise<Supplier[]>;
+	getSupplierOperationalSummary(
+		scope: CatalogScope,
+	): Promise<SupplierOperationalSummary>;
 	updateSupplier(input: UpdateSupplierInput): Promise<Supplier>;
 	deleteSupplier(scope: CatalogScope, supplierId: string): Promise<void>;
 	createSupplierResponsible(

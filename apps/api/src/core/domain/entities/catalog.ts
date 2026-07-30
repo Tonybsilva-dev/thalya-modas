@@ -52,6 +52,17 @@ export type Supplier = {
 	updatedAt: string;
 };
 
+export type SupplierOperationalSummary = {
+	activeSuppliers: number;
+	delayedOrders: number;
+	delayedReceivings: number;
+	dueReceivings: number;
+	openOrderValue: number;
+	openOrders: number;
+	suppliersWithResponsible: number;
+	totalSuppliers: number;
+};
+
 export type SupplierResponsible = {
 	id: string;
 	supplierId: string;
@@ -300,6 +311,7 @@ export type PreparedProductImageUpload = {
 export type CatalogListQuery = {
 	q?: string;
 	status?: string;
+	supplierId?: string;
 	page?: number;
 	perPage?: number;
 };

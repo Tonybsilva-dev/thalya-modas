@@ -245,6 +245,32 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 				(responsible) => responsible.storeId === currentStoreId,
 			),
 		).toBe(true);
+
+		const summary = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			url: '/suppliers/operational-summary',
+		});
+		expect(summary.body).toMatchObject({
+			activeSuppliers: 1,
+			delayedOrders: 0,
+			delayedReceivings: 0,
+			dueReceivings: 1,
+			openOrderValue: 155,
+			openOrders: 1,
+			suppliersWithResponsible: 1,
+			totalSuppliers: 1,
+		});
+
+		const supplierOrders = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			query: { supplierId },
+			url: '/purchase-orders',
+		});
+		expect(supplierOrders.body).toEqual([
+			expect.objectContaining({ id: purchaseOrderId, supplierId }),
+		]);
 	});
 
 	it('deve impedir documento e SKU duplicados dentro da mesma loja', async () => {
@@ -296,6 +322,40 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		});
 		expect(firstProduct.statusCode).toBe(201);
 		expect(secondProduct.statusCode).toBe(400);
+	});
+
+	it('deve impedir exclusão de fornecedor com histórico no PostgreSQL', async () => {
+		const token = await registerAndGetToken();
+		const supplier = await makeRequest(server, {
+			body: {
+				document: '55444333000122',
+				name: 'Fornecedor com Histórico Prisma',
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/suppliers',
+		});
+		expect(supplier.statusCode).toBe(201);
+		const supplierId = (supplier.body as { id: string }).id;
+
+		const order = await createPurchaseOrder(token, currentStoreId, supplierId);
+		expect(order.statusCode).toBe(201);
+		const orderId = (order.body as { id: string }).id;
+
+		const removeSupplier = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'DELETE',
+			url: `/suppliers/${supplierId}`,
+		});
+
+		expect(removeSupplier.statusCode).toBe(400);
+		expect(removeSupplier.body).toMatchObject({ code: 'TM-DOM-400' });
+		await expect(
+			prisma.supplier.findUnique({ where: { id: supplierId } }),
+		).resolves.not.toBeNull();
+		await expect(
+			prisma.purchaseOrder.findUnique({ where: { id: orderId } }),
+		).resolves.not.toBeNull();
 	});
 
 	it('deve permitir as mesmas chaves operacionais em lojas diferentes', async () => {

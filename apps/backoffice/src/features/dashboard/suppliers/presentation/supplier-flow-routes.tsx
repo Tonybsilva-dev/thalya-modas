@@ -56,7 +56,12 @@ import {
   deleteSupplier,
   deleteSupplierResponsible,
   getSupplier,
+  listPurchaseOrders,
+  listReceivings,
   listSupplierResponsibles,
+  type PurchaseOrder,
+  type Receiving,
+  type Supplier,
   updateSupplierResponsible,
   updateSupplier,
 } from "../application/suppliers-api";
@@ -178,7 +183,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   const localResponsibles = useSupplierFlowStore((state) => state.responsibles);
   const supplierDraft = useSupplierFlowStore((state) => state.supplierDraft);
   const setSupplierDraft = useSupplierFlowStore((state) => state.setSupplierDraft);
-  const resetSupplierDraft = useSupplierFlowStore((state) => state.resetSupplierDraft);
+  const resetFlow = useSupplierFlowStore((state) => state.resetFlow);
   const [section, setSection] = useQueryState("section", parseAsString.withDefault("data"));
   const [modal, setModal] = useQueryState("modal", supplierModalParser);
   const [category, setCategory] = useQueryState(
@@ -212,13 +217,29 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
     queryKey: ["suppliers", supplierId, "responsibles"],
     queryFn: () => listSupplierResponsibles(supplierId as string),
   });
+  const ordersQuery = useQuery({
+    enabled: isPersistedSupplier,
+    queryKey: ["purchase-orders", "supplier", supplierId],
+    queryFn: () =>
+      listPurchaseOrders({ page: 1, perPage: 100, supplierId }),
+  });
+  const receivingsQuery = useQuery({
+    enabled: isPersistedSupplier,
+    queryKey: ["receivings", "supplier", supplierId],
+    queryFn: () => listReceivings({ page: 1, perPage: 100, supplierId }),
+  });
   const responsibles = responsiblesQuery.data ?? localResponsibles;
   const primaryResponsibleId =
-    assignedResponsibleId ?? responsibles.find((responsible) => responsible.isPrimary)?.id;
+    responsibles.find((responsible) => responsible.id === assignedResponsibleId)?.id ??
+    responsibles.find((responsible) => responsible.isPrimary)?.id;
   const assignedResponsible = responsibles.find(
     (responsible) => responsible.id === primaryResponsibleId,
   );
   const persistedSupplier = supplierQuery.data;
+
+  useEffect(() => {
+    if (mode === "create") resetFlow();
+  }, [mode, resetFlow]);
 
   useEffect(() => {
     if (!persistedSupplier) return;
@@ -261,26 +282,37 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   const mutation = useMutation({
     mutationFn: async (input: SupplierFormInput) => {
       if (isEdit && supplierId && isUuid(supplierId)) {
-        return updateSupplier({ ...input, supplierId });
+        const supplier = await updateSupplier({ ...input, supplierId });
+        return { responsibleFailures: 0, supplier };
       }
 
       if (isEdit) {
-        return Promise.resolve(null);
+        throw new Error("Invalid supplier identifier.");
       }
 
       const supplier = await createSupplier(input);
-      await Promise.all(
+      const responsibleResults = await Promise.allSettled(
         localResponsibles.map((responsible) =>
           createSupplierResponsible(supplier.id, responsible),
         ),
       );
-      return supplier;
+      return {
+        responsibleFailures: responsibleResults.filter(
+          (result) => result.status === "rejected",
+        ).length,
+        supplier,
+      };
     },
     onError: (error) => setFormError(getApiErrorMessage(error, t("errors.save"))),
-    onSuccess: () => {
+    onSuccess: ({ responsibleFailures, supplier }) => {
       void queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      resetSupplierDraft();
-      router.push(basePath);
+      resetFlow();
+      const notice = isEdit
+        ? "updated"
+        : responsibleFailures > 0
+          ? "createdPartial"
+          : "created";
+      router.push(`${basePath}?notice=${notice}&supplier=${supplier.id}`);
     },
   });
 
@@ -309,6 +341,41 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
 
     setErrors({});
     mutation.mutate(result.data);
+  }
+
+  if (isEdit && !isPersistedSupplier) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={t("errors.invalidId")}
+        title={t("errors.notFound")}
+      />
+    );
+  }
+
+  if (isEdit && supplierQuery.isPending) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={t("loadingDescription")}
+        loading
+        title={t("loading")}
+      />
+    );
+  }
+
+  if (isEdit && supplierQuery.isError) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={getApiErrorMessage(supplierQuery.error, t("errors.load"))}
+        onRetry={() => void supplierQuery.refetch()}
+        title={t("errors.notFound")}
+      />
+    );
   }
 
   return (
@@ -343,50 +410,39 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
                 }}
                 values={values}
               />
-              {isEdit ? (
-                <>
-                  <SupplierCommercialCard
-                    errors={errors}
-                    onDeliveryTermChange={(value) => {
-                      setSupplierDraft({ deliveryTerm: value });
-                      void setDeliveryTerm(value);
-                    }}
-                    onPaymentTermChange={(value) => {
-                      setSupplierDraft({ paymentTerm: value });
-                      void setPaymentTerm(value);
-                    }}
-                    onStatusChange={setStatus}
-                    status={status}
-                    values={values}
-                  />
-                  <SupplierNotesCard errors={errors} values={values} />
-                </>
-              ) : (
-                <SupplierCommercialCard
-                  errors={errors}
-                  onDeliveryTermChange={(value) => {
-                    setSupplierDraft({ deliveryTerm: value });
-                    void setDeliveryTerm(value);
-                  }}
-                  onPaymentTermChange={(value) => {
-                    setSupplierDraft({ paymentTerm: value });
-                    void setPaymentTerm(value);
-                  }}
-                  onStatusChange={setStatus}
-                  status={status}
-                  values={values}
-                />
-              )}
+              <SupplierCommercialCard
+                errors={errors}
+                onDeliveryTermChange={(value) => {
+                  setSupplierDraft({ deliveryTerm: value });
+                  void setDeliveryTerm(value);
+                }}
+                onPaymentTermChange={(value) => {
+                  setSupplierDraft({ paymentTerm: value });
+                  void setPaymentTerm(value);
+                }}
+                onStatusChange={setStatus}
+                status={status}
+                values={values}
+              />
+              <SupplierNotesCard errors={errors} values={values} />
             </div>
 
             {isEdit ? (
               <SupplierPerformanceRail
+                orders={(ordersQuery.data ?? []).filter(
+                  (order) => order.supplierId === supplierId,
+                )}
                 onOpenDelete={() => void setModal("delete")}
                 onOpenResponsible={() => void setModal("responsible")}
+                receivings={(receivingsQuery.data ?? []).filter(
+                  (receiving) => receiving.supplierId === supplierId,
+                )}
+                supplier={persistedSupplier}
               />
             ) : (
               <SupplierCreateSummary
                 onOpenResponsible={() => void setModal("responsible")}
+                responsiblesCount={responsibles.length}
               />
             )}
           </div>
@@ -398,16 +454,79 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
           <SupplierDeleteModal
             onClose={() => void setModal(null)}
             onDeleted={() => router.push(basePath)}
+            supplier={persistedSupplier}
             supplierId={supplierId}
           />
         ) : null}
         {modal === "responsible" ? (
           <SupplierResponsibleModal
             onClose={() => void setModal(null)}
+            supplier={persistedSupplier}
             supplierId={supplierId}
           />
         ) : null}
       </>
+    </DashboardShell>
+  );
+}
+
+function SupplierRouteState({
+  basePath,
+  content,
+  description,
+  loading = false,
+  onRetry,
+  title,
+}: {
+  basePath: string;
+  content: ReturnType<typeof useSupplierShellContent>;
+  description: string;
+  loading?: boolean;
+  onRetry?: () => void;
+  title: string;
+}) {
+  const t = useTranslations("dashboard.suppliers.flow");
+
+  return (
+    <DashboardShell
+      activeItem="Suppliers"
+      operatorRole={content.sidebar.operatorRole}
+      status={content.sidebar.status}
+    >
+      <Card>
+        <CardContent className="grid min-h-[360px] place-items-center p-6 text-center">
+          <div className="grid max-w-md justify-items-center gap-4">
+            <div
+              className={cn(
+                "flex size-12 items-center justify-center bg-muted text-muted-foreground",
+                loading && "animate-pulse",
+              )}
+            >
+              {loading ? (
+                <ArrowLeft className="size-5 animate-pulse" />
+              ) : (
+                <WarningCircle className="size-5" />
+              )}
+            </div>
+            <div className="grid gap-1">
+              <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+              <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+            </div>
+            {!loading ? (
+              <div className="flex flex-wrap justify-center gap-2">
+                {onRetry ? (
+                  <Button onClick={onRetry} type="button" variant="outline">
+                    {t("tryAgain")}
+                  </Button>
+                ) : null}
+                <Button asChild>
+                  <Link href={basePath}>{t("backToList")}</Link>
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
     </DashboardShell>
   );
 }
@@ -452,7 +571,12 @@ function SupplierFormHeader({
                 "h-8 px-3 text-xs font-semibold text-muted-foreground transition-colors",
                 section === value && "bg-secondary text-secondary-foreground",
               )}
-              onClick={() => void setSection(value)}
+              onClick={() => {
+                void setSection(value);
+                document
+                  .getElementById(`supplier-section-${value}`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
               type="button"
             >
               {label}
@@ -491,7 +615,7 @@ function SupplierDataCard({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <Card>
+    <Card id="supplier-section-data" className="scroll-mt-6">
       <CardContent className="grid gap-4 p-5">
         <SectionHeading
           description={t("dataDescription")}
@@ -592,7 +716,7 @@ function SupplierCommercialCard({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <Card>
+    <Card id="supplier-section-commercial" className="scroll-mt-6">
       <CardContent className="grid gap-4 p-5">
         <SectionHeading
           description={t("commercialDescription")}
@@ -654,7 +778,7 @@ function SupplierNotesCard({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <Card>
+    <Card id="supplier-section-notes" className="scroll-mt-6">
       <CardContent className="grid gap-4 p-5">
         <SectionHeading
           description={t("notesDescription")}
@@ -678,8 +802,10 @@ function SupplierNotesCard({
 
 function SupplierCreateSummary({
   onOpenResponsible,
+  responsiblesCount,
 }: {
   onOpenResponsible: () => void;
+  responsiblesCount: number;
 }) {
   const t = useTranslations("dashboard.suppliers.flow");
 
@@ -712,7 +838,11 @@ function SupplierCreateSummary({
                 <p className="text-sm font-bold text-foreground">
                   {t("summary.responsibles")}
                 </p>
-                <Badge variant="secondary">{t("summary.none")}</Badge>
+                <Badge variant="secondary">
+                  {responsiblesCount > 0
+                    ? t("summary.count", { count: responsiblesCount })
+                    : t("summary.none")}
+                </Badge>
               </div>
             </div>
             <Button
@@ -732,22 +862,61 @@ function SupplierCreateSummary({
 }
 
 function SupplierPerformanceRail({
+  orders,
   onOpenDelete,
   onOpenResponsible,
+  receivings,
+  supplier,
 }: {
+  orders: PurchaseOrder[];
   onOpenDelete: () => void;
   onOpenResponsible: () => void;
+  receivings: Receiving[];
+  supplier?: Supplier;
 }) {
   const t = useTranslations("dashboard.suppliers.flow");
+  const locale = normalizeLocale(useLocale());
+  const openOrders = orders.filter(
+    (order) => !["completed", "cancelled"].includes(order.status),
+  );
+  const completedReceivings = receivings.filter(
+    (receiving) => receiving.status === "completed" && receiving.receivedAt,
+  );
+  const onTimeReceivings = completedReceivings.filter(
+    (receiving) =>
+      new Date(receiving.receivedAt as string).getTime() <=
+      new Date(receiving.expectedAt).getTime(),
+  );
+  const onTimeRate =
+    completedReceivings.length > 0
+      ? `${Math.round((onTimeReceivings.length / completedReceivings.length) * 100)}%`
+      : "-";
+  const openValue = openOrders.reduce(
+    (total, order) => total + order.totalCost,
+    0,
+  );
+  const metrics = [
+    [t("performance.onTime"), onTimeRate],
+    [
+      t("performance.leadTime"),
+      supplier?.deliveryTerm
+        ? `${supplier.deliveryTerm} ${locale === "en" ? "days" : "dias"}`
+        : "-",
+    ],
+    [t("performance.openOrders"), String(openOrders.length)],
+    [
+      t("performance.openValue"),
+      new Intl.NumberFormat(locale, {
+        currency: "BRL",
+        maximumFractionDigits: 0,
+        style: "currency",
+      }).format(openValue),
+    ],
+  ];
 
   return (
     <aside className="grid content-start gap-3">
-      {[
-        [t("performance.onTime"), "94%"],
-        [t("performance.leadTime"), "4 dias"],
-        [t("performance.openOrders"), "3"],
-        [t("performance.openValue"), "R$ 8.420"],
-      ].map(([label, value]) => (
+      {metrics.map(([label, value]) => (
         <Card key={label}>
           <CardContent className="grid gap-1 p-4">
             <p className="text-xs font-bold text-muted-foreground">{label}</p>
@@ -780,7 +949,51 @@ function SupplierPerformanceRail({
 export function SupplierDeleteModalRoute() {
   const basePath = useSupplierBasePath();
   const content = useSupplierShellContent();
+  const params = useParams<{ supplierId?: string }>();
+  const router = useRouter();
   const t = useTranslations("dashboard.suppliers.flow");
+  const supplierId = params.supplierId;
+  const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
+  const supplierQuery = useQuery({
+    enabled: isPersistedSupplier,
+    queryKey: ["suppliers", supplierId],
+    queryFn: () => getSupplier(supplierId as string),
+  });
+
+  if (!isPersistedSupplier) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={t("errors.invalidId")}
+        title={t("errors.notFound")}
+      />
+    );
+  }
+
+  if (supplierQuery.isPending) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={t("loadingDescription")}
+        loading
+        title={t("loading")}
+      />
+    );
+  }
+
+  if (supplierQuery.isError) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={getApiErrorMessage(supplierQuery.error, t("errors.load"))}
+        onRetry={() => void supplierQuery.refetch()}
+        title={t("errors.notFound")}
+      />
+    );
+  }
 
   return (
     <DashboardShell
@@ -798,18 +1011,19 @@ export function SupplierDeleteModalRoute() {
         <Card>
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">
-              {t("deleteModal.pageDescription")}
+              {supplierQuery.data.name} ·{" "}
+              {supplierQuery.data.status === "active"
+                ? t("status.active")
+                : t("status.inactive")}
             </p>
           </CardContent>
         </Card>
       </div>
       <SupplierDeleteModal
-        onClose={() => {
-          window.location.href = `${basePath}/moda-brasil/edit`;
-        }}
-        onDeleted={() => {
-          window.location.href = basePath;
-        }}
+        onClose={() => router.push(`${basePath}/${supplierId}/edit`)}
+        onDeleted={() => router.push(`${basePath}?notice=deleted`)}
+        supplier={supplierQuery.data}
+        supplierId={supplierId}
       />
     </DashboardShell>
   );
@@ -818,20 +1032,27 @@ export function SupplierDeleteModalRoute() {
 function SupplierDeleteModal({
   onClose,
   onDeleted,
+  supplier,
   supplierId,
 }: {
   onClose: () => void;
   onDeleted?: () => void;
+  supplier?: Supplier;
   supplierId?: string;
 }) {
   const t = useTranslations("dashboard.suppliers.flow");
   const queryClient = useQueryClient();
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: () =>
-      isPersistedSupplier && supplierId
-        ? deleteSupplier(supplierId)
-        : Promise.resolve(),
+    mutationFn: () => {
+      if (!isPersistedSupplier || !supplierId) {
+        throw new Error("Invalid supplier identifier.");
+      }
+      return deleteSupplier(supplierId);
+    },
+    onError: (error) =>
+      setDeleteError(getApiErrorMessage(error, t("errors.delete"))),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       if (onDeleted) {
@@ -844,7 +1065,7 @@ function SupplierDeleteModal({
   });
 
   return (
-    <ModalOverlay>
+    <ModalOverlay onClose={onClose}>
       <Card className="w-full max-w-[520px] animate-nitro-scale-in">
         <CardContent className="grid gap-5 p-6">
           <div className="flex items-start gap-3">
@@ -862,12 +1083,13 @@ function SupplierDeleteModal({
           </div>
           <div className="grid gap-2 border border-border bg-muted p-4">
             <p className="text-sm font-bold text-foreground">
-              {t("deleteModal.supplierName")}
+              {supplier?.name ?? t("deleteModal.unknownSupplier")}
             </p>
             <p className="text-sm text-muted-foreground">
               {t("deleteModal.warning")}
             </p>
           </div>
+          {deleteError ? <FormError>{deleteError}</FormError> : null}
           <div className="flex justify-end gap-3">
             <Button className="h-10 px-4" onClick={onClose} type="button" variant="outline">
               {t("cancel")}
@@ -891,29 +1113,82 @@ function SupplierDeleteModal({
 
 export function SupplierResponsibleModalRoute() {
   const basePath = useSupplierBasePath();
+  const content = useSupplierShellContent();
+  const params = useParams<{ supplierId?: string }>();
+  const router = useRouter();
+  const t = useTranslations("dashboard.suppliers.flow");
+  const supplierId = params.supplierId;
+  const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
+  const supplierQuery = useQuery({
+    enabled: isPersistedSupplier,
+    queryKey: ["suppliers", supplierId],
+    queryFn: () => getSupplier(supplierId as string),
+  });
+
+  if (!isPersistedSupplier) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={t("errors.invalidId")}
+        title={t("errors.notFound")}
+      />
+    );
+  }
+
+  if (supplierQuery.isPending) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={t("loadingDescription")}
+        loading
+        title={t("loading")}
+      />
+    );
+  }
+
+  if (supplierQuery.isError) {
+    return (
+      <SupplierRouteState
+        basePath={basePath}
+        content={content}
+        description={getApiErrorMessage(supplierQuery.error, t("errors.load"))}
+        onRetry={() => void supplierQuery.refetch()}
+        title={t("errors.notFound")}
+      />
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <DashboardShell
+      activeItem="Suppliers"
+      operatorRole={content.sidebar.operatorRole}
+      status={content.sidebar.status}
+    >
       <SupplierResponsibleModal
-        onClose={() => {
-          window.location.href = `${basePath}/moda-brasil/edit`;
-        }}
+        onClose={() => router.push(`${basePath}/${supplierId}/edit`)}
+        supplier={supplierQuery.data}
+        supplierId={supplierId}
       />
-    </main>
+    </DashboardShell>
   );
 }
 
 function SupplierResponsibleModal({
   onClose,
+  supplier,
   supplierId,
 }: {
   onClose: () => void;
+  supplier?: Supplier;
   supplierId?: string;
 }) {
   const t = useTranslations("dashboard.suppliers.flow");
   const queryClient = useQueryClient();
   const assignedResponsibleId = useSupplierFlowStore((state) => state.assignedResponsibleId);
   const localResponsibles = useSupplierFlowStore((state) => state.responsibles);
+  const supplierDraft = useSupplierFlowStore((state) => state.supplierDraft);
   const assignResponsible = useSupplierFlowStore((state) => state.assignResponsible);
   const deleteResponsible = useSupplierFlowStore((state) => state.deleteResponsible);
   const saveResponsible = useSupplierFlowStore((state) => state.saveResponsible);
@@ -933,6 +1208,7 @@ function SupplierResponsibleModal({
     supplierStatusParser.withDefault("active"),
   );
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
   const responsiblesQuery = useQuery({
     enabled: isPersistedSupplier,
@@ -941,7 +1217,8 @@ function SupplierResponsibleModal({
   });
   const responsibles = responsiblesQuery.data ?? localResponsibles;
   const primaryResponsibleId =
-    assignedResponsibleId ?? responsibles.find((responsible) => responsible.isPrimary)?.id;
+    responsibles.find((responsible) => responsible.id === assignedResponsibleId)?.id ??
+    responsibles.find((responsible) => responsible.isPrimary)?.id;
   const selectedResponsible = responsibles.find(
     (responsible) => responsible.id === responsibleId,
   );
@@ -959,7 +1236,10 @@ function SupplierResponsibleModal({
 
       return createSupplierResponsible(supplierId, input);
     },
+    onError: (error) =>
+      setMutationError(getApiErrorMessage(error, t("errors.responsibleSave"))),
     onSuccess: () => {
+      setMutationError(null);
       if (isPersistedSupplier) {
         void queryClient.invalidateQueries({
           queryKey: ["suppliers", supplierId, "responsibles"],
@@ -978,7 +1258,10 @@ function SupplierResponsibleModal({
 
       return deleteSupplierResponsible(supplierId, responsibleIdToDelete);
     },
+    onError: (error) =>
+      setMutationError(getApiErrorMessage(error, t("errors.responsibleDelete"))),
     onSuccess: () => {
+      setMutationError(null);
       if (isPersistedSupplier) {
         void queryClient.invalidateQueries({
           queryKey: ["suppliers", supplierId, "responsibles"],
@@ -1020,6 +1303,7 @@ function SupplierResponsibleModal({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setMutationError(null);
     const result = supplierResponsibleSchema.safeParse({
       ...getFormData(event.currentTarget),
       contactType,
@@ -1043,7 +1327,7 @@ function SupplierResponsibleModal({
   }
 
   return (
-    <ModalOverlay>
+    <ModalOverlay onClose={closeModal}>
       <Card className="w-full max-w-[640px] animate-nitro-scale-in">
         {isEditing ? (
           <form
@@ -1061,7 +1345,10 @@ function SupplierResponsibleModal({
                     : t("responsibleModal.title")
                 }
               />
-              <SupplierResponsibleSupplierSummary />
+              <SupplierResponsibleSupplierSummary
+                supplier={supplier}
+                supplierDraft={supplierDraft}
+              />
               <SupplierResponsibleForm
                 contactType={contactType}
                 errors={errors}
@@ -1076,6 +1363,7 @@ function SupplierResponsibleModal({
                 selectedResponsible={selectedResponsible}
                 status={status}
               />
+              {mutationError ? <FormError>{mutationError}</FormError> : null}
               <div className="flex justify-end gap-2">
                 <Button
                   className="h-9 px-4"
@@ -1085,8 +1373,14 @@ function SupplierResponsibleModal({
                 >
                   {t("cancel")}
                 </Button>
-                <Button className="h-9 px-4" type="submit">
-                  {t("responsibleModal.save")}
+                <Button
+                  className="h-9 px-4"
+                  disabled={saveMutation.isPending}
+                  type="submit"
+                >
+                  {saveMutation.isPending
+                    ? t("responsibleModal.saving")
+                    : t("responsibleModal.save")}
                 </Button>
               </div>
             </CardContent>
@@ -1098,16 +1392,40 @@ function SupplierResponsibleModal({
               onClose={closeModal}
               title={t("responsibleModal.listTitle")}
             />
-            <SupplierResponsibleSupplierSummary />
-            <SupplierResponsibleList
-              assignedResponsibleId={primaryResponsibleId}
+            <SupplierResponsibleSupplierSummary
+              supplier={supplier}
+              supplierDraft={supplierDraft}
+            />
+            {mutationError ? <FormError>{mutationError}</FormError> : null}
+            {responsiblesQuery.isPending && isPersistedSupplier ? (
+              <div
+                className="h-20 animate-pulse border border-border bg-muted"
+                role="status"
+              >
+                <span className="sr-only">
+                  {t("responsibleModal.loading")}
+                </span>
+              </div>
+            ) : responsiblesQuery.isError ? (
+              <FormError>
+                {getApiErrorMessage(
+                  responsiblesQuery.error,
+                  t("errors.responsibleLoad"),
+                )}
+              </FormError>
+            ) : (
+              <SupplierResponsibleList
+                assignedResponsibleId={primaryResponsibleId}
                 onCreate={openCreateForm}
-                onDelete={(responsibleIdToDelete) =>
-                  deleteMutation.mutate(responsibleIdToDelete)
-                }
+                onDelete={(responsibleIdToDelete) => {
+                  if (window.confirm(t("responsibleModal.deleteConfirm"))) {
+                    deleteMutation.mutate(responsibleIdToDelete);
+                  }
+                }}
                 onEdit={openEditForm}
                 responsibles={responsibles}
               />
+            )}
           </CardContent>
         )}
       </Card>
@@ -1145,20 +1463,30 @@ function SupplierResponsibleModalHeader({
   );
 }
 
-function SupplierResponsibleSupplierSummary() {
+function SupplierResponsibleSupplierSummary({
+  supplier,
+  supplierDraft,
+}: {
+  supplier?: Supplier;
+  supplierDraft: Partial<SupplierFormInput>;
+}) {
   const t = useTranslations("dashboard.suppliers.flow");
+  const name = supplier?.name ?? supplierDraft.name ?? t("responsibleModal.newSupplier");
+  const category = supplier?.category ?? supplierDraft.category;
+  const status = supplier?.status ?? supplierDraft.status ?? "active";
 
   return (
     <div className="flex items-center gap-3 bg-muted p-3">
       <div className="flex size-9 items-center justify-center bg-foreground text-xs font-bold text-background">
-        MB
+        {getInitials(name)}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-foreground">
-          {t("responsibleModal.supplierName")}
+          {name}
         </p>
         <p className="truncate text-xs text-muted-foreground">
-          {t("responsibleModal.supplierDescription")}
+          {status === "active" ? t("status.active") : t("status.inactive")}
+          {category ? ` · ${t(`categories.${category}`)}` : ""}
         </p>
       </div>
     </div>
@@ -1503,13 +1831,28 @@ function FormError({ children }: { children: string }) {
   );
 }
 
-function ModalOverlay({ children }: { children: ReactNode }) {
+function ModalOverlay({
+  children,
+  onClose,
+}: {
+  children: ReactNode;
+  onClose: () => void;
+}) {
   return (
     <div
+      aria-modal="true"
       className={cn(
         "fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-black/60 p-4",
         "animate-nitro-fade-in",
       )}
+      onClick={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onClose();
+      }}
+      role="dialog"
+      tabIndex={-1}
     >
       {children}
     </div>

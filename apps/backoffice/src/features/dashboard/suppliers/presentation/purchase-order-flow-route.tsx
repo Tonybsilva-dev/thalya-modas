@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import {
   ArrowLeft,
   CalendarBlank,
@@ -41,7 +41,7 @@ import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import {
   createPurchaseOrder,
-  listSuppliers,
+  listAllSuppliers,
   type Supplier,
 } from "../application/suppliers-api";
 import { usePurchaseOrderFlowStore } from "../application/purchase-order-flow-store";
@@ -113,6 +113,7 @@ export function PurchaseOrderCreateRoute() {
     "status",
     purchaseOrderStatusParser.withDefault("confirmed"),
   );
+  const [supplierId, setSupplierId] = useQueryState("supplierId", parseAsString);
   const items = usePurchaseOrderFlowStore((state) => state.items);
   const addItem = usePurchaseOrderFlowStore((state) => state.addItem);
   const removeItem = usePurchaseOrderFlowStore((state) => state.removeItem);
@@ -122,7 +123,7 @@ export function PurchaseOrderCreateRoute() {
   const [formError, setFormError] = useState<string | null>(null);
   const suppliersQuery = useQuery({
     queryKey: ["suppliers", { status: "active" }],
-    queryFn: () => listSuppliers({ status: "active" }),
+    queryFn: () => listAllSuppliers({ status: "active" }),
   });
   const suppliers = suppliersQuery.data ?? [];
 
@@ -133,7 +134,11 @@ export function PurchaseOrderCreateRoute() {
       void queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       void queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       resetItems();
-      router.push(basePath);
+      router.push(
+        `${basePath}?notice=orderCreated&supplier=${encodeURIComponent(
+          supplierId ?? "",
+        )}`,
+      );
     },
   });
 
@@ -144,7 +149,7 @@ export function PurchaseOrderCreateRoute() {
     const raw = getFormData(event.currentTarget);
     const result = purchaseOrderFormSchema.safeParse({
       ...raw,
-      supplierId: raw.supplierId ?? "",
+      supplierId: supplierId ?? raw.supplierId ?? "",
       items,
       paymentTerm,
       status,
@@ -157,6 +162,43 @@ export function PurchaseOrderCreateRoute() {
 
     setErrors({});
     mutation.mutate(result.data);
+  }
+
+  if (suppliersQuery.isPending) {
+    return (
+      <PurchaseOrderRouteState
+        basePath={basePath}
+        content={content}
+        description={t("loadingDescription")}
+        loading
+        title={t("loading")}
+      />
+    );
+  }
+
+  if (suppliersQuery.isError) {
+    return (
+      <PurchaseOrderRouteState
+        basePath={basePath}
+        content={content}
+        description={getApiErrorMessage(suppliersQuery.error, t("errors.suppliers"))}
+        onRetry={() => void suppliersQuery.refetch()}
+        title={t("loadError")}
+      />
+    );
+  }
+
+  if (suppliers.length === 0) {
+    return (
+      <PurchaseOrderRouteState
+        actionHref={`${basePath}/create`}
+        actionLabel={t("createSupplier")}
+        basePath={basePath}
+        content={content}
+        description={t("emptySuppliersDescription")}
+        title={t("emptySuppliers")}
+      />
+    );
   }
 
   return (
@@ -179,8 +221,10 @@ export function PurchaseOrderCreateRoute() {
               errors={errors}
               onPaymentTermChange={(value) => void setPaymentTerm(value)}
               onStatusChange={(value) => void setStatus(value)}
+              onSupplierChange={(value) => void setSupplierId(value)}
               paymentTerm={paymentTerm}
               status={status}
+              supplierId={supplierId}
               suppliers={suppliers}
             />
             <PurchaseOrderItemsCard
@@ -193,11 +237,79 @@ export function PurchaseOrderCreateRoute() {
             <PurchaseOrderNotesCard error={errors.notes} />
           </div>
 
-          <PurchaseOrderSummaryRail items={items} suppliers={suppliers} />
+          <PurchaseOrderSummaryRail
+            items={items}
+            selectedSupplier={suppliers.find(
+              (supplier) => supplier.id === supplierId,
+            )}
+          />
         </div>
 
         {formError ? <FormError>{formError}</FormError> : null}
       </form>
+    </DashboardShell>
+  );
+}
+
+function PurchaseOrderRouteState({
+  actionHref,
+  actionLabel,
+  basePath,
+  content,
+  description,
+  loading = false,
+  onRetry,
+  title,
+}: {
+  actionHref?: string;
+  actionLabel?: string;
+  basePath: string;
+  content: ReturnType<typeof useSupplierShellContent>;
+  description: string;
+  loading?: boolean;
+  onRetry?: () => void;
+  title: string;
+}) {
+  const t = useTranslations("dashboard.suppliers.purchaseOrder");
+
+  return (
+    <DashboardShell
+      activeItem="Suppliers"
+      operatorRole={content.sidebar.operatorRole}
+      status={content.sidebar.status}
+    >
+      <Card>
+        <CardContent className="grid min-h-[360px] place-items-center p-6 text-center">
+          <div className="grid max-w-md justify-items-center gap-4">
+            <div
+              className={cn(
+                "flex size-12 items-center justify-center bg-muted text-muted-foreground",
+                loading && "animate-pulse",
+              )}
+            >
+              <Package className="size-5" />
+            </div>
+            <div className="grid gap-1">
+              <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+              <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+            </div>
+            {!loading ? (
+              <div className="flex flex-wrap justify-center gap-2">
+                {onRetry ? (
+                  <Button onClick={onRetry} type="button" variant="outline">
+                    {t("tryAgain")}
+                  </Button>
+                ) : null}
+                <Button asChild>
+                  <Link href={actionHref ?? basePath}>
+                    {actionLabel ?? t("backToSuppliers")}
+                  </Link>
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
     </DashboardShell>
   );
 }
@@ -233,7 +345,12 @@ function PurchaseOrderHeader({
                 "h-8 px-3 text-xs font-semibold text-muted-foreground transition-colors",
                 section === value && "bg-secondary text-secondary-foreground",
               )}
-              onClick={() => void setSection(value)}
+              onClick={() => {
+                void setSection(value);
+                document
+                  .getElementById(`purchase-order-section-${value}`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
               type="button"
             >
               {t(`sections.${value}`)}
@@ -262,21 +379,25 @@ function PurchaseOrderDetailsCard({
   errors,
   onPaymentTermChange,
   onStatusChange,
+  onSupplierChange,
   paymentTerm,
   status,
+  supplierId,
   suppliers,
 }: {
   errors: FieldErrors;
   onPaymentTermChange: (value: SupplierTerm) => void;
   onStatusChange: (value: "draft" | "confirmed") => void;
+  onSupplierChange: (value: string) => void;
   paymentTerm: SupplierTerm;
   status: "draft" | "confirmed";
+  supplierId: string | null;
   suppliers: Supplier[];
 }) {
   const t = useTranslations("dashboard.suppliers.purchaseOrder");
 
   return (
-    <Card>
+    <Card id="purchase-order-section-details" className="scroll-mt-6">
       <CardContent className="grid gap-4 p-5">
         <SectionHeading description={t("detailsDescription")} title={t("detailsTitle")} />
         <div className="grid gap-3 md:grid-cols-2">
@@ -284,11 +405,13 @@ function PurchaseOrderDetailsCard({
             error={errors.supplierId}
             label={t("fields.supplier")}
             name="supplierId"
+            onValueChange={onSupplierChange}
             options={suppliers.map((supplier) => ({
               label: supplier.name,
               value: supplier.id,
             }))}
             placeholder={t("placeholders.supplier")}
+            value={supplierId ?? undefined}
           />
           <FormField
             error={errors.expectedDeliveryAt}
@@ -349,7 +472,7 @@ function PurchaseOrderItemsCard({
   const t = useTranslations("dashboard.suppliers.purchaseOrder");
 
   return (
-    <Card>
+    <Card id="purchase-order-section-items" className="scroll-mt-6">
       <CardContent className="grid gap-4 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <SectionHeading description={t("itemsDescription")} title={t("itemsTitle")} />
@@ -420,7 +543,7 @@ function PurchaseOrderNotesCard({ error }: { error?: string }) {
   const t = useTranslations("dashboard.suppliers.purchaseOrder");
 
   return (
-    <Card>
+    <Card id="purchase-order-section-review" className="scroll-mt-6">
       <CardContent className="grid gap-4 p-5">
         <SectionHeading description={t("notesDescription")} title={t("notesTitle")} />
         <div className="grid gap-1.5">
@@ -440,10 +563,10 @@ function PurchaseOrderNotesCard({ error }: { error?: string }) {
 
 function PurchaseOrderSummaryRail({
   items,
-  suppliers,
+  selectedSupplier,
 }: {
   items: Array<{ quantity: string; unitCost: string }>;
-  suppliers: Supplier[];
+  selectedSupplier?: Supplier;
 }) {
   const t = useTranslations("dashboard.suppliers.purchaseOrder");
   const totalItems = items.reduce((total, item) => total + Number(item.quantity || 0), 0);
@@ -465,7 +588,10 @@ function PurchaseOrderSummaryRail({
           <h2 className="text-lg font-bold">{t("summary.title")}</h2>
           <p className="text-xs leading-5 text-white/80">{t("summary.description")}</p>
           <div className="grid gap-2 pt-2">
-            <SummaryRow label={t("summary.suppliers")} value={String(suppliers.length)} />
+            <SummaryRow
+              label={t("summary.suppliers")}
+              value={selectedSupplier?.name ?? t("summary.notSelected")}
+            />
             <SummaryRow label={t("summary.items")} value={String(totalItems)} />
             <SummaryRow label={t("summary.total")} value={formatMoney(totalCost)} />
           </div>

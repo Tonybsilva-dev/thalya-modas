@@ -59,6 +59,10 @@
         "saveSupplier": "Guardar proveedor",
         "saveChanges": "Guardar cambios",
         "saving": "Guardando...",
+        "loading": "Cargando proveedor",
+        "loadingDescription": "Estamos obteniendo los datos más recientes del proveedor.",
+        "backToList": "Volver a proveedores",
+        "tryAgain": "Intentar nuevamente",
         "dataTitle": "Datos del proveedor",
         "dataDescription": "Datos fiscales y contacto comercial principal.",
         "commercialTitle": "Condiciones comerciales",
@@ -105,6 +109,7 @@
           "terms": "Condiciones de compra revisadas",
           "responsibles": "Responsables",
           "none": "Ninguno registrado",
+          "count": "{count, plural, one {# registrado} other {# registrados}}",
           "addResponsible": "Agregar responsable"
         },
         "performance": {
@@ -117,11 +122,10 @@
         },
         "deleteModal": {
           "title": "Eliminar proveedor?",
-          "description": "Esta accion elimina el proveedor de la lista activa.",
-          "supplierName": "Moda Brasil Mayorista",
-          "warning": "Las ordenes abiertas deben revisarse antes de eliminar.",
-          "confirm": "Eliminar proveedor",
-          "pageDescription": "Proveedor activo con ordenes abiertas e historial de compras."
+          "description": "Esta accion elimina permanentemente el registro del proveedor.",
+          "unknownSupplier": "Proveedor no identificado",
+          "warning": "Los proveedores con ordenes o recepciones no se pueden eliminar. En ese caso, inactiva el registro para preservar el historial.",
+          "confirm": "Eliminar proveedor"
         },
         "responsibleModal": {
           "title": "Agregar responsable",
@@ -131,10 +135,10 @@
           "description": "Agrega un contacto para pedidos, entregas o finanzas.",
           "addNew": "Nuevo responsable",
           "empty": "Ningun responsable registrado.",
+          "loading": "Cargando responsables.",
           "assigned": "Responsable principal",
           "close": "Cerrar",
-          "supplierName": "Moda Brasil Mayorista",
-          "supplierDescription": "Proveedor activo - moda femenina",
+          "newSupplier": "Nuevo proveedor",
           "name": "Nombre del responsable",
           "namePlaceholder": "Ej.: Camila Santos",
           "role": "Cargo",
@@ -153,10 +157,19 @@
           "count": "2 responsables registrados",
           "edit": "Editar",
           "delete": "Eliminar",
-          "save": "Guardar responsable"
+          "deleteConfirm": "¿Deseas eliminar este responsable?",
+          "save": "Guardar responsable",
+          "saving": "Guardando..."
         },
         "errors": {
-          "save": "No fue posible guardar."
+          "save": "No fue posible guardar.",
+          "load": "No fue posible cargar el proveedor.",
+          "invalidId": "El identificador del proveedor no es válido.",
+          "notFound": "Proveedor no encontrado",
+          "delete": "No fue posible eliminar el proveedor.",
+          "responsibleLoad": "No fue posible cargar los responsables.",
+          "responsibleSave": "No fue posible guardar el responsable.",
+          "responsibleDelete": "No fue posible eliminar el responsable."
         }
       },
       "purchaseOrder": {
@@ -166,6 +179,14 @@
         "cancel": "Cancelar",
         "save": "Guardar orden",
         "saving": "Guardando...",
+        "loading": "Cargando proveedores",
+        "loadingDescription": "Estamos preparando los proveedores activos para la orden.",
+        "loadError": "No se pudieron cargar los proveedores",
+        "emptySuppliers": "No hay proveedores activos",
+        "emptySuppliersDescription": "Crea o activa un proveedor antes de crear una orden de compra.",
+        "createSupplier": "Crear proveedor",
+        "tryAgain": "Intentar nuevamente",
+        "backToSuppliers": "Volver a proveedores",
         "sections": {
           "details": "Datos",
           "items": "Items",
@@ -215,6 +236,7 @@
           "title": "Resumen operacional",
           "description": "La orden sera enviada al tablero de proveedores para seguimiento.",
           "suppliers": "Proveedores activos",
+          "notSelected": "No seleccionado",
           "items": "Items",
           "total": "Valor estimado"
         },
@@ -225,7 +247,8 @@
           "delivery": "Prevision de entrega definida"
         },
         "errors": {
-          "save": "No fue posible guardar la orden."
+          "save": "No fue posible guardar la orden.",
+          "suppliers": "No fue posible cargar los proveedores activos."
         }
       }
     }

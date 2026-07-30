@@ -18,6 +18,7 @@ import type {
 	PurchaseOrderItem,
 	Receiving,
 	Supplier,
+	SupplierOperationalSummary,
 	SupplierResponsible,
 	UpdateProductInput,
 	UpdatePurchaseOrderInput,
@@ -114,6 +115,59 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		).map((supplier) => this.hydrateSupplier(supplier));
 	}
 
+	async getSupplierOperationalSummary(
+		scope: CatalogScope,
+	): Promise<SupplierOperationalSummary> {
+		const suppliers = Array.from(this.suppliers.values()).filter(
+			(supplier) =>
+				supplier.userId === scope.userId && supplier.storeId === scope.storeId,
+		);
+		const supplierIdsWithResponsible = new Set(
+			Array.from(this.responsibles.values())
+				.filter(
+					(responsible) =>
+						responsible.userId === scope.userId &&
+						responsible.storeId === scope.storeId,
+				)
+				.map((responsible) => responsible.supplierId),
+		);
+		const orders = Array.from(this.purchaseOrders.values()).filter(
+			(order) =>
+				order.userId === scope.userId && order.storeId === scope.storeId,
+		);
+		const receivings = Array.from(this.receivings.values()).filter(
+			(receiving) =>
+				receiving.userId === scope.userId &&
+				receiving.storeId === scope.storeId,
+		);
+		const openOrders = orders.filter(
+			(order) => !['completed', 'cancelled'].includes(order.status),
+		);
+
+		return {
+			activeSuppliers: suppliers.filter(
+				(supplier) => supplier.status === 'active',
+			).length,
+			delayedOrders: orders.filter((order) => order.status === 'delayed')
+				.length,
+			delayedReceivings: receivings.filter(
+				(receiving) => receiving.status === 'delayed',
+			).length,
+			dueReceivings: receivings.filter((receiving) =>
+				['scheduled', 'checking', 'delayed'].includes(receiving.status),
+			).length,
+			openOrderValue: openOrders.reduce(
+				(total, order) => total + order.totalCost,
+				0,
+			),
+			openOrders: openOrders.length,
+			suppliersWithResponsible: suppliers.filter((supplier) =>
+				supplierIdsWithResponsible.has(supplier.id),
+			).length,
+			totalSuppliers: suppliers.length,
+		};
+	}
+
 	async updateSupplier(input: UpdateSupplierInput): Promise<Supplier> {
 		const supplier = this.suppliers.get(input.id);
 		if (
@@ -158,6 +212,23 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 			supplier.storeId !== scope.storeId
 		) {
 			throw new NotFoundError('Fornecedor não encontrado.');
+		}
+		const hasPurchaseOrder = Array.from(this.purchaseOrders.values()).some(
+			(order) =>
+				order.supplierId === supplierId &&
+				order.userId === scope.userId &&
+				order.storeId === scope.storeId,
+		);
+		const hasReceiving = Array.from(this.receivings.values()).some(
+			(receiving) =>
+				receiving.supplierId === supplierId &&
+				receiving.userId === scope.userId &&
+				receiving.storeId === scope.storeId,
+		);
+		if (hasPurchaseOrder || hasReceiving) {
+			throw new DomainError(
+				'Fornecedor possui pedidos ou recebimentos e não pode ser excluído. Inative o cadastro para preservar o histórico.',
+			);
 		}
 
 		this.suppliers.delete(supplierId);
@@ -492,7 +563,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		return filterAndPaginate(
 			Array.from(this.purchaseOrders.values()).filter(
 				(item) =>
-					item.userId === scope.userId && item.storeId === scope.storeId,
+					item.userId === scope.userId &&
+					item.storeId === scope.storeId &&
+					(!query.supplierId || item.supplierId === query.supplierId),
 			),
 			query,
 			(item) => [item.code, item.invoiceNumber, item.status],
@@ -572,7 +645,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		return filterAndPaginate(
 			Array.from(this.receivings.values()).filter(
 				(item) =>
-					item.userId === scope.userId && item.storeId === scope.storeId,
+					item.userId === scope.userId &&
+					item.storeId === scope.storeId &&
+					(!query.supplierId || item.supplierId === query.supplierId),
 			),
 			query,
 			(item) => [item.invoiceNumber, item.status, item.dock, item.receiverName],

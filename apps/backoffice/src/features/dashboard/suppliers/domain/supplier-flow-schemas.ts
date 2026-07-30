@@ -6,18 +6,34 @@ import {
 } from "./supplier-options";
 
 const optionalText = z.string().trim().optional();
+const phoneSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => [10, 11].includes(value.replace(/\D/g, "").length),
+    "Informe um telefone valido.",
+  );
 
 export const supplierFormSchema = z.object({
   category: z.enum(supplierCategoryOptions),
   contactName: optionalText,
   deliveryTerm: z.enum(supplierTermOptions),
-  document: z.string().trim().min(14, "Informe um CNPJ valido."),
+  document: z
+    .string()
+    .trim()
+    .refine(isValidCnpj, "Informe um CNPJ valido."),
   email: z.string().trim().email("Informe um e-mail valido."),
-  minimumOrder: z.string().trim().min(1, "Informe o pedido minimo."),
+  minimumOrder: z
+    .string()
+    .trim()
+    .refine(
+      (value) => Number(value.replace(/\D/g, "")) > 0,
+      "Informe o pedido minimo.",
+    ),
   name: z.string().trim().min(2, "Informe o nome fantasia."),
   notes: optionalText,
   paymentTerm: z.enum(supplierTermOptions),
-  phone: z.string().trim().min(14, "Informe um telefone valido."),
+  phone: phoneSchema,
   status: z.enum(["active", "inactive"]),
 });
 
@@ -26,7 +42,7 @@ export const supplierResponsibleSchema = z.object({
   email: z.string().trim().email("Informe um e-mail valido."),
   isPrimary: z.boolean(),
   name: z.string().trim().min(2, "Informe o nome do responsavel."),
-  phone: z.string().trim().min(14, "Informe um telefone valido."),
+  phone: phoneSchema,
   role: z.string().trim().min(2, "Informe o cargo."),
   status: z.enum(["active", "inactive"]),
 });
@@ -69,3 +85,25 @@ export const purchaseOrderFormSchema = z.object({
 export type SupplierFormInput = z.infer<typeof supplierFormSchema>;
 export type PurchaseOrderFormInput = z.infer<typeof purchaseOrderFormSchema>;
 export type SupplierResponsibleInput = z.infer<typeof supplierResponsibleSchema>;
+
+function isValidCnpj(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 14 || /^(\d)\1+$/.test(digits)) return false;
+
+  const calculateDigit = (length: number) => {
+    let factor = length - 7;
+    let total = 0;
+    for (let index = 0; index < length; index += 1) {
+      total += Number(digits[index]) * factor;
+      factor -= 1;
+      if (factor === 1) factor = 9;
+    }
+    const remainder = total % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+
+  return (
+    calculateDigit(12) === Number(digits[12]) &&
+    calculateDigit(13) === Number(digits[13])
+  );
+}

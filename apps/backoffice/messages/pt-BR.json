@@ -59,6 +59,10 @@
         "saveSupplier": "Salvar fornecedor",
         "saveChanges": "Salvar alteracoes",
         "saving": "Salvando...",
+        "loading": "Carregando fornecedor",
+        "loadingDescription": "Estamos buscando os dados mais recentes deste fornecedor.",
+        "backToList": "Voltar para fornecedores",
+        "tryAgain": "Tentar novamente",
         "dataTitle": "Dados do fornecedor",
         "dataDescription": "Dados fiscais e contato comercial principal.",
         "commercialTitle": "Condicoes comerciais",
@@ -105,6 +109,7 @@
           "terms": "Condicoes de compra revisadas",
           "responsibles": "Responsaveis",
           "none": "Nenhum cadastrado",
+          "count": "{count, plural, one {# cadastrado} other {# cadastrados}}",
           "addResponsible": "Cadastrar responsavel"
         },
         "performance": {
@@ -117,11 +122,10 @@
         },
         "deleteModal": {
           "title": "Excluir fornecedor?",
-          "description": "Esta acao remove o fornecedor da lista ativa.",
-          "supplierName": "Moda Brasil Atacado",
-          "warning": "Pedidos abertos devem ser revisados antes da exclusao.",
-          "confirm": "Excluir fornecedor",
-          "pageDescription": "Fornecedor ativo com pedidos abertos e historico de compras."
+          "description": "Esta acao remove permanentemente o cadastro do fornecedor.",
+          "unknownSupplier": "Fornecedor não identificado",
+          "warning": "Fornecedores com pedidos ou recebimentos não podem ser excluidos. Nesse caso, inative o cadastro para preservar o historico.",
+          "confirm": "Excluir fornecedor"
         },
         "responsibleModal": {
           "title": "Cadastrar responsavel",
@@ -131,10 +135,10 @@
           "description": "Adicione um contato para pedidos, entregas ou financeiro.",
           "addNew": "Novo responsavel",
           "empty": "Nenhum responsavel cadastrado.",
+          "loading": "Carregando responsáveis.",
           "assigned": "Responsavel principal",
           "close": "Fechar",
-          "supplierName": "Moda Brasil Atacado",
-          "supplierDescription": "Fornecedor ativo - moda feminina",
+          "newSupplier": "Novo fornecedor",
           "name": "Nome do responsavel",
           "namePlaceholder": "Ex.: Camila Santos",
           "role": "Cargo",
@@ -153,10 +157,19 @@
           "count": "2 responsaveis cadastrados",
           "edit": "Editar",
           "delete": "Excluir",
-          "save": "Salvar responsavel"
+          "deleteConfirm": "Deseja realmente excluir este responsável?",
+          "save": "Salvar responsavel",
+          "saving": "Salvando..."
         },
         "errors": {
-          "save": "Nao foi possivel salvar."
+          "save": "Nao foi possivel salvar.",
+          "load": "Nao foi possivel carregar o fornecedor.",
+          "invalidId": "O identificador do fornecedor é inválido.",
+          "notFound": "Fornecedor não encontrado",
+          "delete": "Nao foi possivel excluir o fornecedor.",
+          "responsibleLoad": "Nao foi possivel carregar os responsaveis.",
+          "responsibleSave": "Nao foi possivel salvar o responsavel.",
+          "responsibleDelete": "Nao foi possivel excluir o responsavel."
         }
       },
       "purchaseOrder": {
@@ -166,6 +179,14 @@
         "cancel": "Cancelar",
         "save": "Salvar pedido",
         "saving": "Salvando...",
+        "loading": "Carregando fornecedores",
+        "loadingDescription": "Estamos preparando os fornecedores ativos para o pedido.",
+        "loadError": "Não foi possível carregar os fornecedores",
+        "emptySuppliers": "Nenhum fornecedor ativo",
+        "emptySuppliersDescription": "Cadastre ou ative um fornecedor antes de criar um pedido de compra.",
+        "createSupplier": "Cadastrar fornecedor",
+        "tryAgain": "Tentar novamente",
+        "backToSuppliers": "Voltar para fornecedores",
         "sections": {
           "details": "Dados",
           "items": "Itens",
@@ -215,6 +236,7 @@
           "title": "Resumo operacional",
           "description": "O pedido sera enviado para acompanhamento no quadro de fornecedores.",
           "suppliers": "Fornecedores ativos",
+          "notSelected": "Não selecionado",
           "items": "Itens",
           "total": "Valor estimado"
         },
@@ -225,7 +247,8 @@
           "delivery": "Previsao de entrega definida"
         },
         "errors": {
-          "save": "Nao foi possivel salvar o pedido."
+          "save": "Nao foi possivel salvar o pedido.",
+          "suppliers": "Nao foi possivel carregar os fornecedores ativos."
         }
       }
     }

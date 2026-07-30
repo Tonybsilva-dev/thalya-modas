@@ -12,6 +12,7 @@ type SupplierFlowState = {
   supplierDraft: Partial<SupplierFormInput>;
   assignResponsible: (responsibleId: string) => void;
   deleteResponsible: (responsibleId: string) => void;
+  resetFlow: () => void;
   saveResponsible: (responsible: SupplierResponsibleInput & { id?: string }) => void;
   resetResponsibleDraft: () => void;
   resetSupplierDraft: () => void;
@@ -34,6 +35,13 @@ export const useSupplierFlowStore = create<SupplierFlowState>((set) => ({
           : state.assignedResponsibleId,
       responsibles: state.responsibles.filter((item) => item.id !== responsibleId),
     })),
+  resetFlow: () =>
+    set({
+      assignedResponsibleId: undefined,
+      responsibleDraft: {},
+      responsibles: [],
+      supplierDraft: {},
+    }),
   saveResponsible: (responsible) =>
     set((state) => {
       const id = responsible.id ?? crypto.randomUUID();
