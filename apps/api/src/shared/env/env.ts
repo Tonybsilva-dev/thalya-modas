@@ -38,94 +38,126 @@ const booleanFlag = (defaultValue: boolean) =>
 			return val === 'true';
 		});
 
-const envSchema = z.object({
-	NODE_ENV: z
-		.enum(['development', 'production', 'test'])
-		.default('development'),
-	PORT: z.preprocess((val) => {
-		if (val === '' || val === undefined || val === null) {
-			return 3333;
+const developmentJwtSecret =
+	'development-secret-key-must-be-at-least-32-characters-long';
+
+const envSchema = z
+	.object({
+		NODE_ENV: z
+			.enum(['development', 'production', 'test'])
+			.default('development'),
+		PORT: z.preprocess((val) => {
+			if (val === '' || val === undefined || val === null) {
+				return 3333;
+			}
+			const num = Number(val);
+			return Number.isNaN(num) ? 3333 : num;
+		}, z.number().int().positive().default(3333)),
+		HOST: z.string().default('0.0.0.0'),
+		API_VERSION: z.string().default('1.0.0'),
+		API_TITLE: z.string().default('Thalya Modas API'),
+		API_DESCRIPTION: z
+			.string()
+			.default('API operacional da plataforma Thalya Modas'),
+		CORS_ORIGINS: z
+			.string()
+			.optional()
+			.transform((value) =>
+				(value ?? '')
+					.split(',')
+					.map((origin) => origin.trim())
+					.filter(Boolean),
+			),
+		// Swagger/OpenAPI Configuration
+		API_BASE_URL: optionalUrl(),
+		API_DEV_URL: optionalUrl(),
+		API_STAGING_URL: optionalUrl(),
+		API_PRODUCTION_URL: optionalUrl(),
+		API_CONTACT_NAME: z
+			.string()
+			.optional()
+			.transform((val) => (val === '' ? undefined : val)),
+		API_CONTACT_EMAIL: optionalEmail(),
+		API_CONTACT_URL: optionalUrl(),
+		API_LICENSE_NAME: z.string().default('ISC'),
+		API_LICENSE_URL: optionalUrl(),
+		API_TERMS_OF_SERVICE: optionalUrl(),
+		API_EXTERNAL_DOCS_URL: optionalUrl(),
+		API_EXTERNAL_DOCS_DESCRIPTION: z
+			.string()
+			.optional()
+			.transform((val) => (val === '' ? undefined : val)),
+		// Persistence
+		PERSISTENCE_DRIVER: z.enum(['in-memory', 'postgres']).default('in-memory'),
+		DATABASE_URL: z
+			.string()
+			.optional()
+			.transform((val) => (val === '' ? undefined : val)),
+		// Object storage / Cloudflare R2
+		R2_ENDPOINT: optionalUrl(),
+		R2_ACCESS_KEY: z
+			.string()
+			.optional()
+			.transform((val) => (val === '' ? undefined : val)),
+		R2_SECRET_KEY: z
+			.string()
+			.optional()
+			.transform((val) => (val === '' ? undefined : val)),
+		R2_BUCKET_NAME: z
+			.string()
+			.optional()
+			.transform((val) => (val === '' ? undefined : val)),
+		R2_PUBLIC_URL: optionalUrl(),
+		// JWT Configuration
+		JWT_SECRET: z.preprocess(
+			(val) => (val === '' || val === undefined ? undefined : val),
+			z
+				.string()
+				.min(32, 'JWT secret must be at least 32 characters')
+				.default(developmentJwtSecret),
+		),
+		JWT_EXPIRES_IN: z.string().default('7d'),
+		// Feature flags / Kill switches
+		FEATURE_AUTH_LOGIN_ENABLED: booleanFlag(true),
+		FEATURE_AUTH_REGISTER_ENABLED: booleanFlag(true),
+		FEATURE_AUTH_SSO_ENABLED: booleanFlag(false),
+		FEATURE_CATALOG_ENABLED: booleanFlag(true),
+		FEATURE_DASHBOARD_ENABLED: booleanFlag(true),
+		FEATURE_DASHBOARD_OVERVIEW_ENABLED: booleanFlag(true),
+		FEATURE_DASHBOARD_ORDERS_ENABLED: booleanFlag(true),
+		FEATURE_DASHBOARD_INVENTORY_ENABLED: booleanFlag(true),
+		FEATURE_DASHBOARD_CUSTOMERS_ENABLED: booleanFlag(true),
+		FEATURE_DASHBOARD_CASH_REGISTER_ENABLED: booleanFlag(true),
+		FEATURE_DASHBOARD_SUPPLIERS_ENABLED: booleanFlag(true),
+		FEATURE_DASHBOARD_REPORTS_ENABLED: booleanFlag(true),
+		FEATURE_ONBOARDING_ENABLED: booleanFlag(true),
+		FEATURE_PASSWORD_RECOVERY_ENABLED: booleanFlag(true),
+		FEATURE_PASSWORD_RECOVERY_REQUEST_ENABLED: booleanFlag(true),
+		FEATURE_PASSWORD_RECOVERY_VERIFY_CODE_ENABLED: booleanFlag(true),
+		FEATURE_PASSWORD_RECOVERY_RESEND_CODE_ENABLED: booleanFlag(true),
+		FEATURE_PASSWORD_RECOVERY_RESET_ENABLED: booleanFlag(true),
+		SEED_PREVIEW_USER_ENABLED: booleanFlag(false),
+	})
+	.superRefine((values, context) => {
+		if (
+			values.NODE_ENV === 'production' &&
+			values.JWT_SECRET === developmentJwtSecret
+		) {
+			context.addIssue({
+				code: 'custom',
+				message: 'JWT_SECRET must be explicitly configured in production',
+				path: ['JWT_SECRET'],
+			});
 		}
-		const num = Number(val);
-		return Number.isNaN(num) ? 3333 : num;
-	}, z.number().int().positive().default(3333)),
-	HOST: z.string().default('0.0.0.0'),
-	API_VERSION: z.string().default('1.0.0'),
-	API_TITLE: z.string().default('Fastify Boilerplate API'),
-	API_DESCRIPTION: z
-		.string()
-		.default('API Boilerplate com Fastify, DDD e RBAC'),
-	// Swagger/OpenAPI Configuration
-	API_BASE_URL: optionalUrl(),
-	API_DEV_URL: optionalUrl(),
-	API_STAGING_URL: optionalUrl(),
-	API_PRODUCTION_URL: optionalUrl(),
-	API_CONTACT_NAME: z
-		.string()
-		.optional()
-		.transform((val) => (val === '' ? undefined : val)),
-	API_CONTACT_EMAIL: optionalEmail(),
-	API_CONTACT_URL: optionalUrl(),
-	API_LICENSE_NAME: z.string().default('ISC'),
-	API_LICENSE_URL: optionalUrl(),
-	API_TERMS_OF_SERVICE: optionalUrl(),
-	API_EXTERNAL_DOCS_URL: optionalUrl(),
-	API_EXTERNAL_DOCS_DESCRIPTION: z
-		.string()
-		.optional()
-		.transform((val) => (val === '' ? undefined : val)),
-	// Persistence
-	PERSISTENCE_DRIVER: z.enum(['in-memory', 'postgres']).default('in-memory'),
-	DATABASE_URL: z
-		.string()
-		.optional()
-		.transform((val) => (val === '' ? undefined : val)),
-	// Object storage / Cloudflare R2
-	R2_ENDPOINT: optionalUrl(),
-	R2_ACCESS_KEY: z
-		.string()
-		.optional()
-		.transform((val) => (val === '' ? undefined : val)),
-	R2_SECRET_KEY: z
-		.string()
-		.optional()
-		.transform((val) => (val === '' ? undefined : val)),
-	R2_BUCKET_NAME: z
-		.string()
-		.optional()
-		.transform((val) => (val === '' ? undefined : val)),
-	R2_PUBLIC_URL: optionalUrl(),
-	// JWT Configuration
-	JWT_SECRET: z
-		.string()
-		.transform(
-			(val) =>
-				val || 'development-secret-key-must-be-at-least-32-characters-long',
-		)
-		.pipe(z.string().min(32, 'JWT secret must be at least 32 characters'))
-		.default('development-secret-key-must-be-at-least-32-characters-long'),
-	JWT_EXPIRES_IN: z.string().default('7d'),
-	// Feature flags / Kill switches
-	FEATURE_AUTH_LOGIN_ENABLED: booleanFlag(true),
-	FEATURE_AUTH_REGISTER_ENABLED: booleanFlag(true),
-	FEATURE_AUTH_SSO_ENABLED: booleanFlag(false),
-	FEATURE_CATALOG_ENABLED: booleanFlag(true),
-	FEATURE_DASHBOARD_ENABLED: booleanFlag(true),
-	FEATURE_DASHBOARD_OVERVIEW_ENABLED: booleanFlag(true),
-	FEATURE_DASHBOARD_ORDERS_ENABLED: booleanFlag(true),
-	FEATURE_DASHBOARD_INVENTORY_ENABLED: booleanFlag(true),
-	FEATURE_DASHBOARD_CUSTOMERS_ENABLED: booleanFlag(true),
-	FEATURE_DASHBOARD_CASH_REGISTER_ENABLED: booleanFlag(true),
-	FEATURE_DASHBOARD_SUPPLIERS_ENABLED: booleanFlag(true),
-	FEATURE_DASHBOARD_REPORTS_ENABLED: booleanFlag(true),
-	FEATURE_ONBOARDING_ENABLED: booleanFlag(true),
-	FEATURE_PASSWORD_RECOVERY_ENABLED: booleanFlag(true),
-	FEATURE_PASSWORD_RECOVERY_REQUEST_ENABLED: booleanFlag(true),
-	FEATURE_PASSWORD_RECOVERY_VERIFY_CODE_ENABLED: booleanFlag(true),
-	FEATURE_PASSWORD_RECOVERY_RESEND_CODE_ENABLED: booleanFlag(true),
-	FEATURE_PASSWORD_RECOVERY_RESET_ENABLED: booleanFlag(true),
-	SEED_PREVIEW_USER_ENABLED: booleanFlag(false),
-});
+
+		if (values.PERSISTENCE_DRIVER === 'postgres' && !values.DATABASE_URL) {
+			context.addIssue({
+				code: 'custom',
+				message: 'DATABASE_URL is required when using PostgreSQL',
+				path: ['DATABASE_URL'],
+			});
+		}
+	});
 
 export type Env = z.infer<typeof envSchema>;
 

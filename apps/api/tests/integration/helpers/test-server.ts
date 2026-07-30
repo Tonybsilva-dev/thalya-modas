@@ -10,6 +10,7 @@ import { authRoutes } from '../../../src/app/http/routes/auth.routes';
 import { catalogRoutes } from '../../../src/app/http/routes/catalog.routes';
 import { dashboardRoutes } from '../../../src/app/http/routes/dashboard.routes';
 import { onboardingRoutes } from '../../../src/app/http/routes/onboarding.routes';
+import { userRoutes } from '../../../src/app/http/routes/user.routes';
 import type { CatalogRepository } from '../../../src/core/domain/repositories/catalog-repository';
 import type { OnboardingRepository } from '../../../src/core/domain/repositories/onboarding-repository';
 import type { PasswordRecoveryRepository } from '../../../src/core/domain/repositories/password-recovery-repository';
@@ -104,6 +105,7 @@ export async function createTestServer(
 	await server.register(catalogRoutes, { container });
 	await server.register(dashboardRoutes, { container });
 	await server.register(onboardingRoutes, { container });
+	await server.register(userRoutes, { container });
 
 	// Registra rota raiz para testes
 	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
@@ -123,7 +125,7 @@ export async function createTestServer(
 				reply.header('X-Trace-Id', traceId);
 			}
 			return {
-				message: 'Fastify Boilerplate API',
+				message: 'Thalya Modas API',
 				version: '1.0.0',
 				docs: '/docs',
 			};

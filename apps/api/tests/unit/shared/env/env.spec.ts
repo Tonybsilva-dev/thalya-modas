@@ -25,7 +25,7 @@ describe('env validation', () => {
 		expect(env.PORT).toBe(3333);
 		expect(env.HOST).toBe('0.0.0.0');
 		expect(env.API_VERSION).toBe('1.0.0');
-		expect(env.API_TITLE).toBe('Fastify Boilerplate API');
+		expect(env.API_TITLE).toBe('Thalya Modas API');
 		expect(env.JWT_EXPIRES_IN).toBe('7d');
 		expect(env.API_LICENSE_NAME).toBe('ISC');
 		expect(env.FEATURE_CATALOG_ENABLED).toBe(true);
@@ -33,10 +33,30 @@ describe('env validation', () => {
 
 	it('deve validar NODE_ENV como enum', async () => {
 		process.env.NODE_ENV = 'production';
+		process.env.JWT_SECRET =
+			'production-secret-key-with-more-than-32-characters';
 
 		const { env } = await import('../../../../src/shared/env/env');
 
 		expect(env.NODE_ENV).toBe('production');
+	});
+
+	it('deve exigir JWT_SECRET explícito em produção', async () => {
+		process.env.NODE_ENV = 'production';
+		delete process.env.JWT_SECRET;
+
+		await expect(import('../../../../src/shared/env/env')).rejects.toThrow(
+			'JWT_SECRET',
+		);
+	});
+
+	it('deve exigir DATABASE_URL quando o driver for postgres', async () => {
+		process.env.PERSISTENCE_DRIVER = 'postgres';
+		process.env.DATABASE_URL = '';
+
+		await expect(import('../../../../src/shared/env/env')).rejects.toThrow(
+			'DATABASE_URL',
+		);
 	});
 
 	it('deve validar PORT como número positivo', async () => {
@@ -136,6 +156,18 @@ describe('env validation', () => {
 		expect(env.API_LICENSE_URL).toBe('https://license.example.com');
 		expect(env.API_TERMS_OF_SERVICE).toBe('https://terms.example.com');
 		expect(env.API_EXTERNAL_DOCS_URL).toBe('https://docs.example.com');
+	});
+
+	it('deve normalizar múltiplas origens de CORS', async () => {
+		process.env.CORS_ORIGINS =
+			'https://app.example.com, https://admin.example.com';
+
+		const { env } = await import('../../../../src/shared/env/env');
+
+		expect(env.CORS_ORIGINS).toEqual([
+			'https://app.example.com',
+			'https://admin.example.com',
+		]);
 	});
 
 	it('deve validar configuração opcional do Cloudflare R2', async () => {

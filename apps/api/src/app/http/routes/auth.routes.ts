@@ -27,6 +27,15 @@ import {
 import type { AppContainer } from '../container';
 import { authMiddleware } from '../middlewares/auth';
 
+type CookieReply = {
+	header: (
+		name: string,
+		value: string,
+	) => {
+		send: (payload: unknown) => unknown;
+	};
+};
+
 // Schemas para requisições
 const registerRequestSchema = z.object({
 	name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -365,7 +374,7 @@ export async function authRoutes(
 					},
 				},
 			},
-			async (_request: unknown, reply: any) => {
+			async (_request: unknown, reply: CookieReply) => {
 				return reply
 					.header('Set-Cookie', createExpiredAuthSessionCookie())
 					.send(logoutSuccessExample);

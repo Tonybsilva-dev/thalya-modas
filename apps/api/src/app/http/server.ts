@@ -76,7 +76,10 @@ async function build() {
 
 	// Registra CORS
 	await server.register(cors, {
-		origin: env.NODE_ENV !== 'production', // Em produção, configurar origins específicos
+		origin:
+			env.CORS_ORIGINS.length > 0
+				? env.CORS_ORIGINS
+				: env.NODE_ENV !== 'production',
 		credentials: true,
 	});
 	if (env.NODE_ENV !== 'development') {
@@ -178,7 +181,7 @@ async function build() {
 		},
 		async () => {
 			return {
-				message: 'Fastify Boilerplate API',
+				message: 'Thalya Modas API',
 				version: env.API_VERSION,
 				docs: '/docs',
 			};
