@@ -1,5 +1,8 @@
 import type { Store } from '../../../domain/entities/store';
-import type { StoreRepository } from '../../../domain/repositories/store-repository';
+import type {
+	StoreAccess,
+	StoreRepository,
+} from '../../../domain/repositories/store-repository';
 
 export class InMemoryStoreRepository implements StoreRepository {
 	private stores: Map<string, Store> = new Map();
@@ -40,6 +43,12 @@ export class InMemoryStoreRepository implements StoreRepository {
 		}
 
 		return null;
+	}
+
+	async findAccessibleByUserId(userId: string): Promise<StoreAccess[]> {
+		return Array.from(this.stores.values())
+			.filter((store) => store.ownerId === userId)
+			.map((store) => ({ role: 'OWNER', store }));
 	}
 
 	async update(

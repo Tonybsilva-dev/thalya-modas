@@ -17,6 +17,7 @@ import {
 } from '../../../shared/utils/zod-to-json-schema';
 import type { AppContainer } from '../container';
 import { authMiddleware } from '../middlewares/auth';
+import { storeContextMiddleware } from '../middlewares/store-context';
 
 const metricSchema = z.object({
 	label: z.string(),
@@ -189,6 +190,9 @@ export async function dashboardRoutes(
 	if (!container.dashboardRepository) {
 		throw new Error('DashboardRepository precisa estar configurado.');
 	}
+	if (!container.storeRepository) {
+		throw new Error('StoreRepository precisa estar configurado.');
+	}
 
 	const useCases = {
 		cashRegister: new GetDashboardCashRegisterUseCase(
@@ -302,7 +306,10 @@ function registerReadRoute<TResponse>(
 			| 'dashboard.reports'
 			| 'dashboard.suppliers';
 		responseSchema: z.ZodTypeAny;
-		execute: (userId: string, query?: z.infer<typeof listQuerySchema>) => Promise<TResponse>;
+		execute: (
+			userId: string,
+			query?: z.infer<typeof listQuerySchema>,
+		) => Promise<TResponse>;
 		container: AppContainer;
 		withQuery?: boolean;
 	},
@@ -311,6 +318,11 @@ function registerReadRoute<TResponse>(
 		options.container.featureFlags.assertEnabled('dashboard');
 		options.container.featureFlags.assertEnabled(options.feature);
 		await authMiddleware(request, reply, options.container.jwtService);
+		await storeContextMiddleware(
+			request,
+			reply,
+			getStoreRepository(options.container),
+		);
 	};
 
 	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
@@ -328,7 +340,10 @@ function registerReadRoute<TResponse>(
 						}
 					: {}),
 				response: {
-					200: createResponseSchema(options.responseSchema, options.description),
+					200: createResponseSchema(
+						options.responseSchema,
+						options.description,
+					),
 					401: createResponseSchema(
 						authErrorSchema,
 						'Token ausente ou inválido',
@@ -375,6 +390,11 @@ function registerCustomerReadRoute<TResponse>(
 		options.container.featureFlags.assertEnabled('dashboard');
 		options.container.featureFlags.assertEnabled('dashboard.customers');
 		await authMiddleware(request, reply, options.container.jwtService);
+		await storeContextMiddleware(
+			request,
+			reply,
+			getStoreRepository(options.container),
+		);
 	};
 
 	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
@@ -387,9 +407,18 @@ function registerCustomerReadRoute<TResponse>(
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				params: createRequestSchema({ params: customerParamsSchema }).params,
 				response: {
-					200: createResponseSchema(options.responseSchema, options.description),
-					401: createResponseSchema(authErrorSchema, 'Token ausente ou inválido'),
-					403: createResponseSchema(authErrorSchema, 'Funcionalidade desabilitada'),
+					200: createResponseSchema(
+						options.responseSchema,
+						options.description,
+					),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
 				},
 			},
 			preHandler,
@@ -409,4 +438,12 @@ function getAuthenticatedUser(request: FastifyRequest) {
 	}
 
 	return request.user;
+}
+
+function getStoreRepository(container: AppContainer) {
+	if (!container.storeRepository) {
+		throw new Error('StoreRepository precisa estar configurado.');
+	}
+
+	return container.storeRepository;
 }

@@ -1,8 +1,8 @@
 import type {
 	DashboardCashRegister,
-	DashboardCustomers,
 	DashboardCustomerDetail,
 	DashboardCustomerPromissory,
+	DashboardCustomers,
 	DashboardInventory,
 	DashboardListQuery,
 	DashboardOrders,
@@ -17,19 +17,37 @@ export class InMemoryDashboardRepository implements DashboardRepository {
 		return clone(overview);
 	}
 
-	async getOrders(_userId: string, query?: DashboardListQuery): Promise<DashboardOrders> {
+	async getOrders(
+		_userId: string,
+		query?: DashboardListQuery,
+	): Promise<DashboardOrders> {
 		return { ...clone(orders), orders: filterRows(orders.orders, query) };
 	}
 
-	async getInventory(_userId: string, query?: DashboardListQuery): Promise<DashboardInventory> {
-		return { ...clone(inventory), products: filterRows(inventory.products, query) };
+	async getInventory(
+		_userId: string,
+		query?: DashboardListQuery,
+	): Promise<DashboardInventory> {
+		return {
+			...clone(inventory),
+			products: filterRows(inventory.products, query),
+		};
 	}
 
-	async getCustomers(_userId: string, query?: DashboardListQuery): Promise<DashboardCustomers> {
-		return { ...clone(customers), customers: filterRows(customers.customers, query) };
+	async getCustomers(
+		_userId: string,
+		query?: DashboardListQuery,
+	): Promise<DashboardCustomers> {
+		return {
+			...clone(customers),
+			customers: filterRows(customers.customers, query),
+		};
 	}
 
-	async getCustomerDetail(_userId: string, customerId: string): Promise<DashboardCustomerDetail> {
+	async getCustomerDetail(
+		_userId: string,
+		customerId: string,
+	): Promise<DashboardCustomerDetail> {
 		return {
 			...clone(customerDetail),
 			id: customerId,
@@ -50,11 +68,20 @@ export class InMemoryDashboardRepository implements DashboardRepository {
 		return clone(cashRegister);
 	}
 
-	async getSuppliers(_userId: string, query?: DashboardListQuery): Promise<DashboardSuppliers> {
-		return { ...clone(suppliers), suppliers: filterRows(suppliers.suppliers, query) };
+	async getSuppliers(
+		_userId: string,
+		query?: DashboardListQuery,
+	): Promise<DashboardSuppliers> {
+		return {
+			...clone(suppliers),
+			suppliers: filterRows(suppliers.suppliers, query),
+		};
 	}
 
-	async getReports(_userId: string, query?: DashboardListQuery): Promise<DashboardReports> {
+	async getReports(
+		_userId: string,
+		query?: DashboardListQuery,
+	): Promise<DashboardReports> {
 		return { ...clone(reports), reports: filterRows(reports.reports, query) };
 	}
 }
@@ -161,7 +188,12 @@ const orders: DashboardOrders = {
 	summary: [
 		{ label: 'Abertos', value: '26', description: '8 retiradas', tone: 'info' },
 		{ label: 'Faturados', value: '74', description: 'Hoje', tone: 'success' },
-		{ label: 'Atrasados', value: '3', description: 'Exigem acao', tone: 'warning' },
+		{
+			label: 'Atrasados',
+			value: '3',
+			description: 'Exigem acao',
+			tone: 'warning',
+		},
 	],
 	queues: [
 		{ status: 'Novo', count: 9, description: 'Separar produtos' },
@@ -188,9 +220,24 @@ const orders: DashboardOrders = {
 
 const inventory: DashboardInventory = {
 	summary: [
-		{ label: 'SKUs ativos', value: '1.284', description: '+32 novos', tone: 'info' },
-		{ label: 'Baixo estoque', value: '14', description: '5 criticos', tone: 'warning' },
-		{ label: 'Cobertura', value: '18d', description: 'Media geral', tone: 'success' },
+		{
+			label: 'SKUs ativos',
+			value: '1.284',
+			description: '+32 novos',
+			tone: 'info',
+		},
+		{
+			label: 'Baixo estoque',
+			value: '14',
+			description: '5 criticos',
+			tone: 'warning',
+		},
+		{
+			label: 'Cobertura',
+			value: '18d',
+			description: 'Media geral',
+			tone: 'success',
+		},
 	],
 	products: [
 		{
@@ -216,9 +263,24 @@ const inventory: DashboardInventory = {
 
 const customers: DashboardCustomers = {
 	summary: [
-		{ label: 'Clientes ativos', value: '942', description: '+21 mes', tone: 'info' },
-		{ label: 'VIP', value: '86', description: 'Alta recorrencia', tone: 'success' },
-		{ label: 'Promissorias', value: 'R$ 3.420', description: 'Em aberto', tone: 'warning' },
+		{
+			label: 'Clientes ativos',
+			value: '942',
+			description: '+21 mes',
+			tone: 'info',
+		},
+		{
+			label: 'VIP',
+			value: '86',
+			description: 'Alta recorrencia',
+			tone: 'success',
+		},
+		{
+			label: 'Promissorias',
+			value: 'R$ 3.420',
+			description: 'Em aberto',
+			tone: 'warning',
+		},
 	],
 	customers: [
 		{
@@ -257,7 +319,12 @@ const customerDetail: DashboardCustomerDetail = {
 	],
 	recentOrders: [
 		{ order: '#1048', date: '2 dias atras', total: 'R$ 420', status: 'Pago' },
-		{ order: '#1032', date: '12 dias atras', total: 'R$ 189', status: 'Retirado' },
+		{
+			order: '#1032',
+			date: '12 dias atras',
+			total: 'R$ 189',
+			status: 'Retirado',
+		},
 		{ order: '#1017', date: '30 abr.', total: 'R$ 760', status: 'Devolucao' },
 	],
 	notes: [
@@ -270,7 +337,11 @@ const customerDetail: DashboardCustomerDetail = {
 		description: 'R$ 580 ate o nivel Platinum',
 		progress: 75,
 	},
-	nextActions: ['Enviar preview de aniversario', 'Oferecer reposicao de linho', 'Convidar para venda VIP'],
+	nextActions: [
+		'Enviar preview de aniversario',
+		'Oferecer reposicao de linho',
+		'Convidar para venda VIP',
+	],
 	timeline: [
 		{ title: 'Comprou conjunto de linho', date: '2 dias atras' },
 		{ title: 'Resgatou credito fidelidade', date: '12 dias atras' },
@@ -285,19 +356,54 @@ const customerPromissory: DashboardCustomerPromissory = {
 	alertDescription:
 		'A parcela vencida em 14 de maio de 2026 ainda nao foi baixada. Proxima acao recomendada: contato por WhatsApp hoje.',
 	metrics: [
-		{ label: 'Valor em aberto', value: 'R$ 1.248,00', description: '3 parcelas pendentes' },
+		{
+			label: 'Valor em aberto',
+			value: 'R$ 1.248,00',
+			description: '3 parcelas pendentes',
+		},
 		{ label: 'Em atraso', value: 'R$ 416,00', description: '12 dias vencidos' },
-		{ label: 'Ultimo pagamento', value: '02 maio 2026', description: 'R$ 416 via Pix' },
-		{ label: 'Limite a prazo', value: 'R$ 2.000,00', description: '62% utilizado' },
+		{
+			label: 'Ultimo pagamento',
+			value: '02 maio 2026',
+			description: 'R$ 416 via Pix',
+		},
+		{
+			label: 'Limite a prazo',
+			value: 'R$ 2.000,00',
+			description: '62% utilizado',
+		},
 	],
 	installments: [
-		{ date: '14 maio 2026', due: 'Venceu ha 12 dias', value: 'R$ 416,00', status: 'Atrasada' },
-		{ date: '14 junho 2026', due: 'Vence em 19 dias', value: 'R$ 416,00', status: 'Em aberto' },
-		{ date: '14 julho 2026', due: 'Vence em 49 dias', value: 'R$ 416,00', status: 'Em aberto' },
+		{
+			date: '14 maio 2026',
+			due: 'Venceu ha 12 dias',
+			value: 'R$ 416,00',
+			status: 'Atrasada',
+		},
+		{
+			date: '14 junho 2026',
+			due: 'Vence em 19 dias',
+			value: 'R$ 416,00',
+			status: 'Em aberto',
+		},
+		{
+			date: '14 julho 2026',
+			due: 'Vence em 49 dias',
+			value: 'R$ 416,00',
+			status: 'Em aberto',
+		},
 	],
 	purchases: [
-		{ title: '#1048 - Vestido linho + sandalia', date: '02 maio 2026', value: 'R$ 1.248,00' },
-		{ title: '#0991 - Blusa alfaiataria', date: '18 abr. 2026', value: 'R$ 238,00' },
+		{
+			title: '#1048 - Vestido linho + sandalia',
+			date: '02 maio 2026',
+			value: 'R$ 1.248,00',
+		},
+		{
+			title: '#0991 - Blusa alfaiataria',
+			date: '18 abr. 2026',
+			value: 'R$ 238,00',
+		},
 	],
 	timeline: [
 		{ title: 'Pagamento recebido', description: '02 maio - R$ 416 via Pix' },
@@ -314,9 +420,24 @@ const customerPromissory: DashboardCustomerPromissory = {
 
 const cashRegister: DashboardCashRegister = {
 	summary: [
-		{ label: 'Caixa previsto', value: 'R$ 7.310', description: 'Hoje', tone: 'success' },
-		{ label: 'Diferenca', value: 'R$ 490', description: 'Cartao', tone: 'warning' },
-		{ label: 'Vendas abertas', value: '1', description: 'Recibo #1842', tone: 'info' },
+		{
+			label: 'Caixa previsto',
+			value: 'R$ 7.310',
+			description: 'Hoje',
+			tone: 'success',
+		},
+		{
+			label: 'Diferenca',
+			value: 'R$ 490',
+			description: 'Cartao',
+			tone: 'warning',
+		},
+		{
+			label: 'Vendas abertas',
+			value: '1',
+			description: 'Recibo #1842',
+			tone: 'info',
+		},
 	],
 	paymentMethods: [
 		{ method: 'Cartao de credito', amount: 'R$ 320', status: 'Selecionado' },
@@ -324,8 +445,18 @@ const cashRegister: DashboardCashRegister = {
 		{ method: 'Dinheiro', amount: 'R$ 0', status: 'Disponivel' },
 	],
 	currentSale: [
-		{ item: 'Vestido midi canelado - M / Preto', quantity: 1, price: 'R$ 219', total: 'R$ 219' },
-		{ item: 'Sandalia tiras nude - 36', quantity: 1, price: 'R$ 189', total: 'R$ 189' },
+		{
+			item: 'Vestido midi canelado - M / Preto',
+			quantity: 1,
+			price: 'R$ 219',
+			total: 'R$ 219',
+		},
+		{
+			item: 'Sandalia tiras nude - 36',
+			quantity: 1,
+			price: 'R$ 189',
+			total: 'R$ 189',
+		},
 	],
 	closingTasks: [
 		{ task: 'Conferir lote Stone 0047', status: 'Pendente' },
@@ -335,9 +466,19 @@ const cashRegister: DashboardCashRegister = {
 
 const suppliers: DashboardSuppliers = {
 	summary: [
-		{ label: 'Fornecedores ativos', value: '38', description: '6 prioritarios', tone: 'info' },
+		{
+			label: 'Fornecedores ativos',
+			value: '38',
+			description: '6 prioritarios',
+			tone: 'info',
+		},
 		{ label: 'Recebimentos', value: '7', description: 'Hoje', tone: 'success' },
-		{ label: 'Atrasos', value: '2', description: 'Acionar compras', tone: 'warning' },
+		{
+			label: 'Atrasos',
+			value: '2',
+			description: 'Acionar compras',
+			tone: 'warning',
+		},
 	],
 	suppliers: [
 		{
@@ -354,16 +495,41 @@ const suppliers: DashboardSuppliers = {
 		},
 	],
 	receivings: [
-		{ invoice: 'NF-8842', supplier: 'Moda Bella Distribuidora', items: 42, status: 'Conferir' },
-		{ invoice: 'NF-8843', supplier: 'Urban Fit Atacado', items: 18, status: 'Atrasado' },
+		{
+			invoice: 'NF-8842',
+			supplier: 'Moda Bella Distribuidora',
+			items: 42,
+			status: 'Conferir',
+		},
+		{
+			invoice: 'NF-8843',
+			supplier: 'Urban Fit Atacado',
+			items: 18,
+			status: 'Atrasado',
+		},
 	],
 };
 
 const reports: DashboardReports = {
 	summary: [
-		{ label: 'Receita', value: 'R$ 148.200', description: 'Mes atual', tone: 'success' },
-		{ label: 'Ticket medio', value: 'R$ 187', description: '+8%', tone: 'info' },
-		{ label: 'Margem', value: '42%', description: 'Operacional', tone: 'muted' },
+		{
+			label: 'Receita',
+			value: 'R$ 148.200',
+			description: 'Mes atual',
+			tone: 'success',
+		},
+		{
+			label: 'Ticket medio',
+			value: 'R$ 187',
+			description: '+8%',
+			tone: 'info',
+		},
+		{
+			label: 'Margem',
+			value: '42%',
+			description: 'Operacional',
+			tone: 'muted',
+		},
 	],
 	reports: [
 		{ id: 'sales', name: 'Vendas por periodo', status: 'Disponivel' },
@@ -390,7 +556,9 @@ function filterRows<T extends Record<string, number | string>>(
 	const q = query?.q?.trim().toLowerCase();
 	const status = query?.status?.trim().toLowerCase();
 	const filtered = rows.filter((row) => {
-		const values = Object.values(row).map((value) => String(value).toLowerCase());
+		const values = Object.values(row).map((value) =>
+			String(value).toLowerCase(),
+		);
 		const matchesQuery = q ? values.some((value) => value.includes(q)) : true;
 		const matchesStatus =
 			status && status !== 'all'

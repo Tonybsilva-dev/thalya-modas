@@ -3,10 +3,15 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	PrismaCatalogRepository,
+	PrismaStoreRepository,
 	PrismaUserRepository,
 	prisma,
 } from '../../../src/core/infra/persistence';
-import { createTestServer, makeRequest } from '../helpers';
+import {
+	createActiveTestStore,
+	createTestServer,
+	makeRequest,
+} from '../helpers';
 
 const runPrismaTests =
 	process.env.RUN_PRISMA_INTEGRATION_TESTS === 'true' &&
@@ -16,11 +21,14 @@ const testEmailPrefix = 'prisma-catalog';
 
 describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 	let server: FastifyInstance;
+	let storeRepository: PrismaStoreRepository;
 
 	beforeEach(async () => {
 		await cleanupPrismaRecords();
+		storeRepository = new PrismaStoreRepository(prisma);
 		server = await createTestServer(new PrismaUserRepository(prisma), {
 			catalogRepository: new PrismaCatalogRepository(prisma),
+			storeRepository,
 		});
 	});
 
@@ -264,7 +272,12 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 			url: '/auth/register',
 		});
 
-		return (response.body as { token: string }).token;
+		const body = response.body as {
+			token: string;
+			user: { id: string };
+		};
+		await createActiveTestStore(storeRepository, body.user.id);
+		return body.token;
 	}
 
 	async function createResponsible(

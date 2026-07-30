@@ -39,9 +39,7 @@ export async function authMiddleware(
 		throw new AuthError('Token de autenticação não fornecido');
 	}
 
-	const token = authHeader
-		? getBearerToken(authHeader)
-		: sessionCookieToken;
+	const token = authHeader ? getBearerToken(authHeader) : sessionCookieToken;
 	if (!token) {
 		throw new AuthError('Token de autenticação não fornecido');
 	}

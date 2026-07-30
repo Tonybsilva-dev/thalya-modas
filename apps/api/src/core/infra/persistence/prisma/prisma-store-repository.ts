@@ -6,7 +6,10 @@ import type {
 	StoreSegment,
 	StoreStatus,
 } from '../../../domain/entities/store';
-import type { StoreRepository } from '../../../domain/repositories/store-repository';
+import type {
+	StoreAccess,
+	StoreRepository,
+} from '../../../domain/repositories/store-repository';
 
 const ownerMembershipRole = 'OWNER';
 const activeMembershipStatus = 'ACTIVE';
@@ -53,6 +56,42 @@ export class PrismaStoreRepository implements StoreRepository {
 	async findByOwnerId(ownerId: string): Promise<Store | null> {
 		const store = await this.prisma.store.findFirst({ where: { ownerId } });
 		return store ? toDomainStore(store) : null;
+	}
+
+	async findAccessibleByUserId(userId: string): Promise<StoreAccess[]> {
+		const stores = await this.prisma.store.findMany({
+			include: {
+				memberships: {
+					select: { role: true },
+					where: {
+						status: activeMembershipStatus,
+						userId,
+					},
+				},
+			},
+			orderBy: { createdAt: 'asc' },
+			where: {
+				OR: [
+					{ ownerId: userId },
+					{
+						memberships: {
+							some: {
+								status: activeMembershipStatus,
+								userId,
+							},
+						},
+					},
+				],
+			},
+		});
+
+		return stores.map((store) => ({
+			role:
+				store.ownerId === userId
+					? ownerMembershipRole
+					: (store.memberships[0]?.role ?? 'MEMBER'),
+			store: toDomainStore(store),
+		}));
 	}
 
 	async update(

@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createTestServer, makeRequest } from '../helpers';
+import { InMemoryStoreRepository } from '../../../src/core/infra/persistence';
+import {
+	createActiveTestStore,
+	createTestServer,
+	makeRequest,
+} from '../helpers';
 
 const dashboardEndpoints = [
 	'/dashboard/overview',
@@ -17,9 +22,11 @@ const dashboardEndpoints = [
 
 describe('Dashboard - Integração', () => {
 	let server: FastifyInstance;
+	let storeRepository: InMemoryStoreRepository;
 
 	beforeEach(async () => {
-		server = await createTestServer();
+		storeRepository = new InMemoryStoreRepository();
+		server = await createTestServer(undefined, { storeRepository });
 	});
 
 	afterEach(async () => {
@@ -39,20 +46,19 @@ describe('Dashboard - Integração', () => {
 		});
 	});
 
-	it.each(dashboardEndpoints)(
-		'deve retornar dados de dashboard autenticado em %s',
-		async (url) => {
-			const token = await registerAndGetToken();
-			const response = await makeRequest(server, {
-				method: 'GET',
-				url,
-				headers: { authorization: `Bearer ${token}` },
-			});
+	it.each(
+		dashboardEndpoints,
+	)('deve retornar dados de dashboard autenticado em %s', async (url) => {
+		const token = await registerAndGetToken();
+		const response = await makeRequest(server, {
+			method: 'GET',
+			url,
+			headers: { authorization: `Bearer ${token}` },
+		});
 
-			expect(response.statusCode).toBe(200);
-			expect(response.body).toEqual(expect.any(Object));
-		},
-	);
+		expect(response.statusCode).toBe(200);
+		expect(response.body).toEqual(expect.any(Object));
+	});
 
 	it('deve retornar overview com cards, pulso de vendas e risco de estoque', async () => {
 		const token = await registerAndGetToken();
@@ -195,6 +201,11 @@ describe('Dashboard - Integração', () => {
 			},
 		});
 
-		return (response.body as { token: string }).token;
+		const body = response.body as {
+			token: string;
+			user: { id: string };
+		};
+		await createActiveTestStore(storeRepository, body.user.id);
+		return body.token;
 	}
 });

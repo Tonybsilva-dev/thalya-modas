@@ -1,6 +1,6 @@
 # Isolamento operacional por loja
 
-Status: proposta para implementação incremental.
+Status: Fases 1 e 2 concluídas; Fases 3 e 4 pendentes.
 
 ## Problema atual
 
@@ -25,7 +25,7 @@ o tenant dos dados.
 5. Rotas sem uma loja ativa retornam erro controlado antes de consultar um
    repositório operacional.
 
-## Modelo proposto
+## Modelo implementado
 
 Adicionar `StoreMembership`:
 
@@ -52,19 +52,21 @@ serão associados explicitamente por um fluxo administrativo.
 
 ## Transporte da loja ativa
 
-O backoffice deve enviar `X-Store-Id` em chamadas operacionais. O ID já mantido
-no cookie de última loja pode preencher esse header.
+O backoffice envia `X-Store-Id` automaticamente quando o cookie de última loja
+está disponível no navegador. Um header definido explicitamente pelo chamador
+tem precedência.
 
-Um middleware da API deve:
+O middleware da API:
 
 1. autenticar o usuário;
 2. ler `X-Store-Id`;
 3. validar propriedade ou associação ativa;
 4. anexar `{ userId, storeId, role }` ao contexto da requisição.
 
-Durante a transição, contas com exatamente uma loja podem usar essa loja como
-fallback. O fallback deve ser removido quando o seletor de lojas estiver
-disponível.
+Durante a transição, contas com exatamente uma loja usam essa loja como
+fallback. Contas sem loja recebem `403`; contas com mais de uma loja e sem o
+header recebem `400`. O fallback deve ser removido quando o seletor de lojas
+estiver disponível.
 
 ## Tabelas a migrar
 
@@ -88,16 +90,18 @@ exemplo:
 
 ### Fase 1 — Associação
 
-- criar `StoreMembership`;
-- criar associação do proprietário no onboarding;
-- popular associações para proprietários existentes;
-- implementar consulta de acesso à loja e seus testes.
+- [x] criar `StoreMembership`;
+- [x] criar associação do proprietário no onboarding;
+- [x] popular associações para proprietários existentes;
+- [x] implementar consulta de acesso à loja e seus testes.
 
 ### Fase 2 — Contexto HTTP
 
-- aceitar e validar `X-Store-Id`;
-- enviar o header pelo backoffice;
-- manter fallback temporário para a única loja acessível.
+- [x] aceitar e validar `X-Store-Id`;
+- [x] enviar o header pelo backoffice;
+- [x] manter fallback temporário para a única loja acessível;
+- [x] validar propriedade ou associação ativa antes das rotas operacionais;
+- [x] cobrir fallback, ambiguidade, acesso negado e membership no PostgreSQL.
 
 ### Fase 3 — Colunas e backfill
 
@@ -123,6 +127,6 @@ A auditoria utilizou somente contagens:
 - nenhum usuário com dados de catálogo sem loja associável;
 - nenhum proprietário com múltiplas lojas.
 
-O banco local pode receber o backfill, mas a migration só deve ser criada junto
-com a validação de associação e o contexto HTTP para não introduzir isolamento
-apenas aparente.
+O backfill de associações foi aplicado na Fase 1. O contexto HTTP da Fase 2
+impede que a seleção enviada pelo cliente seja aceita sem validação no servidor.
+As colunas operacionais continuam baseadas em `userId` até a Fase 3.

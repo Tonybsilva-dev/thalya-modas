@@ -31,6 +31,7 @@ import {
 import type { AppContainer } from '../container';
 import { NotFoundError } from '../errors/not-found-error';
 import { authMiddleware } from '../middlewares/auth';
+import { storeContextMiddleware } from '../middlewares/store-context';
 
 const listQuerySchema = z.object({
 	page: z.coerce.number().int().positive().default(1),
@@ -292,6 +293,10 @@ export async function catalogRoutes(
 	if (!container.catalogRepository) {
 		throw new Error('CatalogRepository precisa estar configurado.');
 	}
+	const storeRepository = container.storeRepository;
+	if (!storeRepository) {
+		throw new Error('StoreRepository precisa estar configurado.');
+	}
 
 	const useCases = {
 		createInventoryAdjustment: new CreateInventoryAdjustmentUseCase(
@@ -341,6 +346,7 @@ export async function catalogRoutes(
 	const preHandler = async (request: FastifyRequest, reply: unknown) => {
 		container.featureFlags.assertEnabled('catalog');
 		await authMiddleware(request, reply, container.jwtService);
+		await storeContextMiddleware(request, reply, storeRepository);
 	};
 
 	fastify.get(

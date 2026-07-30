@@ -1,4 +1,5 @@
 import { type NormalizedApiError, normalizeApiErrorPayload } from "./api-error";
+import { getLastStoreFromCookie } from "../store/last-store-cookie";
 
 export class ApiRequestError extends Error {
   readonly payload: NormalizedApiError;
@@ -13,6 +14,7 @@ export class ApiRequestError extends Error {
 }
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
+const activeStoreHeaderName = "X-Store-Id";
 
 export async function apiRequest<TResponse>(
   path: string,
@@ -22,6 +24,13 @@ export async function apiRequest<TResponse>(
 
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+
+  if (!headers.has(activeStoreHeaderName)) {
+    const activeStoreId = getActiveStoreId();
+    if (activeStoreId) {
+      headers.set(activeStoreHeaderName, activeStoreId);
+    }
   }
 
   const response = await fetch(`${apiBaseUrl}${path}`, {
@@ -40,4 +49,12 @@ export async function apiRequest<TResponse>(
   }
 
   return payload as TResponse;
+}
+
+function getActiveStoreId() {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return getLastStoreFromCookie(document.cookie)?.id ?? null;
 }

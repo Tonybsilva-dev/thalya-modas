@@ -155,8 +155,7 @@ export function getSwaggerConfig() {
 						type: 'apiKey' as const,
 						name: '@thalya-modas:session',
 						in: 'cookie' as const,
-						description:
-							'Sessão httpOnly emitida pelo login do backoffice.',
+						description: 'Sessão httpOnly emitida pelo login do backoffice.',
 					},
 					apiKey: {
 						type: 'apiKey' as const,
