@@ -48,11 +48,10 @@
     },
     "suppliers": {
       "flow": {
-        "breadcrumbCreate": "Proveedores / Crear proveedor",
-        "breadcrumbEdit": "Proveedores / Editar proveedor",
-        "breadcrumbDelete": "Proveedores / Eliminar proveedor",
+        "breadcrumbRoot": "Proveedores",
         "createTitle": "Crear proveedor",
         "editTitle": "Editar proveedor",
+        "deleteTitle": "Eliminar proveedor",
         "createDescription": "Registra datos comerciales, contacto y condiciones de compra.",
         "editDescription": "Actualiza registro, contacto y condiciones comerciales.",
         "cancel": "Cancelar",
@@ -176,7 +175,7 @@
         }
       },
       "purchaseOrder": {
-        "breadcrumb": "Proveedores / Nueva orden de compra",
+        "breadcrumbRoot": "Proveedores",
         "title": "Nueva orden de compra",
         "description": "Monta la orden con proveedor, prevision de entrega, items y condiciones comerciales.",
         "cancel": "Cancelar",

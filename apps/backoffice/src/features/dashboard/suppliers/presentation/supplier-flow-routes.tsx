@@ -78,6 +78,7 @@ import {
 } from "../domain/supplier-options";
 import { suppliersContentByLocale } from "../domain/suppliers-content";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
+import { SupplierBreadcrumb } from "./supplier-breadcrumb";
 
 type FieldErrors = Record<string, string>;
 type IconComponent = ComponentType<{ className?: string }>;
@@ -572,9 +573,11 @@ function SupplierFormHeader({
   return (
     <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div className="grid gap-1.5">
-        <p className="text-xs font-bold text-muted-foreground">
-          {isEdit ? t("breadcrumbEdit") : t("breadcrumbCreate")}
-        </p>
+        <SupplierBreadcrumb
+          basePath={basePath}
+          currentLabel={isEdit ? t("editTitle") : t("createTitle")}
+          rootLabel={t("breadcrumbRoot")}
+        />
         <h1 className="text-2xl font-bold leading-tight text-foreground md:text-[28px]">
           {isEdit ? t("editTitle") : t("createTitle")}
         </h1>
@@ -1032,11 +1035,13 @@ export function SupplierDeleteModalRoute() {
       status={content.sidebar.status}
     >
       <div className="grid gap-5">
-        <p className="text-xs font-bold text-muted-foreground">
-          {t("breadcrumbDelete")}
-        </p>
+        <SupplierBreadcrumb
+          basePath={basePath}
+          currentLabel={t("deleteTitle")}
+          rootLabel={t("breadcrumbRoot")}
+        />
         <h1 className="text-2xl font-bold text-foreground md:text-[28px]">
-          {t("editTitle")}
+          {t("deleteTitle")}
         </h1>
         <Card>
           <CardContent className="p-5">

@@ -48,11 +48,10 @@
     },
     "suppliers": {
       "flow": {
-        "breadcrumbCreate": "Fornecedores / Cadastrar fornecedor",
-        "breadcrumbEdit": "Fornecedores / Editar fornecedor",
-        "breadcrumbDelete": "Fornecedores / Excluir fornecedor",
+        "breadcrumbRoot": "Fornecedores",
         "createTitle": "Cadastrar fornecedor",
         "editTitle": "Editar fornecedor",
+        "deleteTitle": "Excluir fornecedor",
         "createDescription": "Registre dados comerciais, contato e condicoes de compra.",
         "editDescription": "Atualize cadastro, contato e condicoes comerciais.",
         "cancel": "Cancelar",
@@ -176,7 +175,7 @@
         }
       },
       "purchaseOrder": {
-        "breadcrumb": "Fornecedores / Novo pedido de compra",
+        "breadcrumbRoot": "Fornecedores",
         "title": "Novo pedido de compra",
         "description": "Monte o pedido com fornecedor, previsao de entrega, itens e condicoes comerciais.",
         "cancel": "Cancelar",
