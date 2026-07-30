@@ -1,5 +1,10 @@
 import { type NormalizedApiError, normalizeApiErrorPayload } from "./api-error";
-import { getLastStoreFromCookie } from "../store/last-store-cookie";
+import {
+  clearLastStoreCookie,
+  getLastStoreFromCookie,
+  saveLastStoreCookie,
+  type LastStore,
+} from "../store/last-store-cookie";
 
 export class ApiRequestError extends Error {
   readonly payload: NormalizedApiError;
@@ -21,28 +26,43 @@ export async function apiRequest<TResponse>(
   init: RequestInit = {},
 ): Promise<TResponse> {
   const headers = new Headers(init.headers);
+  const activeStore = getActiveStore();
 
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  if (!headers.has(activeStoreHeaderName)) {
-    const activeStoreId = getActiveStoreId();
-    if (activeStoreId) {
-      headers.set(activeStoreHeaderName, activeStoreId);
-    }
+  if (!headers.has(activeStoreHeaderName) && activeStore) {
+    headers.set(activeStoreHeaderName, activeStore.id);
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  let response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     credentials: "include",
     headers,
   });
+  let payload = await readResponsePayload(response);
 
-  const contentType = response.headers.get("content-type");
-  const payload = contentType?.includes("application/json")
-    ? ((await response.json()) as unknown)
-    : undefined;
+  if (
+    activeStore &&
+    headers.has(activeStoreHeaderName) &&
+    isStaleStoreResponse(response, payload, activeStore.id)
+  ) {
+    const retryHeaders = new Headers(headers);
+    retryHeaders.delete(activeStoreHeaderName);
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      ...init,
+      credentials: "include",
+      headers: retryHeaders,
+    });
+    payload = await readResponsePayload(response);
+
+    if (response.ok) {
+      synchronizeActiveStore(response, activeStore);
+    } else {
+      clearLastStoreCookie();
+    }
+  }
 
   if (!response.ok) {
     throw new ApiRequestError(response.status, normalizeApiErrorPayload(response.status, payload));
@@ -51,10 +71,45 @@ export async function apiRequest<TResponse>(
   return payload as TResponse;
 }
 
-function getActiveStoreId() {
+async function readResponsePayload(response: Response) {
+  const contentType = response.headers.get("content-type");
+  return contentType?.includes("application/json")
+    ? ((await response.json()) as unknown)
+    : undefined;
+}
+
+function getActiveStore() {
   if (typeof document === "undefined") {
     return null;
   }
 
-  return getLastStoreFromCookie(document.cookie)?.id ?? null;
+  return getLastStoreFromCookie(document.cookie);
+}
+
+function isStaleStoreResponse(
+  response: Response,
+  payload: unknown,
+  activeStoreId: string,
+) {
+  if (response.status !== 403 || !payload || typeof payload !== "object") {
+    return false;
+  }
+
+  const problem = payload as {
+    details?: { storeId?: unknown };
+    error?: unknown;
+  };
+  return (
+    problem.error === "ForbiddenError" &&
+    problem.details?.storeId === activeStoreId
+  );
+}
+
+function synchronizeActiveStore(response: Response, activeStore: LastStore) {
+  const resolvedStoreId = response.headers.get(activeStoreHeaderName);
+  if (resolvedStoreId) {
+    saveLastStoreCookie({ ...activeStore, id: resolvedStoreId });
+  } else {
+    clearLastStoreCookie();
+  }
 }

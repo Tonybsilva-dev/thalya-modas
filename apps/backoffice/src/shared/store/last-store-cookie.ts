@@ -51,3 +51,12 @@ export function serializeLastStoreCookie(store: LastStore) {
 export function saveLastStoreCookie(store: LastStore) {
   document.cookie = serializeLastStoreCookie(store);
 }
+
+export function clearLastStoreCookie() {
+  document.cookie = [
+    `${lastStoreCookieName}=`,
+    "Path=/",
+    "Max-Age=0",
+    "SameSite=Lax",
+  ].join("; ");
+}

@@ -81,6 +81,7 @@ async function build() {
 				? env.CORS_ORIGINS
 				: env.NODE_ENV !== 'production',
 		credentials: true,
+		exposedHeaders: ['X-Store-Id'],
 	});
 	if (env.NODE_ENV !== 'development') {
 		// Registra Rate Limiting Global
