@@ -55,8 +55,10 @@ RUN_PRISMA_INTEGRATION_TESTS=true \
 pnpm --filter @thalya-modas/api exec vitest run --fileParallelism=false
 ```
 
-O workflow principal está em `.github/workflows/ci.yml` e executa migrations,
-lint, typecheck, testes com cobertura e build.
+O CI separa qualidade, testes unitários, integração PostgreSQL e builds em jobs
+independentes, consolidados pelo check `CI Gate`. Segurança e release da API
+possuem workflows próprios. Consulte [docs/ci-cd.md](docs/ci-cd.md) para a
+operação e a proteção de branches recomendada.
 
 ## Estado funcional
 

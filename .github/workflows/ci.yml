@@ -2,64 +2,39 @@ name: CI
 
 on:
   pull_request:
+  merge_group:
   push:
     branches:
       - main
       - preview-interface
 
 concurrency:
-  cancel-in-progress: true
   group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   quality:
-    name: Quality, tests and build
+    name: Quality
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: thalya_modas_test
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d thalya_modas_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/thalya_modas_test?schema=public
-      JWT_SECRET: ci-only-secret-key-with-at-least-32-characters
-      RUN_PRISMA_INTEGRATION_TESTS: "true"
-
+    timeout-minutes: 12
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          cache: pnpm
-          node-version: 22
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup workspace
+        uses: ./.github/actions/setup
 
       - name: Generate Prisma Client
         run: pnpm db:generate
 
-      - name: Apply database migrations
-        run: pnpm db:deploy
+      - name: Validate Prisma schema
+        run: pnpm --filter @thalya-modas/api exec prisma validate --schema prisma/schema.prisma
+
+      - name: Check formatting
+        run: pnpm --filter @thalya-modas/api check
 
       - name: Lint
         run: pnpm lint
@@ -67,8 +42,135 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Test with coverage
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Run unit tests
+        run: pnpm --filter @thalya-modas/api exec vitest run tests/unit
+
+  integration-tests:
+    name: Integration tests (PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: thalya_modas_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d thalya_modas_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/thalya_modas_test?schema=public
+      JWT_SECRET: ci-only-secret-with-at-least-32-characters
+      RUN_PRISMA_INTEGRATION_TESTS: "true"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Apply database migrations
+        run: pnpm db:deploy
+
+      - name: Run test suite with coverage
         run: pnpm --filter @thalya-modas/api exec vitest run --coverage --fileParallelism=false
 
-      - name: Build
-        run: pnpm build
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-coverage
+          path: apps/api/coverage
+          if-no-files-found: ignore
+          retention-days: 7
+
+  build:
+    name: Build / ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: api
+            command: pnpm --filter @thalya-modas/api build
+            artifact: apps/api/dist
+          - project: backoffice
+            command: pnpm --filter @thalya-modas/backoffice build
+            artifact: ""
+          - project: docs
+            command: pnpm --filter @thalya-modas/docs build
+            artifact: apps/docs/storybook-static
+          - project: ui
+            command: pnpm --filter @thalya-modas/ui build
+            artifact: ""
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      - name: Build ${{ matrix.project }}
+        run: ${{ matrix.command }}
+
+      - name: Upload build artifact
+        if: matrix.artifact != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-${{ matrix.project }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 7
+
+  ci-gate:
+    name: CI Gate
+    if: always()
+    needs:
+      - quality
+      - unit-tests
+      - integration-tests
+      - build
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      QUALITY_RESULT: ${{ needs.quality.result }}
+      UNIT_RESULT: ${{ needs.unit-tests.result }}
+      INTEGRATION_RESULT: ${{ needs.integration-tests.result }}
+      BUILD_RESULT: ${{ needs.build.result }}
+    steps:
+      - name: Verify required jobs
+        shell: bash
+        run: |
+          for result in \
+            "$QUALITY_RESULT" \
+            "$UNIT_RESULT" \
+            "$INTEGRATION_RESULT" \
+            "$BUILD_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "A required CI job finished with status: $result"
+              exit 1
+            fi
+          done
