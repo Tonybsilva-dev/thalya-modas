@@ -31,6 +31,8 @@ jobs:
         run: pnpm db:generate
 
       - name: Validate Prisma schema
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/thalya_modas_validation
         run: pnpm --filter @thalya-modas/api exec prisma validate --schema prisma/schema.prisma
 
       - name: Check formatting
