@@ -79,7 +79,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 				notes: input.notes,
 				paymentTerm: input.paymentTerm,
 				phone: input.phone,
-				status: 'active',
+				status: input.status ?? 'active',
 				storeId: input.storeId,
 				userId: input.userId,
 			},

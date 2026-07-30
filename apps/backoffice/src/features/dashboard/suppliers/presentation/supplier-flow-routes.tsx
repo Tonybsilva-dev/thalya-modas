@@ -1,8 +1,7 @@
 "use client";
 
 import type { ComponentType, FormEvent, ReactNode } from "react";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -126,8 +125,6 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 }
 
 const supplierStatusParser = parseAsStringLiteral(["active", "inactive"] as const);
-const supplierCategoryParser = parseAsStringLiteral(supplierCategoryOptions);
-const supplierTermParser = parseAsStringLiteral(supplierTermOptions);
 const responsibleContactTypeParser = parseAsStringLiteral([
   "orders",
   "delivery",
@@ -181,29 +178,18 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   const t = useTranslations("dashboard.suppliers.flow");
   const assignedResponsibleId = useSupplierFlowStore((state) => state.assignedResponsibleId);
   const localResponsibles = useSupplierFlowStore((state) => state.responsibles);
-  const supplierDraft = useSupplierFlowStore((state) => state.supplierDraft);
   const setSupplierDraft = useSupplierFlowStore((state) => state.setSupplierDraft);
   const resetFlow = useSupplierFlowStore((state) => state.resetFlow);
   const [section, setSection] = useQueryState("section", parseAsString.withDefault("data"));
   const [modal, setModal] = useQueryState("modal", supplierModalParser);
-  const [category, setCategory] = useQueryState(
-    "category",
-    supplierCategoryParser.withDefault(supplierDefaults.category),
-  );
-  const [deliveryTerm, setDeliveryTerm] = useQueryState(
-    "deliveryTerm",
-    supplierTermParser.withDefault(supplierDefaults.deliveryTerm),
-  );
-  const [paymentTerm, setPaymentTerm] = useQueryState(
-    "paymentTerm",
-    supplierTermParser.withDefault(supplierDefaults.paymentTerm),
-  );
-  const [status, setStatus] = useQueryState(
-    "status",
-    supplierStatusParser.withDefault(supplierDefaults.status),
-  );
+  const [categoryOverride, setCategory] = useState<SupplierCategory>();
+  const [deliveryTermOverride, setDeliveryTerm] = useState<SupplierTerm>();
+  const [paymentTermOverride, setPaymentTerm] = useState<SupplierTerm>();
+  const [statusOverride, setStatus] =
+    useState<SupplierFormInput["status"]>();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const formAlertRef = useRef<HTMLDivElement>(null);
   const isEdit = mode === "edit";
   const supplierId = params.supplierId;
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
@@ -236,42 +222,28 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
     (responsible) => responsible.id === primaryResponsibleId,
   );
   const persistedSupplier = supplierQuery.data;
+  const category =
+    categoryOverride ??
+    persistedSupplier?.category ??
+    supplierDefaults.category;
+  const deliveryTerm =
+    deliveryTermOverride ??
+    persistedSupplier?.deliveryTerm ??
+    supplierDefaults.deliveryTerm;
+  const paymentTerm =
+    paymentTermOverride ??
+    persistedSupplier?.paymentTerm ??
+    supplierDefaults.paymentTerm;
+  const status =
+    statusOverride ?? persistedSupplier?.status ?? supplierDefaults.status;
 
   useEffect(() => {
     if (mode === "create") resetFlow();
   }, [mode, resetFlow]);
 
-  useEffect(() => {
-    if (!persistedSupplier) return;
-
-    setSupplierDraft({
-      category: persistedSupplier.category,
-      deliveryTerm: persistedSupplier.deliveryTerm,
-      document: persistedSupplier.document,
-      email: persistedSupplier.email,
-      minimumOrder: persistedSupplier.minimumOrder,
-      name: persistedSupplier.name,
-      notes: persistedSupplier.notes,
-      paymentTerm: persistedSupplier.paymentTerm,
-      phone: persistedSupplier.phone,
-      status: persistedSupplier.status,
-    });
-    if (persistedSupplier.category) void setCategory(persistedSupplier.category);
-    if (persistedSupplier.deliveryTerm) void setDeliveryTerm(persistedSupplier.deliveryTerm);
-    if (persistedSupplier.paymentTerm) void setPaymentTerm(persistedSupplier.paymentTerm);
-    void setStatus(persistedSupplier.status);
-  }, [
-    persistedSupplier,
-    setCategory,
-    setDeliveryTerm,
-    setPaymentTerm,
-    setStatus,
-    setSupplierDraft,
-  ]);
-
   const values = {
     ...supplierDefaults,
-    ...supplierDraft,
+    ...(persistedSupplier ?? {}),
     category,
     contactName: assignedResponsible?.name,
     deliveryTerm,
@@ -303,7 +275,10 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
         supplier,
       };
     },
-    onError: (error) => setFormError(getApiErrorMessage(error, t("errors.save"))),
+    onError: (error) => {
+      setFormError(getApiErrorMessage(error, t("errors.save")));
+      revealFormAlert();
+    },
     onSuccess: ({ responsibleFailures, supplier }) => {
       void queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       resetFlow();
@@ -322,7 +297,10 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
       return;
     }
 
-    setSupplierDraft({ [target.name]: target.value });
+    if (!isEdit) {
+      setSupplierDraft({ [target.name]: target.value });
+    }
+    clearFieldError(target.name);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -336,11 +314,32 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
 
     if (!result.success) {
       setErrors(getZodErrors(result.error));
+      revealFormAlert();
       return;
     }
 
     setErrors({});
     mutation.mutate(result.data);
+  }
+
+  function clearFieldError(field: string) {
+    setFormError(null);
+    setErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
+  function revealFormAlert() {
+    requestAnimationFrame(() => {
+      formAlertRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      formAlertRef.current?.focus({ preventScroll: true });
+    });
   }
 
   if (isEdit && !isPersistedSupplier) {
@@ -399,28 +398,59 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
             setSection={setSection}
           />
 
+          {formError || Object.keys(errors).length > 0 ? (
+            <div
+              ref={formAlertRef}
+              aria-live="assertive"
+              className="flex items-start gap-3 border border-destructive/40 bg-destructive/10 px-4 py-3 text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              role="alert"
+              tabIndex={-1}
+            >
+              <WarningCircle className="mt-0.5 size-5 shrink-0" />
+              <div className="grid gap-1">
+                <h2 className="text-sm font-bold">
+                  {formError
+                    ? t("errors.saveTitle")
+                    : t("errors.validationTitle")}
+                </h2>
+                <p className="text-sm leading-5">
+                  {formError ??
+                    t("errors.validationDescription", {
+                      count: Object.keys(errors).length,
+                    })}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="grid gap-5">
               <SupplierDataCard
                 assignedResponsible={assignedResponsible}
                 errors={errors}
                 onCategoryChange={(value) => {
-                  setSupplierDraft({ category: value });
-                  void setCategory(value);
+                  if (!isEdit) setSupplierDraft({ category: value });
+                  setCategory(value);
+                  clearFieldError("category");
                 }}
                 values={values}
               />
               <SupplierCommercialCard
                 errors={errors}
                 onDeliveryTermChange={(value) => {
-                  setSupplierDraft({ deliveryTerm: value });
-                  void setDeliveryTerm(value);
+                  if (!isEdit) setSupplierDraft({ deliveryTerm: value });
+                  setDeliveryTerm(value);
+                  clearFieldError("deliveryTerm");
                 }}
                 onPaymentTermChange={(value) => {
-                  setSupplierDraft({ paymentTerm: value });
-                  void setPaymentTerm(value);
+                  if (!isEdit) setSupplierDraft({ paymentTerm: value });
+                  setPaymentTerm(value);
+                  clearFieldError("paymentTerm");
                 }}
-                onStatusChange={setStatus}
+                onStatusChange={(value) => {
+                  setStatus(value);
+                  clearFieldError("status");
+                }}
                 status={status}
                 values={values}
               />
@@ -447,7 +477,6 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
             )}
           </div>
 
-          {formError ? <FormError>{formError}</FormError> : null}
         </form>
 
         {modal === "delete" ? (
@@ -754,7 +783,9 @@ function SupplierCommercialCard({
             placeholder={supplierPlaceholders.minimumOrder}
           />
           <SelectField
+            error={errors.status}
             label={t("fields.status")}
+            name="status"
             onValueChange={(value) => onStatusChange(value as SupplierFormInput["status"])}
             options={[
               { label: t("status.active"), value: "active" },
@@ -787,13 +818,19 @@ function SupplierNotesCard({
         <div className="grid gap-2">
           <Label htmlFor="notes">{t("fields.notes")}</Label>
           <Textarea
+            aria-describedby={errors.notes ? "notes-error" : undefined}
+            aria-invalid={Boolean(errors.notes)}
             className="min-h-36 bg-card"
             defaultValue={values.notes}
             id="notes"
             name="notes"
             placeholder={supplierPlaceholders.notes}
           />
-          {errors.notes ? <p className="text-xs text-destructive">{errors.notes}</p> : null}
+          {errors.notes ? (
+            <p className="text-xs text-destructive" id="notes-error">
+              {errors.notes}
+            </p>
+          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -1703,6 +1740,8 @@ function FormField({
         <Icon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         {mask ? (
           <MaskedInput
+            aria-describedby={error ? `${name}-error` : undefined}
+            aria-invalid={Boolean(error)}
             className="h-10 bg-card pl-9"
             defaultValue={defaultValue}
             id={name}
@@ -1713,6 +1752,8 @@ function FormField({
           />
         ) : (
           <Input
+            aria-describedby={error ? `${name}-error` : undefined}
+            aria-invalid={Boolean(error)}
             className="h-10 bg-card pl-9"
             defaultValue={defaultValue}
             id={name}
@@ -1722,7 +1763,11 @@ function FormField({
           />
         )}
       </div>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-xs text-destructive" id={`${name}-error`}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1749,6 +1794,8 @@ function PlainField({
       <Label htmlFor={name}>{label}</Label>
       {mask ? (
         <MaskedInput
+          aria-describedby={error ? `${name}-error` : undefined}
+          aria-invalid={Boolean(error)}
           className="h-10 bg-background"
           defaultValue={defaultValue}
           id={name}
@@ -1759,6 +1806,8 @@ function PlainField({
         />
       ) : (
         <Input
+          aria-describedby={error ? `${name}-error` : undefined}
+          aria-invalid={Boolean(error)}
           className="h-10 bg-background"
           defaultValue={defaultValue}
           id={name}
@@ -1767,7 +1816,11 @@ function PlainField({
           type={type}
         />
       )}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-xs text-destructive" id={`${name}-error`}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1789,10 +1842,15 @@ function SelectField({
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label>{label}</Label>
+      <Label htmlFor={name}>{label}</Label>
       {name ? <input name={name} type="hidden" value={value} /> : null}
       <Select onValueChange={onValueChange} value={value}>
-        <SelectTrigger className="h-10 bg-card">
+        <SelectTrigger
+          aria-describedby={error && name ? `${name}-error` : undefined}
+          aria-invalid={Boolean(error)}
+          className="h-10 bg-card"
+          id={name}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -1803,7 +1861,11 @@ function SelectField({
           ))}
         </SelectContent>
       </Select>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-xs text-destructive" id={`${name}-error`}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1825,7 +1887,11 @@ function SectionHeading({
 
 function FormError({ children }: { children: string }) {
   return (
-    <div className="border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <div
+      aria-live="assertive"
+      className="border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+      role="alert"
+    >
       {children}
     </div>
   );

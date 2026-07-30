@@ -182,6 +182,7 @@ export type CreateSupplierInput = CatalogScope & {
 	notes?: string;
 	paymentTerm?: SupplierTerm;
 	phone?: string;
+	status?: SupplierStatus;
 };
 
 export type UpdateSupplierInput = Partial<

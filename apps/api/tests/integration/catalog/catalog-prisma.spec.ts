@@ -324,6 +324,34 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		expect(secondProduct.statusCode).toBe(400);
 	});
 
+	it('deve persistir status inicial e prazos comerciais do fornecedor', async () => {
+		const token = await registerAndGetToken();
+		const response = await makeRequest(server, {
+			body: {
+				deliveryTerm: '+15',
+				document: '66555444000133',
+				minimumOrder: '450',
+				name: 'Fornecedor Inativo Prisma',
+				paymentTerm: '+45',
+				status: 'inactive',
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/suppliers',
+		});
+		expect(response.statusCode).toBe(201);
+		const supplierId = (response.body as { id: string }).id;
+
+		const persisted = await prisma.supplier.findUnique({
+			where: { id: supplierId },
+		});
+		expect(persisted).toMatchObject({
+			deliveryTerm: '+15',
+			paymentTerm: '+45',
+			status: 'inactive',
+		});
+	});
+
 	it('deve impedir exclusão de fornecedor com histórico no PostgreSQL', async () => {
 		const token = await registerAndGetToken();
 		const supplier = await makeRequest(server, {

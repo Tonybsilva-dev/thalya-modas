@@ -64,7 +64,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 			paymentTerm: input.paymentTerm,
 			phone: input.phone,
 			responsibles: [],
-			status: 'active',
+			status: input.status ?? 'active',
 			storeId: input.storeId,
 			updatedAt: now,
 			userId: input.userId,

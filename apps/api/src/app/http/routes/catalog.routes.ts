@@ -91,11 +91,10 @@ const createSupplierSchema = z.object({
 	notes: z.string().trim().optional(),
 	paymentTerm: supplierTermSchema.optional(),
 	phone: z.string().trim().min(10).max(11).optional(),
-});
-
-const updateSupplierSchema = createSupplierSchema.partial().extend({
 	status: supplierStatusSchema.optional(),
 });
+
+const updateSupplierSchema = createSupplierSchema.partial();
 
 const supplierResponsibleParamsSchema = z.object({
 	id: z.string().uuid(),

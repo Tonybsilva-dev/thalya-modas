@@ -163,6 +163,9 @@
         },
         "errors": {
           "save": "Could not save.",
+          "saveTitle": "Could not save the supplier",
+          "validationTitle": "Review the supplier information",
+          "validationDescription": "{count, plural, one {Correct the highlighted field before saving.} other {Correct the # highlighted fields before saving.}}",
           "load": "Could not load the supplier.",
           "invalidId": "The supplier identifier is invalid.",
           "notFound": "Supplier not found",

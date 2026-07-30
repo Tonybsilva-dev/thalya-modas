@@ -163,6 +163,9 @@
         },
         "errors": {
           "save": "Nao foi possivel salvar.",
+          "saveTitle": "Não foi possível salvar o fornecedor",
+          "validationTitle": "Revise os dados do fornecedor",
+          "validationDescription": "{count, plural, one {Corrija o campo destacado antes de salvar.} other {Corrija os # campos destacados antes de salvar.}}",
           "load": "Nao foi possivel carregar o fornecedor.",
           "invalidId": "O identificador do fornecedor é inválido.",
           "notFound": "Fornecedor não encontrado",

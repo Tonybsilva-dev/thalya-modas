@@ -87,6 +87,44 @@ describe('Catalog - Integração', () => {
 		});
 	});
 
+	it('deve criar fornecedor inativo e recuperar os prazos comerciais', async () => {
+		const token = await registerAndGetToken();
+		const createResponse = await makeRequest(server, {
+			body: {
+				deliveryTerm: '+15',
+				document: randomUUID().replaceAll('-', '').slice(0, 14),
+				email: `inactive-${randomUUID()}@thalya.test`,
+				minimumOrder: '450',
+				name: 'Fornecedor Inativo',
+				paymentTerm: '+45',
+				phone: '85999998888',
+				status: 'inactive',
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/suppliers',
+		});
+		expect(createResponse.statusCode).toBe(201);
+		expect(createResponse.body).toMatchObject({
+			deliveryTerm: '+15',
+			paymentTerm: '+45',
+			status: 'inactive',
+		});
+
+		const supplierId = (createResponse.body as { id: string }).id;
+		const persistedResponse = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			url: `/suppliers/${supplierId}`,
+		});
+		expect(persistedResponse.statusCode).toBe(200);
+		expect(persistedResponse.body).toMatchObject({
+			deliveryTerm: '+15',
+			paymentTerm: '+45',
+			status: 'inactive',
+		});
+	});
+
 	it('deve impedir SKU duplicado por usuário', async () => {
 		const token = await registerAndGetToken();
 		const sku = `SKU-${randomUUID().slice(0, 8)}`;

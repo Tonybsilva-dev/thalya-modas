@@ -163,6 +163,9 @@
         },
         "errors": {
           "save": "No fue posible guardar.",
+          "saveTitle": "No se pudo guardar el proveedor",
+          "validationTitle": "Revisa los datos del proveedor",
+          "validationDescription": "{count, plural, one {Corrige el campo resaltado antes de guardar.} other {Corrige los # campos resaltados antes de guardar.}}",
           "load": "No fue posible cargar el proveedor.",
           "invalidId": "El identificador del proveedor no es válido.",
           "notFound": "Proveedor no encontrado",

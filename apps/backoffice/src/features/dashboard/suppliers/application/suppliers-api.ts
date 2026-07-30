@@ -170,6 +170,7 @@ export function createSupplier(input: SupplierFormInput) {
       notes: input.notes,
       paymentTerm: input.paymentTerm,
       phone: normalizeDigits(input.phone),
+      status: input.status,
     }),
     method: "POST",
   });
