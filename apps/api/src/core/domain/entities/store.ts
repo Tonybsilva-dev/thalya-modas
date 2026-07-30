@@ -30,6 +30,8 @@ export interface Store {
 	id: string;
 	ownerId: string;
 	name: string;
+	slug: string;
+	bucketKey: string;
 	phone: string;
 	document: string;
 	segment: StoreSegment;

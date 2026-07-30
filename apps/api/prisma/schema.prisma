@@ -37,6 +37,8 @@ model Store {
   id          String   @id @default(uuid())
   ownerId     String   @map("owner_id")
   name        String
+  slug        String   @unique
+  bucketKey   String   @unique @map("bucket_key")
   phone       String
   document    String   @unique
   segment     String

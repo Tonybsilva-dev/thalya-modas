@@ -124,4 +124,8 @@ bucket deve ser validada com:
 pnpm --filter @thalya-modas/api r2:validate
 ```
 
+Cada loja recebe no onboarding um `slug` imutável e um `bucket_key` persistido
+no formato `stores/{slug}`. As chaves de objetos sempre começam por esse
+prefixo, mantendo os arquivos de cada tenant em sua própria pasta.
+
 Não registre valores de `.env`, tokens ou URLs assinadas em logs ou commits.

@@ -20,6 +20,7 @@ const runPrismaTests =
 const testEmailPrefix = 'prisma-catalog';
 
 describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
+	let currentStoreBucketKey: string;
 	let currentStoreId: string;
 	let currentUserId: string;
 	let server: FastifyInstance;
@@ -149,6 +150,11 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 				fileName: 'vestido-prisma.webp',
 				productId,
 			},
+			upload: {
+				key: expect.stringMatching(
+					new RegExp(`^${currentStoreBucketKey}/products/${productId}/`),
+				),
+			},
 		});
 
 		const persistedProduct = await prisma.product.findUnique({
@@ -163,6 +169,9 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		expect(persistedProduct?.images).toHaveLength(1);
 		expect(persistedProduct?.movements).toHaveLength(1);
 		expect(persistedProduct?.images[0]?.storeId).toBe(currentStoreId);
+		expect(persistedProduct?.images[0]?.key).toMatch(
+			new RegExp(`^${currentStoreBucketKey}/products/${productId}/`),
+		);
 		expect(persistedProduct?.movements[0]?.storeId).toBe(currentStoreId);
 
 		const purchaseOrder = await makeRequest(server, {
@@ -380,6 +389,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 	async function registerAndGetToken() {
 		const account = await registerUserOnly();
 		const store = await createActiveTestStore(storeRepository, account.userId);
+		currentStoreBucketKey = store.bucketKey;
 		currentStoreId = store.id;
 		currentUserId = account.userId;
 		return account.token;

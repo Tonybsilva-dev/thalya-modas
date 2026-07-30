@@ -123,7 +123,9 @@ describe.skipIf(!runPrismaTests)('Onboarding - Prisma/Postgres', () => {
 			where: { document: testDocuments[0] },
 		});
 		expect(persistedStore).toMatchObject({
+			bucketKey: 'stores/store-flow-prisma',
 			name: 'Store Flow Prisma',
+			slug: 'store-flow-prisma',
 			status: StoreStatus.ACTIVE,
 		});
 		expect(persistedStore?.address).toMatchObject({
@@ -142,6 +144,21 @@ describe.skipIf(!runPrismaTests)('Onboarding - Prisma/Postgres', () => {
 		expect(ownerMembership).toMatchObject({
 			role: 'OWNER',
 			status: 'ACTIVE',
+		});
+
+		await expect(
+			prisma.store.update({
+				data: { slug: 'slug-alterado' },
+				where: { id: persistedStore?.id ?? '' },
+			}),
+		).rejects.toThrow('Store slug and bucket_key are immutable');
+
+		const storeAfterRejectedUpdate = await prisma.store.findUnique({
+			where: { id: persistedStore?.id ?? '' },
+		});
+		expect(storeAfterRejectedUpdate).toMatchObject({
+			bucketKey: 'stores/store-flow-prisma',
+			slug: 'store-flow-prisma',
 		});
 	});
 

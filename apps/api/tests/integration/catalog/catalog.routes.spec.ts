@@ -9,6 +9,7 @@ import {
 } from '../helpers';
 
 describe('Catalog - Integração', () => {
+	let currentStoreBucketKey: string;
 	let server: FastifyInstance;
 	let storeRepository: InMemoryStoreRepository;
 
@@ -494,6 +495,35 @@ describe('Catalog - Integração', () => {
 				method: 'PUT',
 			},
 		});
+		const firstUploadKey = (valid.body as { upload: { key: string } }).upload
+			.key;
+		expect(firstUploadKey).toMatch(
+			new RegExp(`^${currentStoreBucketKey}/products/${productId}/`),
+		);
+
+		const firstStoreBucketKey = currentStoreBucketKey;
+		const secondToken = await registerAndGetToken();
+		const secondProduct = await createProduct(secondToken);
+		const secondProductId = (secondProduct.body as { id: string }).id;
+		const secondUpload = await makeRequest(server, {
+			body: {
+				contentType: 'image/webp',
+				fileName: 'segundo-produto.webp',
+				size: 1000,
+			},
+			headers: { authorization: `Bearer ${secondToken}` },
+			method: 'POST',
+			url: `/products/${secondProductId}/assets/upload`,
+		});
+		const secondUploadKey = (secondUpload.body as { upload: { key: string } })
+			.upload.key;
+
+		expect(secondUpload.statusCode).toBe(201);
+		expect(currentStoreBucketKey).not.toBe(firstStoreBucketKey);
+		expect(secondUploadKey).toMatch(
+			new RegExp(`^${currentStoreBucketKey}/products/${secondProductId}/`),
+		);
+		expect(secondUploadKey.startsWith(`${firstStoreBucketKey}/`)).toBe(false);
 	});
 
 	it('deve bloquear catálogo pelo kill switch', async () => {
@@ -624,7 +654,8 @@ describe('Catalog - Integração', () => {
 			token: string;
 			user: { id: string };
 		};
-		await createActiveTestStore(storeRepository, body.user.id);
+		const store = await createActiveTestStore(storeRepository, body.user.id);
+		currentStoreBucketKey = store.bucketKey;
 		return body.token;
 	}
 });

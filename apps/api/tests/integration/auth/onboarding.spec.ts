@@ -77,10 +77,12 @@ describe('Onboarding - Integração', () => {
 			nextStep: OnboardingStep.STORE_ADDRESS,
 			completedSteps: [OnboardingStep.STORE_PROFILE],
 			store: {
+				bucketKey: 'stores/thalya-modas',
 				name: 'Thalya Modas',
 				phone: '85999990000',
 				document: '12345678000199',
 				segment: StoreSegment.FASHION,
+				slug: 'thalya-modas',
 				status: StoreStatus.PENDING_ONBOARDING,
 			},
 		});
@@ -145,6 +147,59 @@ describe('Onboarding - Integração', () => {
 			],
 			store: {
 				status: StoreStatus.ACTIVE,
+			},
+		});
+	});
+
+	it('deve manter slug e bucketKey após renomear a loja', async () => {
+		const token = await registerAndGetToken('slug-imutavel@thalyamodas.com');
+		const firstProfile = await saveProfile(
+			token,
+			'12.345.678/0001-99',
+			'Thálya Modas',
+		);
+		const firstStore = (
+			firstProfile.body as {
+				store: { bucketKey: string; slug: string };
+			}
+		).store;
+
+		const renamedProfile = await saveProfile(
+			token,
+			'12.345.678/0001-99',
+			'Novo Nome Comercial',
+		);
+
+		expect(renamedProfile.statusCode).toBe(200);
+		expect(renamedProfile.body).toMatchObject({
+			store: {
+				bucketKey: firstStore.bucketKey,
+				name: 'Novo Nome Comercial',
+				slug: firstStore.slug,
+			},
+		});
+		expect(firstStore).toMatchObject({
+			bucketKey: 'stores/thalya-modas',
+			slug: 'thalya-modas',
+		});
+	});
+
+	it('deve gerar slugs únicos para lojas com o mesmo nome', async () => {
+		const firstToken = await registerAndGetToken('slug-1@thalyamodas.com');
+		const firstProfile = await saveProfile(firstToken, '12.345.678/0001-99');
+		const secondToken = await registerAndGetToken('slug-2@thalyamodas.com');
+		const secondProfile = await saveProfile(secondToken, '98.765.432/0001-11');
+
+		expect(firstProfile.body).toMatchObject({
+			store: {
+				bucketKey: 'stores/thalya-modas',
+				slug: 'thalya-modas',
+			},
+		});
+		expect(secondProfile.body).toMatchObject({
+			store: {
+				bucketKey: 'stores/thalya-modas-2',
+				slug: 'thalya-modas-2',
 			},
 		});
 	});
@@ -349,13 +404,17 @@ describe('Onboarding - Integração', () => {
 		return (response.body as { token: string }).token;
 	}
 
-	async function saveProfile(token: string, document: string) {
+	async function saveProfile(
+		token: string,
+		document: string,
+		storeName = 'Thalya Modas',
+	) {
 		return makeRequest(server, {
 			method: 'POST',
 			url: '/onboarding/store-profile',
 			headers: { authorization: `Bearer ${token}` },
 			body: {
-				storeName: 'Thalya Modas',
+				storeName,
 				phone: '(85) 99999-0000',
 				document,
 				segment: StoreSegment.FASHION,

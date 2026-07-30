@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
+import { DomainError } from '../../../../app/http/errors/domain-error';
 import type {
 	Store,
 	StoreAddress,
@@ -7,8 +8,10 @@ import type {
 	StoreStatus,
 } from '../../../domain/entities/store';
 import type {
+	CreateStoreData,
 	StoreAccess,
 	StoreRepository,
+	UpdateStoreData,
 } from '../../../domain/repositories/store-repository';
 
 const ownerMembershipRole = 'OWNER';
@@ -17,13 +20,13 @@ const activeMembershipStatus = 'ACTIVE';
 export class PrismaStoreRepository implements StoreRepository {
 	constructor(private readonly prisma: PrismaClient) {}
 
-	async create(
-		store: Omit<Store, 'id' | 'createdAt' | 'updatedAt'>,
-	): Promise<Store> {
+	async create(store: CreateStoreData): Promise<Store> {
 		const created = await this.prisma.store.create({
 			data: {
+				bucketKey: store.bucketKey,
 				ownerId: store.ownerId,
 				name: store.name,
+				slug: store.slug,
 				phone: store.phone,
 				document: store.document,
 				segment: store.segment,
@@ -55,6 +58,11 @@ export class PrismaStoreRepository implements StoreRepository {
 
 	async findByOwnerId(ownerId: string): Promise<Store | null> {
 		const store = await this.prisma.store.findFirst({ where: { ownerId } });
+		return store ? toDomainStore(store) : null;
+	}
+
+	async findBySlug(slug: string): Promise<Store | null> {
+		const store = await this.prisma.store.findUnique({ where: { slug } });
 		return store ? toDomainStore(store) : null;
 	}
 
@@ -94,14 +102,12 @@ export class PrismaStoreRepository implements StoreRepository {
 		}));
 	}
 
-	async update(
-		id: string,
-		store: Partial<Omit<Store, 'id' | 'createdAt' | 'updatedAt'>>,
-	): Promise<Store | null> {
+	async update(id: string, store: UpdateStoreData): Promise<Store | null> {
 		const existing = await this.prisma.store.findUnique({ where: { id } });
 		if (!existing) {
 			return null;
 		}
+		assertStorageIdentityIsNotBeingChanged(store);
 
 		const data: Prisma.StoreUpdateInput = {};
 
@@ -144,6 +150,8 @@ function toDomainStore(store: {
 	id: string;
 	ownerId: string;
 	name: string;
+	slug: string;
+	bucketKey: string;
 	phone: string;
 	document: string;
 	segment: string;
@@ -157,6 +165,8 @@ function toDomainStore(store: {
 		id: store.id,
 		ownerId: store.ownerId,
 		name: store.name,
+		slug: store.slug,
+		bucketKey: store.bucketKey,
 		phone: store.phone,
 		document: store.document,
 		segment: store.segment as StoreSegment,
@@ -168,4 +178,10 @@ function toDomainStore(store: {
 		createdAt: store.createdAt,
 		updatedAt: store.updatedAt,
 	};
+}
+
+function assertStorageIdentityIsNotBeingChanged(store: object): void {
+	if ('slug' in store || 'bucketKey' in store) {
+		throw new DomainError('Slug e bucketKey da loja são imutáveis.');
+	}
 }

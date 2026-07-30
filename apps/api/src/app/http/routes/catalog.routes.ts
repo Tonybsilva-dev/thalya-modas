@@ -888,6 +888,7 @@ export async function catalogRoutes(
 			return useCases.prepareProductImageUpload.execute({
 				...body,
 				productId: params.productId,
+				storeBucketKey: user.storeBucketKey,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1211,7 +1212,9 @@ function getAuthenticatedUser(request: FastifyRequest) {
 
 	return {
 		...request.user,
+		storeBucketKey: request.storeContext.storeBucketKey,
 		storeId: request.storeContext.storeId,
+		storeSlug: request.storeContext.storeSlug,
 	};
 }
 

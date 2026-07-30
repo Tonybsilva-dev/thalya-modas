@@ -668,7 +668,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 			throw new NotFoundError('Produto não encontrado.');
 		}
 
-		const key = `stores/${input.storeId}/products/${input.productId}/${randomUUID()}.webp`;
+		const key = `${input.storeBucketKey}/products/${input.productId}/${randomUUID()}.webp`;
 		const upload = this.r2StorageConfig
 			? createR2PresignedUpload(this.r2StorageConfig, {
 					contentType: input.contentType,

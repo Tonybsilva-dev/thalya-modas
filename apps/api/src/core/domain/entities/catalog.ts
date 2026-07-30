@@ -281,6 +281,7 @@ export type UpdateReceivingInput = Partial<
 
 export type PrepareProductImageUploadInput = CatalogScope & {
 	productId: string;
+	storeBucketKey: string;
 	fileName: string;
 	contentType: 'image/webp';
 	size: number;

@@ -24,6 +24,8 @@ o tenant dos dados.
    deve ser validada no servidor.
 5. Rotas sem uma loja ativa retornam erro controlado antes de consultar um
    repositório operacional.
+6. Cada loja possui `slug` e `bucketKey` únicos e imutáveis. Todo objeto no R2
+   usa `bucketKey` como prefixo, isolando os arquivos por tenant.
 
 ## Modelo implementado
 
@@ -61,7 +63,8 @@ O middleware da API:
 1. autenticar o usuário;
 2. ler `X-Store-Id`;
 3. validar propriedade ou associação ativa;
-4. anexar `{ userId, storeId, role }` ao contexto da requisição.
+4. anexar `{ userId, storeId, storeSlug, storeBucketKey, role }` ao contexto da
+   requisição.
 
 Durante a transição, contas com exatamente uma loja usam essa loja como
 fallback. Contas sem loja recebem `403`; contas com mais de uma loja e sem o
@@ -84,6 +87,23 @@ Os índices únicos baseados em `userId` passaram a usar `storeId`:
 - `Supplier`: `@@unique([storeId, document])`
 - `Product`: `@@unique([storeId, sku])`
 - `PurchaseOrder`: `@@unique([storeId, code])`
+
+## Identidade de armazenamento no R2
+
+O onboarding gera um slug normalizado e globalmente único ao criar a loja. O
+prefixo oficial é persistido em `stores.bucket_key` no formato
+`stores/{slug}`. Por exemplo:
+
+```text
+store-flow/
+└── stores/thalya-modas/
+    └── products/{productId}/{assetId}.webp
+```
+
+Renomear a loja não altera o slug nem move seus objetos. O contrato de update
+não aceita `slug` ou `bucketKey`, e uma trigger no PostgreSQL rejeita alterações
+diretas nesses campos. Uma constraint também garante que
+`bucket_key = 'stores/' || slug`.
 
 ## Sequência segura de rollout
 

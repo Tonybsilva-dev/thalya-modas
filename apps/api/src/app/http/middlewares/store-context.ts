@@ -42,7 +42,9 @@ export async function storeContextMiddleware(
 
 	request.storeContext = {
 		role: selectedAccess.role,
+		storeBucketKey: selectedAccess.store.bucketKey,
 		storeId: selectedAccess.store.id,
+		storeSlug: selectedAccess.store.slug,
 		userId: request.user.userId,
 	};
 

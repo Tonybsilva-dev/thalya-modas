@@ -66,6 +66,8 @@ const onboardingResponseSchema = z.object({
 			id: z.string().uuid(),
 			ownerId: z.string().uuid(),
 			name: z.string(),
+			slug: z.string(),
+			bucketKey: z.string(),
 			phone: z.string(),
 			document: z.string(),
 			segment: z.nativeEnum(StoreSegment),
@@ -118,6 +120,8 @@ const onboardingResponseExample = {
 		id: '123e4567-e89b-12d3-a456-426614174000',
 		ownerId: '123e4567-e89b-12d3-a456-426614174001',
 		name: 'Thalya Modas',
+		slug: 'thalya-modas',
+		bucketKey: 'stores/thalya-modas',
 		phone: '85999998888',
 		document: '12345678000199',
 		segment: 'fashion',
@@ -452,6 +456,8 @@ function serializeOnboarding(output: {
 		id: string;
 		ownerId: string;
 		name: string;
+		slug: string;
+		bucketKey: string;
 		phone: string;
 		document: string;
 		segment: StoreSegment;

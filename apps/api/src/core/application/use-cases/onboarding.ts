@@ -14,6 +14,11 @@ import {
 } from '../../domain/entities';
 import type { OnboardingRepository } from '../../domain/repositories/onboarding-repository';
 import type { StoreRepository } from '../../domain/repositories/store-repository';
+import {
+	appendStoreSlugSuffix,
+	createStoreBucketKey,
+	normalizeStoreSlug,
+} from '../../domain/value-objects/store-slug';
 
 export interface OnboardingOutput {
 	status: OnboardingStatus;
@@ -97,7 +102,7 @@ export class SaveStoreProfileUseCase {
 					document,
 					segment: input.segment,
 				})
-			: await this.storeRepository.create({
+			: await this.createStore({
 					ownerId: input.userId,
 					name: input.storeName.trim(),
 					phone,
@@ -125,6 +130,36 @@ export class SaveStoreProfileUseCase {
 			completedSteps,
 			store,
 		};
+	}
+
+	private async createStore(input: {
+		ownerId: string;
+		name: string;
+		phone: string;
+		document: string;
+		segment: StoreSegment;
+		status: StoreStatus;
+	}): Promise<Store> {
+		const slug = await this.createUniqueSlug(input.name);
+
+		return this.storeRepository.create({
+			...input,
+			bucketKey: createStoreBucketKey(slug),
+			slug,
+		});
+	}
+
+	private async createUniqueSlug(storeName: string): Promise<string> {
+		const baseSlug = normalizeStoreSlug(storeName);
+		let slug = baseSlug;
+		let suffix = 2;
+
+		while (await this.storeRepository.findBySlug(slug)) {
+			slug = appendStoreSlugSuffix(baseSlug, suffix);
+			suffix += 1;
+		}
+
+		return slug;
 	}
 }
 

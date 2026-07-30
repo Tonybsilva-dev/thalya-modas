@@ -1,15 +1,16 @@
+import { DomainError } from '../../../../app/http/errors/domain-error';
 import type { Store } from '../../../domain/entities/store';
 import type {
+	CreateStoreData,
 	StoreAccess,
 	StoreRepository,
+	UpdateStoreData,
 } from '../../../domain/repositories/store-repository';
 
 export class InMemoryStoreRepository implements StoreRepository {
 	private stores: Map<string, Store> = new Map();
 
-	async create(
-		storeData: Omit<Store, 'id' | 'createdAt' | 'updatedAt'>,
-	): Promise<Store> {
+	async create(storeData: CreateStoreData): Promise<Store> {
 		const now = new Date();
 		const store: Store = {
 			...storeData,
@@ -45,20 +46,28 @@ export class InMemoryStoreRepository implements StoreRepository {
 		return null;
 	}
 
+	async findBySlug(slug: string): Promise<Store | null> {
+		for (const store of this.stores.values()) {
+			if (store.slug === slug) {
+				return store;
+			}
+		}
+
+		return null;
+	}
+
 	async findAccessibleByUserId(userId: string): Promise<StoreAccess[]> {
 		return Array.from(this.stores.values())
 			.filter((store) => store.ownerId === userId)
 			.map((store) => ({ role: 'OWNER', store }));
 	}
 
-	async update(
-		id: string,
-		storeData: Partial<Omit<Store, 'id' | 'createdAt' | 'updatedAt'>>,
-	): Promise<Store | null> {
+	async update(id: string, storeData: UpdateStoreData): Promise<Store | null> {
 		const existing = this.stores.get(id);
 		if (!existing) {
 			return null;
 		}
+		assertStorageIdentityIsNotBeingChanged(storeData);
 
 		const updated: Store = {
 			...existing,
@@ -67,5 +76,11 @@ export class InMemoryStoreRepository implements StoreRepository {
 		};
 		this.stores.set(id, updated);
 		return updated;
+	}
+}
+
+function assertStorageIdentityIsNotBeingChanged(storeData: object): void {
+	if ('slug' in storeData || 'bucketKey' in storeData) {
+		throw new DomainError('Slug e bucketKey da loja são imutáveis.');
 	}
 }
