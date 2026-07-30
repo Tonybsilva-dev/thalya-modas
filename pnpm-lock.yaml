@@ -277,6 +277,9 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.6.0
+      tailwindcss:
+        specifier: ^4
+        version: 4.3.0
     devDependencies:
       '@types/react':
         specifier: ^19.2.7
