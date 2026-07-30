@@ -1,589 +1,127 @@
-<div align="center">
+# Thalya Modas API
 
-# Fastify Boilerplate - Backend Node.js Production-Ready
+API operacional da plataforma Thalya Modas, construída com Fastify 5,
+TypeScript, Zod, Prisma e PostgreSQL.
 
-![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow?style=for-the-badge)
-![Fastify](https://img.shields.io/badge/Fastify-4.x-green?style=for-the-badge&logo=fastify)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=for-the-badge&logo=typescript)
-![Node.js](https://img.shields.io/badge/Node.js-20+-green?style=for-the-badge&logo=node.js)
+## Responsabilidades atuais
 
-**Boilerplate completo para APIs Node.js com Fastify, DDD e RBAC** 🇧🇷
+- Autenticação JWT por bearer token ou cookie httpOnly.
+- Cadastro, login, sessão e recuperação de senha.
+- Onboarding de loja.
+- Feature flags para desligamento controlado de módulos.
+- Dashboard protegido.
+- Fornecedores e responsáveis.
+- Produtos, imagens WebP e movimentos de estoque.
+- Pedidos de compra e recebimentos.
+- Swagger/OpenAPI, trace ID, métricas e tratamento padronizado de erros.
 
-[Documentação](src/docs/server-with-fastify.md) • [PRD](src/docs/boilerplate.txt) • [Testes](src/docs/tests-qa.md)
+## Arquitetura
 
-</div>
-
----
-
-## 📖 Sobre o Projeto
-
-### 🎯 O Desafio
-
-Equipes de desenvolvimento frequentemente perdem tempo recriando a mesma infraestrutura básica para novos backends: configuração de servidor, autenticação, RBAC, testes, lint, documentação e CI/CD. Isso gera inconsistência entre projetos, maior risco de bugs em produção e dificuldade de manutenção.
-
-### 💡 A Solução
-
-Um **boilerplate completo e production-ready** que atua em múltiplas frentes:
-
-1. **Arquitetura DDD**: Separação clara entre domínio, aplicação e infraestrutura
-2. **Autenticação & Autorização**: JWT, sessão via cookie `httpOnly` e RBAC com CASL pronto para uso
-3. **Qualidade de Código**: Pipeline completo de QA com lint, testes e type-check
-4. **Documentação**: Swagger/OpenAPI integrado
-5. **Testes**: Vitest configurado com coverage e padrão Factory
-6. **CI/CD**: GitHub Actions para QA e análise de qualidade
-
-### 💰 Valor do Projeto
-
-**Boilerplate Open Source** - Template reutilizável para acelerar o desenvolvimento de backends Node.js, garantindo consistência, qualidade e boas práticas desde o início.
-
----
-
-## ✨ Funcionalidades Principais
-
-### 🏗️ Arquitetura e Estrutura
-
-- ✅ **DDD Simplificado**: Organização em camadas (domain, application, infra, app/http)
-- ✅ **TypeScript Strict**: Configuração rigorosa para type safety
-- ✅ **Estrutura Modular**: Separação clara de responsabilidades
-- ✅ **Value Objects**: Encapsulamento de lógica de domínio (ex: Password)
-- ✅ **Repository Pattern**: Abstração de persistência para testes isolados
-
-### 🔐 Autenticação e Autorização
-
-- ✅ **JWT Authentication**: Autenticação baseada em JWT com cookie `httpOnly` para sessão do backoffice
-- ✅ **RBAC com CASL**: Controle de acesso baseado em roles
-- ✅ **User Roles**: Sistema de permissões (`SUPER_ADMIN`, `COMPANY`, `EMPLOYEE`, `DELIVERY_MAN`, `CUSTOMER`)
-- ✅ **Password Security**: Hash seguro com Argon2id
-- ✅ **Password Recovery**: Fluxo de recuperação com código temporário, reset token, cooldown e kill switches
-- ✅ **Onboarding de Loja**: Cadastro público cria `ROLE_COMPANY` e progresso inicial de onboarding
-- ✅ **Kill Switches**: Flags por módulo para desligar login, cadastro, onboarding e recuperação de senha
-
-### ✅ Validação e Schemas
-
-- ✅ **Zod Schemas**: Validação type-safe com reutilização
-- ✅ **Schema Composition**: Merge, unions e objetos compostos
-- ✅ **Domain Schemas**: Schemas reutilizáveis por domínio
-- ✅ **HTTP Validation**: Validação automática de requests
-
-### 🧪 Testes e Qualidade
-
-- ✅ **Vitest**: Framework de testes rápido e moderno
-- ✅ **Coverage Reports**: Relatórios de cobertura com thresholds
-- ✅ **Factory Pattern**: Padrão para criação de dados de teste
-- ✅ **Mock Repositories**: Implementações mock para testes isolados
-- ✅ **Unit & Integration Tests**: Estrutura para ambos os tipos
-
-### 🛠️ Ferramentas de Desenvolvimento
-
-- ✅ **Biome**: Linter e formatter unificado (substitui ESLint + Prettier)
-- ✅ **Husky**: Git hooks para garantir qualidade
-- ✅ **lint-staged**: Lint apenas em arquivos staged
-- ✅ **Commitlint**: Padronização de mensagens de commit
-- ✅ **TypeScript**: Type checking rigoroso
-
-### 📊 CI/CD e Automação
-
-- ✅ **GitHub Actions**: Pipeline completo de QA
-- ✅ **Code Quality Analysis**: Análise profunda de qualidade
-- ✅ **Security Scan**: Detecção de vulnerabilidades e arquivos sensíveis
-- ✅ **Coverage Tracking**: Monitoramento de cobertura de testes
-- ✅ **Dependency Updates**: Scripts para atualização segura
-
----
-
-## 🚀 Destaques Técnicos
-
-### Arquitetura e Performance
-
-- ✅ **Domain-Driven Design**: Separação clara de contextos e regras de negócio
-- ✅ **Repository Pattern**: Abstração de persistência para testabilidade
-- ✅ **Value Objects**: Encapsulamento de lógica de domínio
-- ✅ **Type Safety**: TypeScript strict mode para máxima segurança de tipos
-- ✅ **Modular Structure**: Fácil manutenção e escalabilidade
-
-### Qualidade e Testes
-
-- ✅ **Test Coverage**: Thresholds configurados (80% lines, 75% branches)
-- ✅ **Factory Pattern**: Criação consistente de dados de teste
-- ✅ **Mock Implementations**: Repositórios mock para testes isolados
-- ✅ **QA Pipeline**: Lint + Format + Tests + Type Check automatizado
-
-### Segurança
-
-- ✅ **Sensitive Files Detection**: Bloqueio de commits com .env ou chaves
-- ✅ **Security Audit**: npm audit integrado no CI
-- ✅ **Password Hashing**: Implementação segura com Argon2id
-- ✅ **JWT Best Practices**: Autenticação com JWT e cookie `httpOnly` (`SameSite=Lax`, `Secure` em produção)
-- ✅ **Security Headers**: Helmet configurado (X-Content-Type-Options, X-Frame-Options, etc.)
-- ✅ **Rate Limiting**: Proteção contra DDoS e força bruta
-- ✅ **CORS**: Configuração de Cross-Origin Resource Sharing
-- ✅ **Docker Security**: Container com usuário não-root
-
-### Developer Experience
-
-- ✅ **Hot Reload**: Desenvolvimento com watch mode
-- ✅ **Docker Hot Reload**: Hot-reload no Docker para desenvolvimento
-- ✅ **TypeScript IntelliSense**: Autocomplete completo
-- ✅ **Pre-commit Hooks**: QA automático antes de cada commit
-- ✅ **Conventional Commits**: Padronização de mensagens
-- ✅ **Docker Multi-Stage**: Build otimizado e imagem final pequena
-
----
-
-## 🛠️ Stack Tecnológica
-
-### Core
-
-- **Runtime**: Node.js 20+
-- **Framework**: Fastify 4.x (alta performance)
-- **Language**: TypeScript 5.9 (strict mode)
-- **Architecture**: DDD (Domain-Driven Design)
-- **Database**: PostgreSQL via Docker
-- **ORM**: Prisma
-
-### Validação e Schemas
-
-- **Validation**: Zod 4.x (type-safe schemas)
-- **Schema Composition**: Merge, unions, objects
-
-### Testes
-
-- **Test Framework**: Vitest 3.x
-- **Coverage**: @vitest/coverage-v8
-- **UI**: @vitest/ui
-
-### Qualidade de Código
-
-- **Linter/Formatter**: Biome 2.x
-- **Git Hooks**: Husky 9.x
-- **Commit Linting**: Commitlint
-- **Type Check**: TypeScript Compiler
-
-### CI/CD
-
-- **CI Platform**: GitHub Actions
-- **Workflows**: QA Pipeline + Code Quality Analysis
-
-### Containerização
-
-- **Docker**: Multi-stage build otimizado
-- **Docker Compose**: Desenvolvimento e produção
-- **Base Image**: Node.js 20 Alpine (imagem leve)
-
----
-
-## 📦 Instalação e Desenvolvimento
-
-### Pré-requisitos
-
-- Node.js 20+
-- npm (ou pnpm/yarn)
-
-### Instalação
-
-```bash
-# Clone o repositório
-git clone https://github.com/Tonybsilva-dev/fastify-boilerplate.git
-
-# Entre no diretório
-cd fastify-boilerplate
-
-# Instale as dependências
-npm install
+```txt
+src/
+  app/http/             servidor, middlewares e rotas
+  core/domain/          entidades, value objects e contratos
+  core/application/     casos de uso
+  core/infra/           autenticação, storage e persistência
+  shared/               ambiente, paginação, RBAC e utilitários
+tests/
+  unit/
+  integration/
+prisma/
+  schema.prisma
+  migrations/
 ```
 
-### Desenvolvimento
+O driver `in-memory` é útil para desenvolvimento e testes rápidos. Com
+`PERSISTENCE_DRIVER=postgres`, autenticação, onboarding e catálogo usam Prisma.
+Os read models gerais do dashboard ainda são mantidos em memória.
 
-```bash
-# Execute o pipeline de QA
-npm run qa
+## Ambiente
 
-# Execute testes
-npm test
+Crie `apps/api/.env` a partir de `.env.example`.
 
-# Execute testes com UI
-npm run test:ui
+Variáveis essenciais:
 
-# Execute testes com coverage
-npm run test:coverage
-
-# Lint e format
-npm run check
-npm run format
-
-# Type check
-npm run build:check
+```env
+NODE_ENV="development"
+HOST="0.0.0.0"
+PORT="3333"
+JWT_SECRET="uma-chave-local-com-pelo-menos-32-caracteres"
+PERSISTENCE_DRIVER="postgres"
+DATABASE_URL="postgresql://thalya:thalya_dev_password@localhost:5432/thalya_modas?schema=public"
+CORS_ORIGINS="http://localhost:3000"
 ```
 
-### 🐳 Rodando com Docker
+Em produção, `JWT_SECRET` deve ser informada explicitamente. Quando o driver for
+`postgres`, `DATABASE_URL` é obrigatória.
 
-#### Pré-requisitos
+As origens de browser aceitas em produção podem ser separadas por vírgula em
+`CORS_ORIGINS`.
 
-- Docker instalado e rodando
-- Docker Compose instalado
+## Desenvolvimento
 
-#### Configuração Inicial
-
-```bash
-# Copie o arquivo de exemplo e configure as variáveis
-cp .env.example .env
-
-# Edite o .env e configure pelo menos:
-# - JWT_SECRET (mínimo 32 caracteres)
-# - PORT (padrão local: 3333)
-# - PERSISTENCE_DRIVER ("in-memory" ou "postgres")
-# - DATABASE_URL (quando usar Postgres)
-```
-
-#### Desenvolvimento com Postgres
-
-No monorepo, o Postgres local fica centralizado em `docker/compose.yml`:
+Na raiz do monorepo:
 
 ```bash
 pnpm docker:postgres:up
-pnpm db:migrate
+pnpm db:deploy
 pnpm dev:api
 ```
 
-`DATABASE_URL` local:
+API: `http://localhost:3333`
+
+Swagger: `http://localhost:3333/docs`
+
+## Qualidade
+
+```bash
+pnpm --filter @thalya-modas/api lint
+pnpm --filter @thalya-modas/api typecheck
+pnpm --filter @thalya-modas/api exec vitest run
+pnpm --filter @thalya-modas/api test:coverage
+pnpm --filter @thalya-modas/api build
+```
+
+Para incluir os testes reais de PostgreSQL:
+
+```bash
+RUN_PRISMA_INTEGRATION_TESTS=true \
+pnpm --filter @thalya-modas/api exec vitest run --fileParallelism=false
+```
+
+Os testes Prisma criam e removem apenas registros identificados para teste. O
+workflow principal do repositório provisiona um PostgreSQL isolado e executa
+migrations, cobertura e build.
+
+## Persistência
+
+```bash
+pnpm db:generate
+pnpm db:migrate
+pnpm db:deploy
+pnpm db:studio
+```
+
+As migrations devem ser versionadas em `prisma/migrations`. Em CI e produção,
+use `db:deploy`; `db:migrate` é reservado ao desenvolvimento.
+
+## Cloudflare R2
+
+O adapter gera URLs assinadas para upload direto de `image/webp`. Configure:
 
 ```env
-DATABASE_URL="postgresql://thalya:thalya_dev_password@localhost:5432/thalya_modas?schema=public"
+R2_ENDPOINT=""
+R2_ACCESS_KEY=""
+R2_SECRET_KEY=""
+R2_BUCKET_NAME=""
+R2_PUBLIC_URL=""
 ```
 
-#### Desenvolvimento legado da API (com hot-reload)
+A assinatura possui teste unitário. A permissão real de escrita do token e do
+bucket deve ser validada com:
 
 ```bash
-# Subir o container
-docker compose up
-
-# Ou em background
-docker compose up -d
-
-# Ver logs
-docker compose logs -f
-
-# Parar o container
-docker compose down
+pnpm --filter @thalya-modas/api r2:validate
 ```
 
-A aplicação estará disponível em: `http://localhost:3000`
-
-#### Produção
-
-```bash
-# Build e subir
-docker compose -f docker-compose.prod.yml up --build
-
-# Ou em background
-docker compose -f docker-compose.prod.yml up -d --build
-
-# Ver logs
-docker compose -f docker-compose.prod.yml logs -f
-
-# Parar
-docker compose -f docker-compose.prod.yml down
-```
-
-#### Comandos Úteis
-
-```bash
-# Rebuild da imagem (após mudanças no Dockerfile)
-docker compose build
-
-# Rebuild forçado (sem cache)
-docker compose build --no-cache
-
-# Ver status dos containers
-docker compose ps
-
-# Entrar no container
-docker compose exec app sh
-
-# Ver logs em tempo real
-docker compose logs -f app
-```
-
-### Scripts Disponíveis
-
-- `npm test` - Executa testes em modo watch
-- `npm run test:ui` - Abre interface visual do Vitest
-- `npm run test:changed` - Executa apenas testes de arquivos alterados
-- `npm run test:coverage` - Gera relatório de cobertura
-- `npm run lint` - Executa linter (Biome)
-- `npm run format` - Formata código (Biome)
-- `npm run check` - Lint + Format check
-- `npm run build:check` - Verifica tipos TypeScript
-- `npm run qa` - Pipeline completo: lint + format + tests + type-check
-
----
-
-## 📂 Estrutura do Projeto
-
-```text
-fastify-boilerplate/
-├── src/
-│   ├── core/
-│   │   └── domain/
-│   │       ├── entities/          # Entidades de domínio
-│   │       │   ├── user.ts
-│   │       │   └── index.ts
-│   │       ├── repositories/      # Interfaces de repositórios
-│   │       │   ├── user-repository.ts
-│   │       │   └── index.ts
-│   │       ├── schemas/           # Schemas Zod
-│   │       │   ├── user.schema.ts
-│   │       │   └── index.ts
-│   │       ├── value-objects/     # Value Objects
-│   │       │   ├── password.ts
-│   │       │   └── index.ts
-│   │       └── index.ts
-│   ├── docs/                      # Documentação
-│   │   ├── boilerplate.txt        # PRD (Product Requirements Document)
-│   │   ├── server-with-fastify.md  # Guia de implementação
-│   │   ├── tests-qa.md            # Plano de testes e QA
-│   │   └── use-cases.md           # Casos de uso da API
-│   └── index.ts
-├── tests/
-│   └── unit/
-│       └── core/
-│           └── domain/
-│               ├── entities/
-│               ├── repositories/
-│               ├── schemas/
-│               └── value-objects/
-├── .github/
-│   └── workflows/
-│       └── qa.yml                 # Pipeline CI/CD
-├── .husky/                        # Git hooks
-│   ├── pre-commit
-│   └── commit-msg
-├── .dockerignore                  # Arquivos ignorados no Docker
-├── Dockerfile                     # Dockerfile multi-stage
-├── docker-compose.yml             # Docker Compose (desenvolvimento)
-├── docker-compose.prod.yml        # Docker Compose (produção)
-├── biome.json                     # Configuração Biome
-├── commitlint.config.cjs          # Configuração Commitlint
-├── tsconfig.json                  # Configuração TypeScript
-├── vitest.config.ts               # Configuração Vitest
-└── package.json
-```
-
-### Camadas da Arquitetura
-
-- **`core/domain`**: Regras de negócio puras, sem dependência de frameworks
-  - `entities/`: Entidades de domínio
-  - `repositories/`: Interfaces de persistência
-  - `schemas/`: Schemas Zod para validação
-  - `value-objects/`: Objetos de valor (Password, etc.)
-
-- **`tests/`**: Testes organizados por tipo (unit, integration)
-
----
-
-## 🎯 Funcionalidades Implementadas
-
-### ✅ Domínio e Entidades
-
-- [x] Entidade `User` com roles (USER, ADMIN)
-- [x] Enum `UserRole` para tipagem
-- [x] Value Object `Password` com hash seguro
-- [x] Interface `UserRepository` para abstração
-- [x] Mock `MockUserRepository` para testes
-
-### ✅ Validação com Zod
-
-- [x] Schema base `userSchema` completo
-- [x] Schema `createUserSchema` para criação
-- [x] Schema `updateUserSchema` para atualização parcial
-- [x] Reutilização com `omit`, `extend`, `partial`
-
-### ✅ Testes
-
-- [x] Testes unitários para `Password` value object
-- [x] Testes unitários para schemas Zod
-- [x] Testes unitários para `MockUserRepository`
-- [x] Configuração de coverage com thresholds
-- [x] Factory pattern para dados de teste
-
-### ✅ Qualidade de Código
-
-- [x] Biome configurado (lint + format)
-- [x] Husky com pre-commit hooks
-- [x] Commitlint para mensagens padronizadas
-- [x] TypeScript strict mode
-- [x] Pipeline QA automatizado
-
-### ✅ CI/CD
-
-- [x] GitHub Action para QA básico
-- [x] GitHub Action para análise de qualidade
-- [x] Detecção de arquivos sensíveis
-- [x] Security scan (npm audit)
-- [x] Coverage tracking
-
----
-
-## 🚧 Roadmap
-
-### Em Desenvolvimento
-
-- [ ] Servidor Fastify com rotas básicas
-- [ ] Middleware de autenticação JWT
-- [ ] RBAC com CASL
-- [ ] Tratamento de erros estruturado
-- [ ] Paginação encapsulada
-- [ ] Health-check detalhado
-- [ ] Documentação Swagger/OpenAPI
-- [ ] Testes de integração
-
-### ✅ Resiliência e Segurança
-
-- [x] Docker multi-stage otimizado
-- [x] Docker Compose para desenvolvimento e produção
-- [x] Rate Limiting global e por rota
-- [x] Security Headers (Helmet)
-- [x] CORS configurado
-- [x] Timeouts e limites de requisição
-- [x] Validação robusta de variáveis de ambiente
-
-### Planejado
-
-- [ ] Integração com banco de dados
-- [ ] Cache layer
-- [ ] Logging estruturado para produção
-- [ ] Observabilidade (métricas, traces)
-- [ ] Circuit Breaker para dependências externas
-- [ ] Health checks avançados (liveness/readiness)
-- [ ] Graceful shutdown
-- [ ] Exemplos de use cases
-
----
-
-## 📊 Métricas de Qualidade
-
-### Test Coverage
-
-- **Lines**: 80% (threshold)
-- **Functions**: 80% (threshold)
-- **Branches**: 75% (threshold)
-- **Statements**: 80% (threshold)
-
-### Code Quality
-
-- ✅ **Lint**: Biome com regras configuradas
-- ✅ **Format**: Aspas simples, semicolons, imports organizados
-- ✅ **Type Safety**: TypeScript strict mode
-- ✅ **Security**: npm audit + detecção de arquivos sensíveis
-
----
-
-## 🚀 Como Usar Este Boilerplate
-
-### 1. Clone e Instale
-
-```bash
-git clone https://github.com/Tonybsilva-dev/fastify-boilerplate.git
-cd fastify-boilerplate
-npm install
-```
-
-### 2. Configure o Ambiente
-
-```bash
-# Copie o arquivo de exemplo
-cp .env.example .env
-
-# Configure suas variáveis de ambiente
-# Mínimo necessário:
-# - JWT_SECRET (mínimo 32 caracteres)
-# - PORT (padrão local: 3333)
-# - PERSISTENCE_DRIVER ("in-memory" ou "postgres")
-# - DATABASE_URL (quando usar Postgres)
-```
-
-### 3. Execute o QA
-
-```bash
-# Verifique se tudo está funcionando
-npm run qa
-```
-
-### 4. Comece a Desenvolver
-
-**Opção A: Desenvolvimento Local**
-
-```bash
-npm run dev
-```
-
-**Opção B: Desenvolvimento com Docker**
-
-```bash
-docker compose up
-```
-
-- Adicione suas entidades em `src/core/domain/entities/`
-- Crie seus schemas Zod em `src/core/domain/schemas/`
-- Implemente seus repositórios
-- Adicione seus use cases
-- Configure suas rotas Fastify
-
-### 5. Commit com Padrão
-
-```bash
-# O commitlint garante mensagens padronizadas
-git commit -m "feat: adicionar nova funcionalidade"
-git commit -m "fix: corrigir bug em validação"
-git commit -m "test: adicionar testes para User"
-```
-
----
-
-## 📝 Licença
-
-ISC License
-
----
-
-## 👨‍💻 Desenvolvedor
-
-**Antonio Silva**  
-Desenvolvedor Full Stack
-
-- 🌐 Portfolio: [acesse aqui](https://antonbiobsilva.com.br)
-- 💼 LinkedIn: [acesse aqui](https://linkedin.com/in/antonio-silva)
-- 📧 Email: <contato@antonbiobsilva.com.br>
-- 🐙 GitHub: [@Tonybsilva-dev](https://github.com/Tonybsilva-dev)
-
----
-
-## 🙏 Contribuições
-
-Contribuições são bem-vindas! Sinta-se à vontade para:
-
-1. Abrir issues para reportar bugs ou sugerir features
-2. Fazer fork do projeto
-3. Criar uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-4. Commit suas mudanças (`git commit -m 'feat: adicionar AmazingFeature'`)
-5. Push para a branch (`git push origin feature/AmazingFeature`)
-6. Abrir um Pull Request
-
----
-
-## 📚 Documentação Adicional
-
-- [Guia de Implementação](src/docs/server-with-fastify.md) - Documentação detalhada do boilerplate
-- [PRD](src/docs/boilerplate.txt) - Product Requirements Document (método RPG)
-- [Plano de Testes](src/docs/tests-qa.md) - Casos de teste e QA
-- [Casos de Uso](src/docs/use-cases.md) - Registro dos casos de uso da API (atualizar a cada modificação de comportamento)
-
----
-
-<div align="center">
-
-**Desenvolvido com ❤️ e muito ☕**
-
-[⬆ Voltar ao topo](#fastify-boilerplate---backend-nodejs-production-ready)
-
-</div>
+Não registre valores de `.env`, tokens ou URLs assinadas em logs ou commits.

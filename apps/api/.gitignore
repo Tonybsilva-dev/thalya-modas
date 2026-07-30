@@ -35,4 +35,4 @@ dist/
 # OpenAPI specs (gerados automaticamente)
 openapi-spec.json
 openapi-spec.previous.json
-src/docs/route-changes-report.mddist/
+src/docs/route-changes-report.md

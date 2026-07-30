@@ -37,11 +37,11 @@
 	"license": "ISC",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Tonybsilva-dev/fastify-boilerplate.git"
+		"url": "git+https://github.com/Tonybsilva-dev/thalya-modas.git"
 	},
-	"homepage": "https://github.com/Tonybsilva-dev/fastify-boilerplate#readme",
+	"homepage": "https://github.com/Tonybsilva-dev/thalya-modas#readme",
 	"bugs": {
-		"url": "https://github.com/Tonybsilva-dev/fastify-boilerplate/issues"
+		"url": "https://github.com/Tonybsilva-dev/thalya-modas/issues"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.10",
