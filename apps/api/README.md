@@ -105,6 +105,11 @@ pnpm db:studio
 As migrations devem ser versionadas em `prisma/migrations`. Em CI e produção,
 use `db:deploy`; `db:migrate` é reservado ao desenvolvimento.
 
+`prisma migrate deploy` não gera o Prisma Client. Por isso o CI executa
+`db:generate` explicitamente após instalar as dependências. Os scripts
+`typecheck`, `build:check` e `build` da API também possuem hooks que regeneram o
+client, evitando depender de artefatos antigos em `node_modules`.
+
 ## Cloudflare R2
 
 O adapter gera URLs assinadas para upload direto de `image/webp`. Configure:
