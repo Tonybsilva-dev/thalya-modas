@@ -9,6 +9,7 @@ import {
   CaretLeft,
   CaretRight,
   DownloadSimple,
+  DotsThreeVertical,
   PencilSimple,
   Trash,
   UserPlus,
@@ -19,6 +20,12 @@ import {
   Card,
   CardContent,
   Checkbox,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
   Table,
   TableBody,
@@ -150,9 +157,9 @@ function useSuppliersWorkspace() {
     hasNextPage: Boolean(nextPageQuery.data?.length),
     isInitialLoading: suppliersQuery.isPending,
     isOperationalLoading:
-      selectedSupplierQuery.isPending ||
-      ordersQuery.isPending ||
-      receivingsQuery.isPending,
+      selectedSupplierQuery.isFetching ||
+      ordersQuery.isFetching ||
+      receivingsQuery.isFetching,
     isSummaryLoading: summaryQuery.isPending,
     locale,
     operationalError:
@@ -504,38 +511,11 @@ function SupplierTableCard({
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              asChild
-                              aria-label={`${getText(locale, "edit")} ${supplier.name}`}
-                              className="size-8 p-0"
-                              variant="ghost"
-                            >
-                              <Link href={`${basePath}/${supplier.id}/edit`}>
-                                <PencilSimple className="size-4" />
-                              </Link>
-                            </Button>
-                            <Button
-                              asChild
-                              aria-label={`${getText(locale, "responsibles")} ${supplier.name}`}
-                              className="size-8 p-0"
-                              variant="ghost"
-                            >
-                              <Link href={`${basePath}/${supplier.id}/responsible`}>
-                                <UserPlus className="size-4" />
-                              </Link>
-                            </Button>
-                            <Button
-                              asChild
-                              aria-label={`${getText(locale, "delete")} ${supplier.name}`}
-                              className="size-8 p-0 text-destructive hover:text-destructive"
-                              variant="ghost"
-                            >
-                              <Link href={`${basePath}/${supplier.id}/delete`}>
-                                <Trash className="size-4" />
-                              </Link>
-                            </Button>
-                          </div>
+                          <SupplierActionsMenu
+                            basePath={basePath}
+                            locale={locale}
+                            supplier={supplier}
+                          />
                         </TableCell>
                       </TableRow>
                     );
@@ -575,6 +555,71 @@ function SupplierTableCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function SupplierActionsMenu({
+  basePath,
+  locale,
+  supplier,
+}: {
+  basePath: string;
+  locale: Locale;
+  supplier: Supplier;
+}) {
+  return (
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label={`${getText(locale, "actions")} — ${supplier.name}`}
+            className="size-8 p-0"
+            variant="ghost"
+          >
+            <DotsThreeVertical className="size-5" weight="bold" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="truncate">{supplier.name}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href={`${basePath}/${supplier.id}/edit`}>
+              <PencilSimple className="size-4" />
+              {getText(locale, "editSupplier")}
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`${basePath}/${supplier.id}/responsible`}>
+              <UserPlus className="size-4" />
+              {getText(locale, "manageResponsibles")}
+            </Link>
+          </DropdownMenuItem>
+          {supplier.status === "active" ? (
+            <DropdownMenuItem asChild>
+              <Link href={`${basePath}/purchase-orders/create?supplierId=${supplier.id}`}>
+                <PlusIcon className="size-4" />
+                {getText(locale, "newOrder")}
+              </Link>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              disabled
+              title={getText(locale, "inactiveOrderHint")}
+            >
+              <PlusIcon className="size-4" />
+              {getText(locale, "newOrder")}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild className="text-destructive focus:text-destructive">
+            <Link href={`${basePath}/${supplier.id}/delete`}>
+              <Trash className="size-4" />
+              {getText(locale, "deleteSupplier")}
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 
@@ -635,7 +680,7 @@ function StatePanel({
   );
 }
 
-function SupplierBulkActions({
+function SupplierBulkSelectionRail({
   isPending,
   locale,
   onChangeStatus,
@@ -650,52 +695,72 @@ function SupplierBulkActions({
   onExport: () => void;
   selectedSuppliers: Supplier[];
 }) {
-  if (selectedSuppliers.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex items-center gap-3 p-4">
-          <BoxIcon className="size-4 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            {getText(locale, "bulkHint")}
-          </p>
+  return (
+    <aside className="grid min-w-0 content-start gap-3 xl:w-[340px]">
+      <Card className="border-primary/40">
+        <CardContent className="grid gap-4 p-5">
+          <div className="grid gap-1">
+            <Badge className="w-fit" variant="secondary">
+              {selectedSuppliers.length} {getText(locale, "selected").toLowerCase()}
+            </Badge>
+            <h2 className="text-lg font-semibold text-foreground">
+              {getText(locale, "bulkSelectionTitle")}
+            </h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {getText(locale, "bulkSelectionDescription")}
+            </p>
+          </div>
+          <div className="grid gap-2 border-y border-border py-3">
+            {selectedSuppliers.slice(0, 4).map((supplier) => (
+              <div className="flex items-center gap-2" key={supplier.id}>
+                <div className="flex size-7 shrink-0 items-center justify-center bg-muted text-[10px] font-bold text-muted-foreground">
+                  {getInitials(supplier.name)}
+                </div>
+                <span className="truncate text-sm text-foreground">{supplier.name}</span>
+              </div>
+            ))}
+            {selectedSuppliers.length > 4 ? (
+              <p className="text-xs text-muted-foreground">
+                +{selectedSuppliers.length - 4} {getText(locale, "moreSelected")}
+              </p>
+            ) : null}
+          </div>
+          <div className="grid gap-2">
+            <Button
+              className="h-9 justify-start px-3"
+              disabled={isPending}
+              onClick={() => onChangeStatus("active")}
+              variant="outline"
+            >
+              {getText(locale, "activate")}
+            </Button>
+            <Button
+              className="h-9 justify-start px-3"
+              disabled={isPending}
+              onClick={() => onChangeStatus("inactive")}
+              variant="outline"
+            >
+              {getText(locale, "deactivate")}
+            </Button>
+            <Button
+              className="h-9 justify-start px-3"
+              onClick={onExport}
+              variant="outline"
+            >
+              <DownloadSimple className="size-4" />
+              {getText(locale, "export")}
+            </Button>
+            <Button
+              className="h-9 justify-start px-3"
+              onClick={onClear}
+              variant="ghost"
+            >
+              {getText(locale, "clearSelection")}
+            </Button>
+          </div>
         </CardContent>
       </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
-        <strong className="text-sm text-foreground">
-          {selectedSuppliers.length} {getText(locale, "selected").toLowerCase()}
-        </strong>
-        <div className="flex flex-1 flex-wrap gap-2 lg:justify-end">
-          <Button
-            className="h-9 px-3"
-            disabled={isPending}
-            onClick={() => onChangeStatus("active")}
-            variant="outline"
-          >
-            {getText(locale, "activate")}
-          </Button>
-          <Button
-            className="h-9 px-3"
-            disabled={isPending}
-            onClick={() => onChangeStatus("inactive")}
-            variant="outline"
-          >
-            {getText(locale, "deactivate")}
-          </Button>
-          <Button className="h-9 px-3" onClick={onExport} variant="outline">
-            <DownloadSimple className="size-4" />
-            {getText(locale, "export")}
-          </Button>
-          <Button className="h-9 px-3" onClick={onClear} variant="ghost">
-            {getText(locale, "clearSelection")}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    </aside>
   );
 }
 
@@ -712,8 +777,6 @@ function SupplierDetailRail({
   receivings: Receiving[];
   supplier?: Supplier;
 }) {
-  const basePath = useSuppliersBasePath();
-
   if (!supplier) {
     return (
       <aside className="grid min-w-0 content-start gap-3 xl:w-[340px]">
@@ -830,50 +893,6 @@ function SupplierDetailRail({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="grid gap-2 p-4">
-          <Button asChild className="h-9 justify-start" variant="outline">
-            <Link href={`${basePath}/${supplier.id}/edit`}>
-              <PencilSimple className="size-4" />
-              {getText(locale, "editSupplier")}
-            </Link>
-          </Button>
-          <Button asChild className="h-9 justify-start" variant="outline">
-            <Link href={`${basePath}/${supplier.id}/responsible`}>
-              <UserPlus className="size-4" />
-              {getText(locale, "manageResponsibles")}
-            </Link>
-          </Button>
-          {supplier.status === "active" ? (
-            <Button asChild className="h-9 justify-start" variant="outline">
-              <Link href={`${basePath}/purchase-orders/create?supplierId=${supplier.id}`}>
-                <PlusIcon className="size-4" />
-                {getText(locale, "newOrder")}
-              </Link>
-            </Button>
-          ) : (
-            <Button
-              className="h-9 justify-start"
-              disabled
-              title={getText(locale, "inactiveOrderHint")}
-              variant="outline"
-            >
-              <PlusIcon className="size-4" />
-              {getText(locale, "newOrder")}
-            </Button>
-          )}
-          <Button
-            asChild
-            className="h-9 justify-start text-destructive hover:text-destructive"
-            variant="ghost"
-          >
-            <Link href={`${basePath}/${supplier.id}/delete`}>
-              <Trash className="size-4" />
-              {getText(locale, "deleteSupplier")}
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
     </aside>
   );
 }
@@ -1010,27 +1029,27 @@ export function SuppliersRoute() {
         status={workspace.filters.status}
       />
       <div className="grid min-h-0 min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
-        <div className="grid min-w-0 gap-4">
-          <SupplierTableCard
-            hasNextPage={workspace.hasNextPage}
-            isLoading={workspace.isInitialLoading}
-            locale={workspace.locale}
-            onClearFilters={clearFilters}
-            onExport={downloadSuppliersCsv}
-            onSelect={(supplierId) => void workspace.setSelectedId(supplierId)}
-            onToggle={toggleRow}
-            onToggleAll={toggleAll}
-            page={workspace.filters.page}
-            q={workspace.filters.q}
-            refetch={workspace.refetch}
-            selectedId={workspace.selectedId}
-            selectedRows={selectedRows}
-            setPage={workspace.filters.setPage}
-            status={workspace.filters.status}
-            suppliers={workspace.suppliers}
-            suppliersError={workspace.suppliersError}
-          />
-          <SupplierBulkActions
+        <SupplierTableCard
+          hasNextPage={workspace.hasNextPage}
+          isLoading={workspace.isInitialLoading}
+          locale={workspace.locale}
+          onClearFilters={clearFilters}
+          onExport={downloadSuppliersCsv}
+          onSelect={(supplierId) => void workspace.setSelectedId(supplierId)}
+          onToggle={toggleRow}
+          onToggleAll={toggleAll}
+          page={workspace.filters.page}
+          q={workspace.filters.q}
+          refetch={workspace.refetch}
+          selectedId={workspace.selectedId}
+          selectedRows={selectedRows}
+          setPage={workspace.filters.setPage}
+          status={workspace.filters.status}
+          suppliers={workspace.suppliers}
+          suppliersError={workspace.suppliersError}
+        />
+        {selectedSuppliers.length > 0 ? (
+          <SupplierBulkSelectionRail
             isPending={statusMutation.isPending}
             locale={workspace.locale}
             onChangeStatus={(status) => statusMutation.mutate(status)}
@@ -1038,14 +1057,15 @@ export function SuppliersRoute() {
             onExport={() => downloadSuppliersCsv(selectedSuppliers)}
             selectedSuppliers={selectedSuppliers}
           />
-        </div>
-        <SupplierDetailRail
-          isLoading={workspace.isOperationalLoading}
-          locale={workspace.locale}
-          orders={workspace.orders}
-          receivings={workspace.receivings}
-          supplier={workspace.selectedSupplier}
-        />
+        ) : (
+          <SupplierDetailRail
+            isLoading={workspace.isOperationalLoading}
+            locale={workspace.locale}
+            orders={workspace.orders}
+            receivings={workspace.receivings}
+            supplier={workspace.selectedSupplier}
+          />
+        )}
       </div>
     </DashboardShell>
   );
@@ -1204,6 +1224,16 @@ function getText(locale: Locale, key: string) {
       "Select suppliers to activate, deactivate, or export records.",
       "Selecciona proveedores para activar, desactivar o exportar registros.",
     ],
+    bulkSelectionDescription: [
+      "As ações abaixo serão aplicadas a todos os fornecedores selecionados.",
+      "The actions below apply to every selected supplier.",
+      "Las acciones siguientes se aplican a todos los proveedores seleccionados.",
+    ],
+    bulkSelectionTitle: [
+      "Ações em lote",
+      "Bulk actions",
+      "Acciones en lote",
+    ],
     category: ["Categoria", "Category", "Categoría"],
     clearFilters: ["Limpar filtros", "Clear filters", "Limpiar filtros"],
     clearSelection: ["Limpar seleção", "Clear selection", "Limpiar selección"],
@@ -1240,6 +1270,7 @@ function getText(locale: Locale, key: string) {
     ],
     manageResponsibles: ["Gerenciar responsáveis", "Manage contacts", "Gestionar responsables"],
     minimumOrder: ["Pedido mínimo", "Minimum order", "Pedido mínimo"],
+    moreSelected: ["outros selecionados", "more selected", "más seleccionados"],
     needsAttention: ["Requer acompanhamento", "Needs attention", "Requiere seguimiento"],
     newOrder: ["Novo pedido", "New PO", "Nueva orden"],
     newSupplier: ["Novo fornecedor", "New supplier", "Nuevo proveedor"],

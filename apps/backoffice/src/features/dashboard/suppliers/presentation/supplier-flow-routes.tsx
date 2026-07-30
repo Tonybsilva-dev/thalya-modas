@@ -7,7 +7,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import {
-  parseAsBoolean,
   parseAsString,
   parseAsStringLiteral,
   useQueryState,
@@ -124,12 +123,6 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-const supplierStatusParser = parseAsStringLiteral(["active", "inactive"] as const);
-const responsibleContactTypeParser = parseAsStringLiteral([
-  "orders",
-  "delivery",
-  "financial",
-] as const);
 const supplierModalParser = parseAsStringLiteral([
   "delete",
   "responsible",
@@ -1231,19 +1224,12 @@ function SupplierResponsibleModal({
   const saveResponsible = useSupplierFlowStore((state) => state.saveResponsible);
   const setResponsibleDraft = useSupplierFlowStore((state) => state.setResponsibleDraft);
   const resetResponsibleDraft = useSupplierFlowStore((state) => state.resetResponsibleDraft);
-  const [responsibleId, setResponsibleId] = useQueryState("responsibleId", parseAsString);
-  const [isPrimary, setIsPrimary] = useQueryState(
-    "primary",
-    parseAsBoolean.withDefault(true),
-  );
-  const [contactType, setContactType] = useQueryState(
-    "contactType",
-    responsibleContactTypeParser.withDefault("orders"),
-  );
-  const [status, setStatus] = useQueryState(
-    "status",
-    supplierStatusParser.withDefault("active"),
-  );
+  const [responsibleId, setResponsibleId] = useState<string | null>(null);
+  const [isPrimary, setIsPrimary] = useState(true);
+  const [contactType, setContactType] =
+    useState<SupplierResponsibleInput["contactType"]>("orders");
+  const [status, setStatus] =
+    useState<SupplierFormInput["status"]>("active");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [mutationError, setMutationError] = useState<string | null>(null);
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
@@ -1283,7 +1269,7 @@ function SupplierResponsibleModal({
         });
       }
       resetResponsibleDraft();
-      void setResponsibleId(null);
+      setResponsibleId(null);
     },
   });
   const deleteMutation = useMutation({
@@ -1309,24 +1295,24 @@ function SupplierResponsibleModal({
 
   function closeModal() {
     resetResponsibleDraft();
-    void setResponsibleId(null);
+    setResponsibleId(null);
     onClose();
   }
 
   function openCreateForm() {
     resetResponsibleDraft();
-    void setResponsibleId("new");
-    void setIsPrimary(false);
-    void setContactType("orders");
-    void setStatus("active");
+    setResponsibleId("new");
+    setIsPrimary(false);
+    setContactType("orders");
+    setStatus("active");
   }
 
   function openEditForm(responsible: SupplierResponsibleInput & { id: string }) {
     setResponsibleDraft(responsible);
-    void setResponsibleId(responsible.id);
-    void setIsPrimary(responsible.isPrimary);
-    void setContactType(responsible.contactType);
-    void setStatus(responsible.status);
+    setResponsibleId(responsible.id);
+    setIsPrimary(responsible.isPrimary);
+    setContactType(responsible.contactType);
+    setStatus(responsible.status);
   }
 
   function handleDraftChange(event: FormEvent<HTMLFormElement>) {
@@ -1393,7 +1379,7 @@ function SupplierResponsibleModal({
                 onContactTypeChange={(value) =>
                   setContactType(value as "orders" | "delivery" | "financial")
                 }
-                onPrimaryChange={(value) => void setIsPrimary(value)}
+                onPrimaryChange={setIsPrimary}
                 onStatusChange={(value) =>
                   setStatus(value as SupplierFormInput["status"])
                 }
@@ -1404,7 +1390,7 @@ function SupplierResponsibleModal({
               <div className="flex justify-end gap-2">
                 <Button
                   className="h-9 px-4"
-                  onClick={() => void setResponsibleId(null)}
+                  onClick={() => setResponsibleId(null)}
                   type="button"
                   variant="outline"
                 >
@@ -1904,23 +1890,95 @@ function ModalOverlay({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const previousOverflow = document.body.style.overflow;
+    const focusableSelector = [
+      "a[href]",
+      "button:not([disabled])",
+      "input:not([disabled])",
+      "select:not([disabled])",
+      "textarea:not([disabled])",
+      "[tabindex]:not([tabindex='-1'])",
+    ].join(",");
+
+    document.body.style.overflow = "hidden";
+    const focusableElements = dialog?.querySelectorAll<HTMLElement>(
+      focusableSelector,
+    );
+    focusableElements?.[0]?.focus();
+    if (!focusableElements?.length) dialog?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialog) return;
+      const elements = Array.from(
+        dialog.querySelectorAll<HTMLElement>(focusableSelector),
+      );
+      if (elements.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, []);
+
   return (
     <div
-      aria-modal="true"
       className={cn(
-        "fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-black/60 p-4",
+        "fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-background/10 p-4 backdrop-blur-sm",
         "animate-nitro-fade-in",
       )}
-      onClick={(event) => {
+      onMouseDown={(event) => {
         if (event.currentTarget === event.target) onClose();
       }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
-      }}
-      role="dialog"
-      tabIndex={-1}
     >
-      {children}
+      <div
+        aria-modal="true"
+        className="flex max-h-[calc(100vh-2rem)] w-full justify-center overflow-y-auto outline-none"
+        onMouseDown={(event) => {
+          if (event.currentTarget === event.target) onClose();
+        }}
+        ref={dialogRef}
+        role="dialog"
+        tabIndex={-1}
+      >
+        {children}
+      </div>
     </div>
   );
 }
