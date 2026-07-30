@@ -28,6 +28,7 @@ model User {
   purchaseOrders           PurchaseOrder[]
   purchaseOrderItems       PurchaseOrderItem[]
   receivings               Receiving[]
+  storeMemberships         StoreMembership[]
 
   @@map("users")
 }
@@ -45,11 +46,29 @@ model Store {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   onboardings Onboarding[]
+  memberships StoreMembership[]
 
   @@index([ownerId])
   @@map("stores")
+}
+
+model StoreMembership {
+  id        String   @id @default(uuid())
+  storeId   String   @map("store_id")
+  userId    String   @map("user_id")
+  role      String
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, userId])
+  @@index([userId, status])
+  @@map("store_memberships")
 }
 
 model Onboarding {

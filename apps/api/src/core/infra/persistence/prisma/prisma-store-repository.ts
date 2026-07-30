@@ -8,6 +8,9 @@ import type {
 } from '../../../domain/entities/store';
 import type { StoreRepository } from '../../../domain/repositories/store-repository';
 
+const ownerMembershipRole = 'OWNER';
+const activeMembershipStatus = 'ACTIVE';
+
 export class PrismaStoreRepository implements StoreRepository {
 	constructor(private readonly prisma: PrismaClient) {}
 
@@ -22,6 +25,13 @@ export class PrismaStoreRepository implements StoreRepository {
 				document: store.document,
 				segment: store.segment,
 				address: toOptionalJsonInput(store.address),
+				memberships: {
+					create: {
+						role: ownerMembershipRole,
+						status: activeMembershipStatus,
+						userId: store.ownerId,
+					},
+				},
 				preferences: toOptionalJsonInput(store.preferences),
 				status: store.status,
 			},

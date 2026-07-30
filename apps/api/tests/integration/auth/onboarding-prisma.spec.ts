@@ -130,6 +130,19 @@ describe.skipIf(!runPrismaTests)('Onboarding - Prisma/Postgres', () => {
 			city: 'Fortaleza',
 			state: 'CE',
 		});
+
+		const ownerMembership = await prisma.storeMembership.findUnique({
+			where: {
+				storeId_userId: {
+					storeId: persistedStore?.id ?? '',
+					userId: persistedStore?.ownerId ?? '',
+				},
+			},
+		});
+		expect(ownerMembership).toMatchObject({
+			role: 'OWNER',
+			status: 'ACTIVE',
+		});
 	});
 
 	it('deve manter validação de documento duplicado usando Prisma', async () => {
