@@ -204,6 +204,11 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		});
 		expect(persistedPurchaseOrder?.items).toHaveLength(1);
 		expect(persistedPurchaseOrder?.receivings).toHaveLength(1);
+		expect(persistedPurchaseOrder?.totalCost.toFixed(2)).toBe('155.00');
+		expect(persistedPurchaseOrder?.items[0]?.unitCost.toFixed(2)).toBe('77.50');
+		expect(persistedPurchaseOrder?.items[0]?.totalCost.toFixed(2)).toBe(
+			'155.00',
+		);
 	});
 
 	it('deve impedir documento e SKU duplicados por usuário', async () => {

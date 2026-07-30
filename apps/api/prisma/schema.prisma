@@ -17,17 +17,17 @@ model User {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  stores                    Store[]
-  onboardings               Onboarding[]
-  passwordRecoveryRequests  PasswordRecoveryRequest[]
-  suppliers                 Supplier[]
-  supplierResponsibles      SupplierResponsible[]
-  products                  Product[]
-  productImageAssets        ProductImageAsset[]
-  inventoryMovements        InventoryMovement[]
-  purchaseOrders            PurchaseOrder[]
-  purchaseOrderItems        PurchaseOrderItem[]
-  receivings                Receiving[]
+  stores                   Store[]
+  onboardings              Onboarding[]
+  passwordRecoveryRequests PasswordRecoveryRequest[]
+  suppliers                Supplier[]
+  supplierResponsibles     SupplierResponsible[]
+  products                 Product[]
+  productImageAssets       ProductImageAsset[]
+  inventoryMovements       InventoryMovement[]
+  purchaseOrders           PurchaseOrder[]
+  purchaseOrderItems       PurchaseOrderItem[]
+  receivings               Receiving[]
 
   @@map("users")
 }
@@ -71,18 +71,18 @@ model Onboarding {
 }
 
 model PasswordRecoveryRequest {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   email               String
-  userId              String   @map("user_id")
+  userId              String    @map("user_id")
   code                String
-  codeExpiresAt       DateTime @map("code_expires_at")
-  resetToken          String?  @unique @map("reset_token")
+  codeExpiresAt       DateTime  @map("code_expires_at")
+  resetToken          String?   @unique @map("reset_token")
   resetTokenExpiresAt DateTime? @map("reset_token_expires_at")
-  invalidAttempts     Int      @default(0) @map("invalid_attempts")
-  resendAvailableAt   DateTime @map("resend_available_at")
+  invalidAttempts     Int       @default(0) @map("invalid_attempts")
+  resendAvailableAt   DateTime  @map("resend_available_at")
   status              String
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -92,24 +92,24 @@ model PasswordRecoveryRequest {
 }
 
 model Supplier {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  name          String
-  category      String?
-  document      String?
-  deliveryTerm  String?  @map("delivery_term")
-  email         String?
-  minimumOrder  String?  @map("minimum_order")
-  notes         String?
-  paymentTerm   String?  @map("payment_term")
-  phone         String?
-  status        String
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  name         String
+  category     String?
+  document     String?
+  deliveryTerm String?  @map("delivery_term")
+  email        String?
+  minimumOrder String?  @map("minimum_order")
+  notes        String?
+  paymentTerm  String?  @map("payment_term")
+  phone        String?
+  status       String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  responsibles  SupplierResponsible[]
-  products      Product[]
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responsibles   SupplierResponsible[]
+  products       Product[]
   purchaseOrders PurchaseOrder[]
   receivings     Receiving[]
 
@@ -132,8 +132,8 @@ model SupplierResponsible {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  supplier  Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([supplierId])
@@ -141,24 +141,24 @@ model SupplierResponsible {
 }
 
 model Product {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  supplierId    String?  @map("supplier_id")
-  name          String
-  sku           String
-  description   String?
-  costPrice     Float?   @map("cost_price")
-  salePrice     Float?   @map("sale_price")
-  currentStock  Int      @default(0) @map("current_stock")
-  minimumStock  Int      @default(0) @map("minimum_stock")
-  status        String
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  supplierId   String?  @map("supplier_id")
+  name         String
+  sku          String
+  description  String?
+  costPrice    Decimal? @map("cost_price") @db.Decimal(12, 2)
+  salePrice    Decimal? @map("sale_price") @db.Decimal(12, 2)
+  currentStock Int      @default(0) @map("current_stock")
+  minimumStock Int      @default(0) @map("minimum_stock")
+  status       String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  supplier   Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  images     ProductImageAsset[]
-  movements  InventoryMovement[]
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier           Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  images             ProductImageAsset[]
+  movements          InventoryMovement[]
   purchaseOrderItems PurchaseOrderItem[]
 
   @@unique([userId, sku])
@@ -178,8 +178,8 @@ model ProductImageAsset {
   size        Int
   createdAt   DateTime @default(now()) @map("created_at")
 
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([productId])
@@ -197,8 +197,8 @@ model InventoryMovement {
   reason        String
   createdAt     DateTime @default(now()) @map("created_at")
 
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([productId])
@@ -215,7 +215,7 @@ model PurchaseOrder {
   notes              String?
   paymentTerm        String?  @map("payment_term")
   status             String
-  totalCost          Float    @map("total_cost")
+  totalCost          Decimal  @map("total_cost") @db.Decimal(14, 2)
   totalItems         Int      @map("total_items")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -239,8 +239,8 @@ model PurchaseOrderItem {
   name            String
   sku             String
   quantity        Int
-  unitCost        Float   @map("unit_cost")
-  totalCost       Float   @map("total_cost")
+  unitCost        Decimal @map("unit_cost") @db.Decimal(12, 2)
+  totalCost       Decimal @map("total_cost") @db.Decimal(14, 2)
 
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
@@ -253,21 +253,21 @@ model PurchaseOrderItem {
 }
 
 model Receiving {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
-  supplierId      String   @map("supplier_id")
-  purchaseOrderId String?  @map("purchase_order_id")
-  invoiceNumber   String   @map("invoice_number")
-  expectedAt      DateTime @map("expected_at")
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  supplierId      String    @map("supplier_id")
+  purchaseOrderId String?   @map("purchase_order_id")
+  invoiceNumber   String    @map("invoice_number")
+  expectedAt      DateTime  @map("expected_at")
   receivedAt      DateTime? @map("received_at")
   volumes         Int
   dock            String?
-  receiverName    String?  @map("receiver_name")
+  receiverName    String?   @map("receiver_name")
   discrepancies   String?
   status          String
-  itemsCount      Int      @map("items_count")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  itemsCount      Int       @map("items_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)

@@ -883,7 +883,7 @@ function toDomainSupplierResponsible(
 
 function toDomainProduct(product: PrismaProductWithImages): Product {
 	return {
-		costPrice: product.costPrice ?? undefined,
+		costPrice: product.costPrice?.toNumber(),
 		createdAt: product.createdAt.toISOString(),
 		currentStock: product.currentStock,
 		description: product.description ?? undefined,
@@ -891,7 +891,7 @@ function toDomainProduct(product: PrismaProductWithImages): Product {
 		images: product.images.map(toDomainProductImageAsset),
 		minimumStock: product.minimumStock,
 		name: product.name,
-		salePrice: product.salePrice ?? undefined,
+		salePrice: product.salePrice?.toNumber(),
 		sku: product.sku,
 		status: product.status as ProductStatus,
 		supplierId: product.supplierId ?? undefined,
@@ -946,7 +946,7 @@ function toDomainPurchaseOrder(
 		paymentTerm: order.paymentTerm as SupplierTerm | undefined,
 		status: order.status as PurchaseOrderStatus,
 		supplierId: order.supplierId,
-		totalCost: order.totalCost,
+		totalCost: order.totalCost.toNumber(),
 		totalItems: order.totalItems,
 		updatedAt: order.updatedAt.toISOString(),
 		userId: order.userId,
@@ -963,8 +963,8 @@ function toDomainPurchaseOrderItem(
 		purchaseOrderId: item.purchaseOrderId,
 		quantity: item.quantity,
 		sku: item.sku,
-		totalCost: item.totalCost,
-		unitCost: item.unitCost,
+		totalCost: item.totalCost.toNumber(),
+		unitCost: item.unitCost.toNumber(),
 	};
 }
 
