@@ -2,6 +2,7 @@ import { apiRequest } from "@/src/shared/api/http-client";
 import type { DashboardListQuery } from "../../shared/application/dashboard-api";
 
 import type {
+  PurchaseOrderFormInput,
   SupplierFormInput,
   SupplierResponsibleInput,
 } from "../domain/supplier-flow-schemas";
@@ -93,6 +94,27 @@ export function listSuppliers(query?: DashboardListQuery) {
 
 export function listPurchaseOrders(query?: DashboardListQuery) {
   return apiRequest<PurchaseOrder[]>(withCatalogQuery("/purchase-orders", query));
+}
+
+export function createPurchaseOrder(input: PurchaseOrderFormInput) {
+  return apiRequest<PurchaseOrder>("/purchase-orders", {
+    body: JSON.stringify({
+      expectedDeliveryAt: new Date(input.expectedDeliveryAt).toISOString(),
+      invoiceNumber: input.invoiceNumber,
+      items: input.items.map((item) => ({
+        name: item.name,
+        productId: item.productId,
+        quantity: item.quantity,
+        sku: item.sku,
+        unitCost: item.unitCost,
+      })),
+      notes: input.notes,
+      paymentTerm: input.paymentTerm,
+      status: input.status,
+      supplierId: input.supplierId,
+    }),
+    method: "POST",
+  });
 }
 
 export function listReceivings(query?: DashboardListQuery) {

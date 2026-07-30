@@ -158,6 +158,75 @@
         "errors": {
           "save": "Could not save."
         }
+      },
+      "purchaseOrder": {
+        "breadcrumb": "Suppliers / New purchase order",
+        "title": "New purchase order",
+        "description": "Build the order with supplier, delivery forecast, items and commercial terms.",
+        "cancel": "Cancel",
+        "save": "Save order",
+        "saving": "Saving...",
+        "sections": {
+          "details": "Details",
+          "items": "Items",
+          "review": "Review"
+        },
+        "detailsTitle": "Order details",
+        "detailsDescription": "Supplier, delivery forecast and order terms.",
+        "itemsTitle": "Order items",
+        "itemsDescription": "Add the products or SKUs to purchase.",
+        "notesTitle": "Notes",
+        "notesDescription": "Internal notes for purchasing, receiving and finance.",
+        "fields": {
+          "supplier": "Supplier",
+          "expectedDeliveryAt": "Delivery forecast",
+          "invoiceNumber": "Invoice",
+          "paymentTerm": "Payment term",
+          "status": "Status",
+          "itemName": "Item",
+          "sku": "SKU",
+          "quantity": "Qty",
+          "unitCost": "Unit cost",
+          "notes": "Internal notes"
+        },
+        "placeholders": {
+          "supplier": "Select a supplier",
+          "invoiceNumber": "INV-8842",
+          "itemName": "Ribbed midi dress",
+          "sku": "VD-7712",
+          "notes": "Combine receiving window, batch or checking priority."
+        },
+        "terms": {
+          "+3": "+3 days",
+          "+5": "+5 days",
+          "+7": "+7 days",
+          "+15": "+15 days",
+          "+30": "+30 days",
+          "+45": "+45 days"
+        },
+        "status": {
+          "confirmed": "Confirmed",
+          "draft": "Draft"
+        },
+        "addItem": "Add item",
+        "removeItem": "Remove item",
+        "summary": {
+          "badge": "Purchase order",
+          "title": "Operational summary",
+          "description": "The order will be sent to the supplier board for tracking.",
+          "suppliers": "Active suppliers",
+          "items": "Items",
+          "total": "Estimated value"
+        },
+        "checklist": {
+          "title": "Checklist",
+          "supplier": "Supplier selected",
+          "items": "Items and costs reviewed",
+          "delivery": "Delivery forecast defined"
+        },
+        "errors": {
+          "save": "Could not save the order."
+        }
       }
     }
   },

@@ -387,6 +387,7 @@ function SuppliersHeader() {
   const { q: search, setQ: setSearch } = useSuppliersFilters();
   const { header } = useSuppliersContent();
   const basePath = useSuppliersBasePath();
+  const locale = normalizeLocale(useLocale());
 
   return (
     <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
@@ -399,7 +400,7 @@ function SuppliersHeader() {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,300px)_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,300px)_auto_auto]">
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -409,6 +410,12 @@ function SuppliersHeader() {
             value={search}
           />
         </div>
+        <Button asChild className="h-11 justify-center px-4" variant="outline">
+          <Link href={`${basePath}/purchase-orders/create`}>
+            <PlusIcon className="size-4" />
+            {getNewPurchaseOrderLabel(locale)}
+          </Link>
+        </Button>
         <Button asChild className="h-11 justify-center px-4">
           <Link href={`${basePath}/create`}>
             <PlusIcon className="size-4" />
@@ -418,6 +425,12 @@ function SuppliersHeader() {
       </div>
     </header>
   );
+}
+
+function getNewPurchaseOrderLabel(locale: string) {
+  if (locale === "en") return "New PO";
+  if (locale === "es") return "Nueva orden";
+  return "Novo pedido";
 }
 
 function SupplierMetrics() {
