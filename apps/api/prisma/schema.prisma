@@ -46,9 +46,17 @@ model Store {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  onboardings Onboarding[]
-  memberships StoreMembership[]
+  owner                User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  onboardings          Onboarding[]
+  memberships          StoreMembership[]
+  suppliers            Supplier[]
+  supplierResponsibles SupplierResponsible[]
+  products             Product[]
+  productImageAssets   ProductImageAsset[]
+  inventoryMovements   InventoryMovement[]
+  purchaseOrders       PurchaseOrder[]
+  purchaseOrderItems   PurchaseOrderItem[]
+  receivings           Receiving[]
 
   @@index([ownerId])
   @@map("stores")
@@ -113,6 +121,7 @@ model PasswordRecoveryRequest {
 model Supplier {
   id           String   @id @default(uuid())
   userId       String   @map("user_id")
+  storeId      String   @map("store_id")
   name         String
   category     String?
   document     String?
@@ -127,19 +136,22 @@ model Supplier {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store          Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
   responsibles   SupplierResponsible[]
   products       Product[]
   purchaseOrders PurchaseOrder[]
   receivings     Receiving[]
 
-  @@unique([userId, document])
+  @@unique([storeId, document])
   @@index([userId])
+  @@index([storeId])
   @@map("suppliers")
 }
 
 model SupplierResponsible {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
+  storeId     String   @map("store_id")
   supplierId  String   @map("supplier_id")
   name        String
   role        String
@@ -152,9 +164,11 @@ model SupplierResponsible {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([storeId])
   @@index([supplierId])
   @@map("supplier_responsibles")
 }
@@ -162,6 +176,7 @@ model SupplierResponsible {
 model Product {
   id           String   @id @default(uuid())
   userId       String   @map("user_id")
+  storeId      String   @map("store_id")
   supplierId   String?  @map("supplier_id")
   name         String
   sku          String
@@ -175,13 +190,15 @@ model Product {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
   supplier           Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   images             ProductImageAsset[]
   movements          InventoryMovement[]
   purchaseOrderItems PurchaseOrderItem[]
 
-  @@unique([userId, sku])
+  @@unique([storeId, sku])
   @@index([userId])
+  @@index([storeId])
   @@index([supplierId])
   @@map("products")
 }
@@ -189,6 +206,7 @@ model Product {
 model ProductImageAsset {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
+  storeId     String   @map("store_id")
   productId   String   @map("product_id")
   fileName    String   @map("file_name")
   contentType String   @map("content_type")
@@ -198,9 +216,11 @@ model ProductImageAsset {
   createdAt   DateTime @default(now()) @map("created_at")
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([storeId])
   @@index([productId])
   @@map("product_image_assets")
 }
@@ -208,6 +228,7 @@ model ProductImageAsset {
 model InventoryMovement {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
+  storeId       String   @map("store_id")
   productId     String   @map("product_id")
   type          String
   quantity      Int
@@ -217,9 +238,11 @@ model InventoryMovement {
   createdAt     DateTime @default(now()) @map("created_at")
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([storeId])
   @@index([productId])
   @@map("inventory_movements")
 }
@@ -227,6 +250,7 @@ model InventoryMovement {
 model PurchaseOrder {
   id                 String   @id @default(uuid())
   userId             String   @map("user_id")
+  storeId            String   @map("store_id")
   supplierId         String   @map("supplier_id")
   code               String
   expectedDeliveryAt DateTime @map("expected_delivery_at")
@@ -240,12 +264,14 @@ model PurchaseOrder {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store      Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
   supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   items      PurchaseOrderItem[]
   receivings Receiving[]
 
-  @@unique([userId, code])
+  @@unique([storeId, code])
   @@index([userId])
+  @@index([storeId])
   @@index([supplierId])
   @@map("purchase_orders")
 }
@@ -253,6 +279,7 @@ model PurchaseOrder {
 model PurchaseOrderItem {
   id              String  @id @default(uuid())
   userId          String  @map("user_id")
+  storeId         String  @map("store_id")
   purchaseOrderId String  @map("purchase_order_id")
   productId       String? @map("product_id")
   name            String
@@ -262,10 +289,12 @@ model PurchaseOrderItem {
   totalCost       Decimal @map("total_cost") @db.Decimal(14, 2)
 
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store         Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   product       Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([storeId])
   @@index([purchaseOrderId])
   @@index([productId])
   @@map("purchase_order_items")
@@ -274,6 +303,7 @@ model PurchaseOrderItem {
 model Receiving {
   id              String    @id @default(uuid())
   userId          String    @map("user_id")
+  storeId         String    @map("store_id")
   supplierId      String    @map("supplier_id")
   purchaseOrderId String?   @map("purchase_order_id")
   invoiceNumber   String    @map("invoice_number")
@@ -289,10 +319,12 @@ model Receiving {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
   supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([storeId])
   @@index([supplierId])
   @@index([purchaseOrderId])
   @@map("receivings")

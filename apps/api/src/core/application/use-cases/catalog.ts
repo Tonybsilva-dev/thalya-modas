@@ -1,5 +1,6 @@
 import type {
 	CatalogListQuery,
+	CatalogScope,
 	CreateInventoryAdjustmentInput,
 	CreateProductInput,
 	CreatePurchaseOrderInput,
@@ -18,8 +19,8 @@ import type { CatalogRepository } from '../../domain/repositories/catalog-reposi
 export class ListSuppliersUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; query?: CatalogListQuery }) {
-		return this.catalogRepository.listSuppliers(input.userId, input.query);
+	execute(input: CatalogScope & { query?: CatalogListQuery }) {
+		return this.catalogRepository.listSuppliers(input, input.query);
 	}
 }
 
@@ -34,11 +35,8 @@ export class CreateSupplierUseCase {
 export class GetSupplierUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; supplierId: string }) {
-		return this.catalogRepository.findSupplierById(
-			input.userId,
-			input.supplierId,
-		);
+	execute(input: CatalogScope & { supplierId: string }) {
+		return this.catalogRepository.findSupplierById(input, input.supplierId);
 	}
 }
 
@@ -53,20 +51,17 @@ export class UpdateSupplierUseCase {
 export class DeleteSupplierUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; supplierId: string }) {
-		return this.catalogRepository.deleteSupplier(
-			input.userId,
-			input.supplierId,
-		);
+	execute(input: CatalogScope & { supplierId: string }) {
+		return this.catalogRepository.deleteSupplier(input, input.supplierId);
 	}
 }
 
 export class ListSupplierResponsiblesUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; supplierId: string }) {
+	execute(input: CatalogScope & { supplierId: string }) {
 		return this.catalogRepository.listSupplierResponsibles(
-			input.userId,
+			input,
 			input.supplierId,
 		);
 	}
@@ -91,13 +86,14 @@ export class UpdateSupplierResponsibleUseCase {
 export class DeleteSupplierResponsibleUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: {
-		userId: string;
-		supplierId: string;
-		responsibleId: string;
-	}) {
+	execute(
+		input: CatalogScope & {
+			supplierId: string;
+			responsibleId: string;
+		},
+	) {
 		return this.catalogRepository.deleteSupplierResponsible(
-			input.userId,
+			input,
 			input.supplierId,
 			input.responsibleId,
 		);
@@ -107,8 +103,8 @@ export class DeleteSupplierResponsibleUseCase {
 export class ListProductsUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; query?: CatalogListQuery }) {
-		return this.catalogRepository.listProducts(input.userId, input.query);
+	execute(input: CatalogScope & { query?: CatalogListQuery }) {
+		return this.catalogRepository.listProducts(input, input.query);
 	}
 }
 
@@ -123,11 +119,8 @@ export class CreateProductUseCase {
 export class GetProductUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; productId: string }) {
-		return this.catalogRepository.findProductById(
-			input.userId,
-			input.productId,
-		);
+	execute(input: CatalogScope & { productId: string }) {
+		return this.catalogRepository.findProductById(input, input.productId);
 	}
 }
 
@@ -150,9 +143,9 @@ export class CreateInventoryAdjustmentUseCase {
 export class ListInventoryMovementsUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; productId?: string }) {
+	execute(input: CatalogScope & { productId?: string }) {
 		return this.catalogRepository.listInventoryMovements(
-			input.userId,
+			input,
 			input.productId,
 		);
 	}
@@ -161,8 +154,8 @@ export class ListInventoryMovementsUseCase {
 export class ListPurchaseOrdersUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; query?: CatalogListQuery }) {
-		return this.catalogRepository.listPurchaseOrders(input.userId, input.query);
+	execute(input: CatalogScope & { query?: CatalogListQuery }) {
+		return this.catalogRepository.listPurchaseOrders(input, input.query);
 	}
 }
 
@@ -185,8 +178,8 @@ export class UpdatePurchaseOrderUseCase {
 export class ListReceivingsUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
-	execute(input: { userId: string; query?: CatalogListQuery }) {
-		return this.catalogRepository.listReceivings(input.userId, input.query);
+	execute(input: CatalogScope & { query?: CatalogListQuery }) {
+		return this.catalogRepository.listReceivings(input, input.query);
 	}
 }
 

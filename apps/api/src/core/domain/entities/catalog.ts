@@ -28,9 +28,15 @@ export type ReceivingStatus =
 	| 'completed'
 	| 'delayed';
 
+export type CatalogScope = {
+	storeId: string;
+	userId: string;
+};
+
 export type Supplier = {
 	id: string;
 	userId: string;
+	storeId: string;
 	name: string;
 	category?: SupplierCategory;
 	document?: string;
@@ -50,6 +56,7 @@ export type SupplierResponsible = {
 	id: string;
 	supplierId: string;
 	userId: string;
+	storeId: string;
 	name: string;
 	role: string;
 	phone: string;
@@ -65,6 +72,7 @@ export type ProductImageAsset = {
 	id: string;
 	productId: string;
 	userId: string;
+	storeId: string;
 	fileName: string;
 	contentType: 'image/webp';
 	key: string;
@@ -76,6 +84,7 @@ export type ProductImageAsset = {
 export type Product = {
 	id: string;
 	userId: string;
+	storeId: string;
 	name: string;
 	sku: string;
 	description?: string;
@@ -93,6 +102,7 @@ export type Product = {
 export type InventoryMovement = {
 	id: string;
 	userId: string;
+	storeId: string;
 	productId: string;
 	type: InventoryAdjustmentType;
 	quantity: number;
@@ -105,6 +115,7 @@ export type InventoryMovement = {
 export type PurchaseOrderItem = {
 	id: string;
 	purchaseOrderId: string;
+	storeId: string;
 	productId?: string;
 	name: string;
 	sku: string;
@@ -116,6 +127,7 @@ export type PurchaseOrderItem = {
 export type PurchaseOrder = {
 	id: string;
 	userId: string;
+	storeId: string;
 	supplierId: string;
 	code: string;
 	expectedDeliveryAt: string;
@@ -133,6 +145,7 @@ export type PurchaseOrder = {
 export type Receiving = {
 	id: string;
 	userId: string;
+	storeId: string;
 	supplierId: string;
 	purchaseOrderId?: string;
 	invoiceNumber: string;
@@ -148,8 +161,7 @@ export type Receiving = {
 	updatedAt: string;
 };
 
-export type CreateSupplierInput = {
-	userId: string;
+export type CreateSupplierInput = CatalogScope & {
 	name: string;
 	category?: SupplierCategory;
 	document?: string;
@@ -162,15 +174,15 @@ export type CreateSupplierInput = {
 };
 
 export type UpdateSupplierInput = Partial<
-	Omit<CreateSupplierInput, 'userId'>
+	Omit<CreateSupplierInput, 'storeId' | 'userId'>
 > & {
 	id: string;
+	storeId: string;
 	userId: string;
 	status?: SupplierStatus;
 };
 
-export type CreateSupplierResponsibleInput = {
-	userId: string;
+export type CreateSupplierResponsibleInput = CatalogScope & {
 	supplierId: string;
 	name: string;
 	role: string;
@@ -182,15 +194,15 @@ export type CreateSupplierResponsibleInput = {
 };
 
 export type UpdateSupplierResponsibleInput = Partial<
-	Omit<CreateSupplierResponsibleInput, 'userId' | 'supplierId'>
+	Omit<CreateSupplierResponsibleInput, 'storeId' | 'userId' | 'supplierId'>
 > & {
 	id: string;
+	storeId: string;
 	userId: string;
 	supplierId: string;
 };
 
-export type CreateProductInput = {
-	userId: string;
+export type CreateProductInput = CatalogScope & {
 	name: string;
 	sku: string;
 	description?: string;
@@ -201,22 +213,23 @@ export type CreateProductInput = {
 	minimumStock?: number;
 };
 
-export type UpdateProductInput = Partial<Omit<CreateProductInput, 'userId'>> & {
+export type UpdateProductInput = Partial<
+	Omit<CreateProductInput, 'storeId' | 'userId'>
+> & {
 	id: string;
+	storeId: string;
 	userId: string;
 	status?: ProductStatus;
 };
 
-export type CreateInventoryAdjustmentInput = {
-	userId: string;
+export type CreateInventoryAdjustmentInput = CatalogScope & {
 	productId: string;
 	type: InventoryAdjustmentType;
 	quantity: number;
 	reason: string;
 };
 
-export type CreatePurchaseOrderInput = {
-	userId: string;
+export type CreatePurchaseOrderInput = CatalogScope & {
 	supplierId: string;
 	expectedDeliveryAt: string;
 	invoiceNumber?: string;
@@ -233,15 +246,15 @@ export type CreatePurchaseOrderInput = {
 };
 
 export type UpdatePurchaseOrderInput = Partial<
-	Omit<CreatePurchaseOrderInput, 'userId' | 'supplierId' | 'items'>
+	Omit<CreatePurchaseOrderInput, 'storeId' | 'userId' | 'supplierId' | 'items'>
 > & {
 	id: string;
+	storeId: string;
 	userId: string;
 	status?: PurchaseOrderStatus;
 };
 
-export type CreateReceivingInput = {
-	userId: string;
+export type CreateReceivingInput = CatalogScope & {
 	supplierId: string;
 	purchaseOrderId?: string;
 	invoiceNumber: string;
@@ -255,15 +268,18 @@ export type CreateReceivingInput = {
 };
 
 export type UpdateReceivingInput = Partial<
-	Omit<CreateReceivingInput, 'userId' | 'supplierId' | 'purchaseOrderId'>
+	Omit<
+		CreateReceivingInput,
+		'storeId' | 'userId' | 'supplierId' | 'purchaseOrderId'
+	>
 > & {
 	id: string;
+	storeId: string;
 	userId: string;
 	status?: ReceivingStatus;
 };
 
-export type PrepareProductImageUploadInput = {
-	userId: string;
+export type PrepareProductImageUploadInput = CatalogScope & {
 	productId: string;
 	fileName: string;
 	contentType: 'image/webp';

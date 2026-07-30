@@ -20,6 +20,8 @@ const runPrismaTests =
 const testEmailPrefix = 'prisma-catalog';
 
 describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
+	let currentStoreId: string;
+	let currentUserId: string;
 	let server: FastifyInstance;
 	let storeRepository: PrismaStoreRepository;
 
@@ -156,9 +158,12 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		expect(persistedProduct).toMatchObject({
 			currentStock: 9,
 			sku: 'PRISMA-VD-001',
+			storeId: currentStoreId,
 		});
 		expect(persistedProduct?.images).toHaveLength(1);
 		expect(persistedProduct?.movements).toHaveLength(1);
+		expect(persistedProduct?.images[0]?.storeId).toBe(currentStoreId);
+		expect(persistedProduct?.movements[0]?.storeId).toBe(currentStoreId);
 
 		const purchaseOrder = await makeRequest(server, {
 			body: {
@@ -212,15 +217,38 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		});
 		expect(persistedPurchaseOrder?.items).toHaveLength(1);
 		expect(persistedPurchaseOrder?.receivings).toHaveLength(1);
+		expect(persistedPurchaseOrder?.storeId).toBe(currentStoreId);
+		expect(persistedPurchaseOrder?.items[0]?.storeId).toBe(currentStoreId);
+		expect(persistedPurchaseOrder?.receivings[0]?.storeId).toBe(currentStoreId);
 		expect(persistedPurchaseOrder?.totalCost.toFixed(2)).toBe('155.00');
 		expect(persistedPurchaseOrder?.items[0]?.unitCost.toFixed(2)).toBe('77.50');
 		expect(persistedPurchaseOrder?.items[0]?.totalCost.toFixed(2)).toBe(
 			'155.00',
 		);
+
+		const persistedSupplier = await prisma.supplier.findUnique({
+			include: { responsibles: true },
+			where: { id: supplierId },
+		});
+		expect(persistedSupplier?.storeId).toBe(currentStoreId);
+		expect(
+			persistedSupplier?.responsibles.every(
+				(responsible) => responsible.storeId === currentStoreId,
+			),
+		).toBe(true);
 	});
 
-	it('deve impedir documento e SKU duplicados por usuário', async () => {
+	it('deve impedir documento e SKU duplicados dentro da mesma loja', async () => {
 		const token = await registerAndGetToken();
+		const member = await registerUserOnly();
+		await prisma.storeMembership.create({
+			data: {
+				role: 'MANAGER',
+				status: 'ACTIVE',
+				storeId: currentStoreId,
+				userId: member.userId,
+			},
+		});
 		const supplierBody = {
 			document: '99888777000166',
 			name: 'Duplicado Prisma',
@@ -234,7 +262,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		});
 		const secondSupplier = await makeRequest(server, {
 			body: supplierBody,
-			headers: { authorization: `Bearer ${token}` },
+			headers: operationalHeaders(member.token, currentStoreId),
 			method: 'POST',
 			url: '/suppliers',
 		});
@@ -253,7 +281,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		});
 		const secondProduct = await makeRequest(server, {
 			body: productBody,
-			headers: { authorization: `Bearer ${token}` },
+			headers: operationalHeaders(member.token, currentStoreId),
 			method: 'POST',
 			url: '/products',
 		});
@@ -261,7 +289,103 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		expect(secondProduct.statusCode).toBe(400);
 	});
 
+	it('deve permitir as mesmas chaves operacionais em lojas diferentes', async () => {
+		const token = await registerAndGetToken();
+		const firstStoreId = currentStoreId;
+		const secondStore = await createActiveTestStore(
+			storeRepository,
+			currentUserId,
+			'Segunda loja Prisma',
+		);
+		const supplierBody = {
+			document: '55666777000188',
+			name: 'Fornecedor multi-loja',
+		};
+
+		const firstSupplier = await makeRequest(server, {
+			body: supplierBody,
+			headers: operationalHeaders(token, firstStoreId),
+			method: 'POST',
+			url: '/suppliers',
+		});
+		const secondSupplier = await makeRequest(server, {
+			body: supplierBody,
+			headers: operationalHeaders(token, secondStore.id),
+			method: 'POST',
+			url: '/suppliers',
+		});
+		expect(firstSupplier.statusCode).toBe(201);
+		expect(secondSupplier.statusCode).toBe(201);
+
+		const productBody = {
+			name: 'Produto multi-loja',
+			sku: 'PRISMA-MULTI-001',
+		};
+		const firstProduct = await makeRequest(server, {
+			body: productBody,
+			headers: operationalHeaders(token, firstStoreId),
+			method: 'POST',
+			url: '/products',
+		});
+		const secondProduct = await makeRequest(server, {
+			body: productBody,
+			headers: operationalHeaders(token, secondStore.id),
+			method: 'POST',
+			url: '/products',
+		});
+		expect(firstProduct.statusCode).toBe(201);
+		expect(secondProduct.statusCode).toBe(201);
+
+		const firstOrder = await createPurchaseOrder(
+			token,
+			firstStoreId,
+			(firstSupplier.body as { id: string }).id,
+		);
+		const secondOrder = await createPurchaseOrder(
+			token,
+			secondStore.id,
+			(secondSupplier.body as { id: string }).id,
+		);
+		expect(firstOrder.statusCode).toBe(201);
+		expect(secondOrder.statusCode).toBe(201);
+		expect(firstOrder.body).toMatchObject({ code: 'PO-0001' });
+		expect(secondOrder.body).toMatchObject({ code: 'PO-0001' });
+	});
+
+	it('deve manter store_id obrigatório nas oito tabelas operacionais', async () => {
+		const columns = await prisma.$queryRaw<
+			Array<{ is_nullable: string; table_name: string }>
+		>`
+			SELECT table_name, is_nullable
+			FROM information_schema.columns
+			WHERE table_schema = current_schema()
+			  AND column_name = 'store_id'
+			  AND table_name IN (
+			    'suppliers',
+			    'supplier_responsibles',
+			    'products',
+			    'product_image_assets',
+			    'inventory_movements',
+			    'purchase_orders',
+			    'purchase_order_items',
+			    'receivings'
+			  )
+			ORDER BY table_name
+		`;
+
+		expect(columns).toHaveLength(8);
+		expect(columns.every((column) => column.is_nullable === 'NO')).toBe(true);
+	});
+
 	async function registerAndGetToken() {
+		const account = await registerUserOnly();
+		const store = await createActiveTestStore(storeRepository, account.userId);
+		currentStoreId = store.id;
+		currentUserId = account.userId;
+		return account.token;
+	}
+
+	async function registerUserOnly() {
 		const response = await makeRequest(server, {
 			body: {
 				email: `${testEmailPrefix}-${randomUUID()}@thalya.test`,
@@ -276,8 +400,38 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 			token: string;
 			user: { id: string };
 		};
-		await createActiveTestStore(storeRepository, body.user.id);
-		return body.token;
+		return { token: body.token, userId: body.user.id };
+	}
+
+	function createPurchaseOrder(
+		token: string,
+		storeId: string,
+		supplierId: string,
+	) {
+		return makeRequest(server, {
+			body: {
+				expectedDeliveryAt: '2026-08-05T15:00:00.000Z',
+				items: [
+					{
+						name: 'Item multi-loja',
+						quantity: 1,
+						sku: 'ITEM-MULTI',
+						unitCost: 10,
+					},
+				],
+				supplierId,
+			},
+			headers: operationalHeaders(token, storeId),
+			method: 'POST',
+			url: '/purchase-orders',
+		});
+	}
+
+	function operationalHeaders(token: string, storeId: string) {
+		return {
+			authorization: `Bearer ${token}`,
+			'x-store-id': storeId,
+		};
 	}
 
 	async function createResponsible(

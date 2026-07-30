@@ -4,6 +4,7 @@ import { DomainError } from '../../../../app/http/errors/domain-error';
 import { NotFoundError } from '../../../../app/http/errors/not-found-error';
 import type {
 	CatalogListQuery,
+	CatalogScope,
 	CreateInventoryAdjustmentInput,
 	CreateProductInput,
 	CreatePurchaseOrderInput,
@@ -60,10 +61,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 
 	async createSupplier(input: CreateSupplierInput): Promise<Supplier> {
 		if (input.document) {
-			const existing = await this.findSupplierByDocument(
-				input.userId,
-				input.document,
-			);
+			const existing = await this.findSupplierByDocument(input, input.document);
 			if (existing) {
 				throw new DomainError('Fornecedor com este documento já existe.');
 			}
@@ -81,6 +79,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 				paymentTerm: input.paymentTerm,
 				phone: input.phone,
 				status: 'active',
+				storeId: input.storeId,
 				userId: input.userId,
 			},
 			include: { responsibles: true },
@@ -90,11 +89,15 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async findSupplierById(
-		userId: string,
+		scope: CatalogScope,
 		supplierId: string,
 	): Promise<Supplier | null> {
 		const supplier = await this.prisma.supplier.findFirst({
-			where: { id: supplierId, userId },
+			where: {
+				id: supplierId,
+				storeId: scope.storeId,
+				userId: scope.userId,
+			},
 			include: { responsibles: true },
 		});
 
@@ -102,11 +105,14 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async findSupplierByDocument(
-		userId: string,
+		scope: CatalogScope,
 		document: string,
 	): Promise<Supplier | null> {
 		const supplier = await this.prisma.supplier.findFirst({
-			where: { document, userId },
+			where: {
+				document,
+				storeId: scope.storeId,
+			},
 			include: { responsibles: true },
 		});
 
@@ -114,11 +120,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async listSuppliers(
-		userId: string,
+		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Supplier[]> {
 		const where: Prisma.SupplierWhereInput = {
-			userId,
+			storeId: scope.storeId,
+			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getSupplierSearchWhere(query.q),
 		};
@@ -135,17 +142,18 @@ export class PrismaCatalogRepository implements CatalogRepository {
 
 	async updateSupplier(input: UpdateSupplierInput): Promise<Supplier> {
 		const supplier = await this.prisma.supplier.findFirst({
-			where: { id: input.id, userId: input.userId },
+			where: {
+				id: input.id,
+				storeId: input.storeId,
+				userId: input.userId,
+			},
 		});
 		if (!supplier) {
 			throw new NotFoundError('Fornecedor não encontrado.');
 		}
 
 		if (input.document && input.document !== supplier.document) {
-			const existing = await this.findSupplierByDocument(
-				input.userId,
-				input.document,
-			);
+			const existing = await this.findSupplierByDocument(input, input.document);
 			if (existing) {
 				throw new DomainError('Fornecedor com este documento já existe.');
 			}
@@ -160,9 +168,13 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		return toDomainSupplier(updated);
 	}
 
-	async deleteSupplier(userId: string, supplierId: string): Promise<void> {
+	async deleteSupplier(scope: CatalogScope, supplierId: string): Promise<void> {
 		const supplier = await this.prisma.supplier.findFirst({
-			where: { id: supplierId, userId },
+			where: {
+				id: supplierId,
+				storeId: scope.storeId,
+				userId: scope.userId,
+			},
 		});
 		if (!supplier) {
 			throw new NotFoundError('Fornecedor não encontrado.');
@@ -174,12 +186,16 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async createSupplierResponsible(
 		input: CreateSupplierResponsibleInput,
 	): Promise<SupplierResponsible> {
-		await this.ensureSupplier(input.userId, input.supplierId);
+		await this.ensureSupplier(input, input.supplierId);
 
 		const responsible = await this.prisma.$transaction(async (tx) => {
 			if (input.isPrimary) {
 				await tx.supplierResponsible.updateMany({
-					where: { supplierId: input.supplierId, userId: input.userId },
+					where: {
+						storeId: input.storeId,
+						supplierId: input.supplierId,
+						userId: input.userId,
+					},
 					data: { isPrimary: false },
 				});
 			}
@@ -193,6 +209,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 					phone: input.phone,
 					role: input.role,
 					status: input.status,
+					storeId: input.storeId,
 					supplierId: input.supplierId,
 					userId: input.userId,
 				},
@@ -203,13 +220,18 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async deleteSupplierResponsible(
-		userId: string,
+		scope: CatalogScope,
 		supplierId: string,
 		responsibleId: string,
 	): Promise<void> {
-		await this.ensureSupplier(userId, supplierId);
+		await this.ensureSupplier(scope, supplierId);
 		const responsible = await this.prisma.supplierResponsible.findFirst({
-			where: { id: responsibleId, supplierId, userId },
+			where: {
+				id: responsibleId,
+				storeId: scope.storeId,
+				supplierId,
+				userId: scope.userId,
+			},
 		});
 		if (!responsible) {
 			throw new NotFoundError('Responsável não encontrado.');
@@ -221,12 +243,16 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async listSupplierResponsibles(
-		userId: string,
+		scope: CatalogScope,
 		supplierId: string,
 	): Promise<SupplierResponsible[]> {
-		await this.ensureSupplier(userId, supplierId);
+		await this.ensureSupplier(scope, supplierId);
 		const responsibles = await this.prisma.supplierResponsible.findMany({
-			where: { supplierId, userId },
+			where: {
+				storeId: scope.storeId,
+				supplierId,
+				userId: scope.userId,
+			},
 			orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
 		});
 
@@ -236,10 +262,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async updateSupplierResponsible(
 		input: UpdateSupplierResponsibleInput,
 	): Promise<SupplierResponsible> {
-		await this.ensureSupplier(input.userId, input.supplierId);
+		await this.ensureSupplier(input, input.supplierId);
 		const responsible = await this.prisma.supplierResponsible.findFirst({
 			where: {
 				id: input.id,
+				storeId: input.storeId,
 				supplierId: input.supplierId,
 				userId: input.userId,
 			},
@@ -251,7 +278,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		const updated = await this.prisma.$transaction(async (tx) => {
 			if (input.isPrimary) {
 				await tx.supplierResponsible.updateMany({
-					where: { supplierId: input.supplierId, userId: input.userId },
+					where: {
+						storeId: input.storeId,
+						supplierId: input.supplierId,
+						userId: input.userId,
+					},
 					data: { isPrimary: false },
 				});
 			}
@@ -266,13 +297,13 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async createProduct(input: CreateProductInput): Promise<Product> {
-		const existing = await this.findProductBySku(input.userId, input.sku);
+		const existing = await this.findProductBySku(input, input.sku);
 		if (existing) {
 			throw new DomainError('Produto com este SKU já existe.');
 		}
 
 		if (input.supplierId) {
-			await this.ensureSupplier(input.userId, input.supplierId);
+			await this.ensureSupplier(input, input.supplierId);
 		}
 
 		const product = await this.prisma.product.create({
@@ -285,6 +316,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 				salePrice: input.salePrice,
 				sku: input.sku,
 				status: 'active',
+				storeId: input.storeId,
 				supplierId: input.supplierId,
 				userId: input.userId,
 			},
@@ -295,20 +327,30 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async findProductById(
-		userId: string,
+		scope: CatalogScope,
 		productId: string,
 	): Promise<Product | null> {
 		const product = await this.prisma.product.findFirst({
-			where: { id: productId, userId },
+			where: {
+				id: productId,
+				storeId: scope.storeId,
+				userId: scope.userId,
+			},
 			include: { images: true },
 		});
 
 		return product ? toDomainProduct(product) : null;
 	}
 
-	async findProductBySku(userId: string, sku: string): Promise<Product | null> {
+	async findProductBySku(
+		scope: CatalogScope,
+		sku: string,
+	): Promise<Product | null> {
 		const product = await this.prisma.product.findFirst({
-			where: { sku, userId },
+			where: {
+				sku,
+				storeId: scope.storeId,
+			},
 			include: { images: true },
 		});
 
@@ -316,11 +358,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async listProducts(
-		userId: string,
+		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Product[]> {
 		const where: Prisma.ProductWhereInput = {
-			userId,
+			storeId: scope.storeId,
+			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getProductSearchWhere(query.q),
 		};
@@ -337,21 +380,25 @@ export class PrismaCatalogRepository implements CatalogRepository {
 
 	async updateProduct(input: UpdateProductInput): Promise<Product> {
 		const product = await this.prisma.product.findFirst({
-			where: { id: input.id, userId: input.userId },
+			where: {
+				id: input.id,
+				storeId: input.storeId,
+				userId: input.userId,
+			},
 		});
 		if (!product) {
 			throw new NotFoundError('Produto não encontrado.');
 		}
 
 		if (input.sku && input.sku !== product.sku) {
-			const existing = await this.findProductBySku(input.userId, input.sku);
+			const existing = await this.findProductBySku(input, input.sku);
 			if (existing) {
 				throw new DomainError('Produto com este SKU já existe.');
 			}
 		}
 
 		if (input.supplierId) {
-			await this.ensureSupplier(input.userId, input.supplierId);
+			await this.ensureSupplier(input, input.supplierId);
 		}
 
 		const updated = await this.prisma.product.update({
@@ -368,7 +415,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	): Promise<InventoryMovement> {
 		const movement = await this.prisma.$transaction(async (tx) => {
 			const product = await tx.product.findFirst({
-				where: { id: input.productId, userId: input.userId },
+				where: {
+					id: input.productId,
+					storeId: input.storeId,
+					userId: input.userId,
+				},
 			});
 			if (!product) {
 				throw new NotFoundError('Produto não encontrado.');
@@ -398,6 +449,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 					productId: product.id,
 					quantity: input.quantity,
 					reason: input.reason,
+					storeId: input.storeId,
 					type: input.type,
 					userId: input.userId,
 				},
@@ -408,11 +460,15 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async listInventoryMovements(
-		userId: string,
+		scope: CatalogScope,
 		productId?: string,
 	): Promise<InventoryMovement[]> {
 		const movements = await this.prisma.inventoryMovement.findMany({
-			where: { userId, ...(productId ? { productId } : {}) },
+			where: {
+				storeId: scope.storeId,
+				userId: scope.userId,
+				...(productId ? { productId } : {}),
+			},
 			orderBy: { createdAt: 'desc' },
 		});
 
@@ -422,14 +478,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async createPurchaseOrder(
 		input: CreatePurchaseOrderInput,
 	): Promise<PurchaseOrder> {
-		await this.ensureSupplier(input.userId, input.supplierId);
+		await this.ensureSupplier(input, input.supplierId);
 
 		for (const item of input.items) {
 			if (item.productId) {
-				const product = await this.findProductById(
-					input.userId,
-					item.productId,
-				);
+				const product = await this.findProductById(input, item.productId);
 				if (!product) {
 					throw new NotFoundError('Produto não encontrado.');
 				}
@@ -445,7 +498,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 			0,
 		);
 		const orderCount = await this.prisma.purchaseOrder.count({
-			where: { userId: input.userId },
+			where: { storeId: input.storeId },
 		});
 
 		const order = await this.prisma.purchaseOrder.create({
@@ -459,6 +512,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 						productId: item.productId,
 						quantity: item.quantity,
 						sku: item.sku,
+						storeId: input.storeId,
 						totalCost: item.quantity * item.unitCost,
 						unitCost: item.unitCost,
 						userId: input.userId,
@@ -467,6 +521,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 				notes: input.notes,
 				paymentTerm: input.paymentTerm,
 				status: input.status ?? 'confirmed',
+				storeId: input.storeId,
 				supplierId: input.supplierId,
 				totalCost,
 				totalItems,
@@ -479,11 +534,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async listPurchaseOrders(
-		userId: string,
+		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<PurchaseOrder[]> {
 		const where: Prisma.PurchaseOrderWhereInput = {
-			userId,
+			storeId: scope.storeId,
+			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getPurchaseOrderSearchWhere(query.q),
 		};
@@ -501,7 +557,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		input: UpdatePurchaseOrderInput,
 	): Promise<PurchaseOrder> {
 		const order = await this.prisma.purchaseOrder.findFirst({
-			where: { id: input.id, userId: input.userId },
+			where: {
+				id: input.id,
+				storeId: input.storeId,
+				userId: input.userId,
+			},
 		});
 		if (!order) {
 			throw new NotFoundError('Pedido de compra não encontrado.');
@@ -517,12 +577,16 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async createReceiving(input: CreateReceivingInput): Promise<Receiving> {
-		await this.ensureSupplier(input.userId, input.supplierId);
+		await this.ensureSupplier(input, input.supplierId);
 
 		let itemsCount = 0;
 		if (input.purchaseOrderId) {
 			const order = await this.prisma.purchaseOrder.findFirst({
-				where: { id: input.purchaseOrderId, userId: input.userId },
+				where: {
+					id: input.purchaseOrderId,
+					storeId: input.storeId,
+					userId: input.userId,
+				},
 			});
 			if (!order) {
 				throw new NotFoundError('Pedido de compra não encontrado.');
@@ -541,6 +605,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 				receivedAt: input.receivedAt ? new Date(input.receivedAt) : undefined,
 				receiverName: input.receiverName,
 				status: input.status ?? 'scheduled',
+				storeId: input.storeId,
 				supplierId: input.supplierId,
 				userId: input.userId,
 				volumes: input.volumes,
@@ -551,11 +616,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async listReceivings(
-		userId: string,
+		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Receiving[]> {
 		const where: Prisma.ReceivingWhereInput = {
-			userId,
+			storeId: scope.storeId,
+			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getReceivingSearchWhere(query.q),
 		};
@@ -570,7 +636,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 
 	async updateReceiving(input: UpdateReceivingInput): Promise<Receiving> {
 		const receiving = await this.prisma.receiving.findFirst({
-			where: { id: input.id, userId: input.userId },
+			where: {
+				id: input.id,
+				storeId: input.storeId,
+				userId: input.userId,
+			},
 		});
 		if (!receiving) {
 			throw new NotFoundError('Recebimento não encontrado.');
@@ -588,13 +658,17 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		input: PrepareProductImageUploadInput,
 	): Promise<PreparedProductImageUpload> {
 		const product = await this.prisma.product.findFirst({
-			where: { id: input.productId, userId: input.userId },
+			where: {
+				id: input.productId,
+				storeId: input.storeId,
+				userId: input.userId,
+			},
 		});
 		if (!product) {
 			throw new NotFoundError('Produto não encontrado.');
 		}
 
-		const key = `products/${input.userId}/${input.productId}/${randomUUID()}.webp`;
+		const key = `stores/${input.storeId}/products/${input.productId}/${randomUUID()}.webp`;
 		const upload = this.r2StorageConfig
 			? createR2PresignedUpload(this.r2StorageConfig, {
 					contentType: input.contentType,
@@ -616,6 +690,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 				productId: input.productId,
 				publicUrl: upload.publicUrl,
 				size: input.size,
+				storeId: input.storeId,
 				userId: input.userId,
 			},
 		});
@@ -626,9 +701,13 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		};
 	}
 
-	private async ensureSupplier(userId: string, supplierId: string) {
+	private async ensureSupplier(scope: CatalogScope, supplierId: string) {
 		const supplier = await this.prisma.supplier.findFirst({
-			where: { id: supplierId, userId },
+			where: {
+				id: supplierId,
+				storeId: scope.storeId,
+				userId: scope.userId,
+			},
 		});
 		if (!supplier) {
 			throw new NotFoundError('Fornecedor não encontrado.');
@@ -857,6 +936,7 @@ function toDomainSupplier(supplier: PrismaSupplierWithResponsibles): Supplier {
 		phone: supplier.phone ?? undefined,
 		responsibles: supplier.responsibles.map(toDomainSupplierResponsible),
 		status: supplier.status as SupplierStatus,
+		storeId: supplier.storeId,
 		updatedAt: supplier.updatedAt.toISOString(),
 		userId: supplier.userId,
 	};
@@ -875,6 +955,7 @@ function toDomainSupplierResponsible(
 		phone: responsible.phone,
 		role: responsible.role,
 		status: responsible.status as SupplierStatus,
+		storeId: responsible.storeId,
 		supplierId: responsible.supplierId,
 		updatedAt: responsible.updatedAt.toISOString(),
 		userId: responsible.userId,
@@ -894,6 +975,7 @@ function toDomainProduct(product: PrismaProductWithImages): Product {
 		salePrice: product.salePrice?.toNumber(),
 		sku: product.sku,
 		status: product.status as ProductStatus,
+		storeId: product.storeId,
 		supplierId: product.supplierId ?? undefined,
 		updatedAt: product.updatedAt.toISOString(),
 		userId: product.userId,
@@ -912,6 +994,7 @@ function toDomainProductImageAsset(
 		productId: asset.productId,
 		publicUrl: asset.publicUrl ?? undefined,
 		size: asset.size,
+		storeId: asset.storeId,
 		userId: asset.userId,
 	};
 }
@@ -927,6 +1010,7 @@ function toDomainInventoryMovement(
 		productId: movement.productId,
 		quantity: movement.quantity,
 		reason: movement.reason,
+		storeId: movement.storeId,
 		type: movement.type as InventoryAdjustmentType,
 		userId: movement.userId,
 	};
@@ -945,6 +1029,7 @@ function toDomainPurchaseOrder(
 		notes: order.notes ?? undefined,
 		paymentTerm: order.paymentTerm as SupplierTerm | undefined,
 		status: order.status as PurchaseOrderStatus,
+		storeId: order.storeId,
 		supplierId: order.supplierId,
 		totalCost: order.totalCost.toNumber(),
 		totalItems: order.totalItems,
@@ -963,6 +1048,7 @@ function toDomainPurchaseOrderItem(
 		purchaseOrderId: item.purchaseOrderId,
 		quantity: item.quantity,
 		sku: item.sku,
+		storeId: item.storeId,
 		totalCost: item.totalCost.toNumber(),
 		unitCost: item.unitCost.toNumber(),
 	};
@@ -983,6 +1069,7 @@ function toDomainReceiving(
 		receivedAt: receiving.receivedAt?.toISOString(),
 		receiverName: receiving.receiverName ?? undefined,
 		status: receiving.status as ReceivingStatus,
+		storeId: receiving.storeId,
 		supplierId: receiving.supplierId,
 		updatedAt: receiving.updatedAt.toISOString(),
 		userId: receiving.userId,

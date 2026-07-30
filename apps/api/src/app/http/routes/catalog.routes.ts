@@ -378,7 +378,11 @@ export async function catalogRoutes(
 		async (request: FastifyRequest) => {
 			const user = getAuthenticatedUser(request);
 			const query = listQuerySchema.parse(getRequestQuery(request));
-			return useCases.listSuppliers.execute({ query, userId: user.userId });
+			return useCases.listSuppliers.execute({
+				query,
+				storeId: user.storeId,
+				userId: user.userId,
+			});
 		},
 	);
 
@@ -411,7 +415,11 @@ export async function catalogRoutes(
 			const user = getAuthenticatedUser(request);
 			const body = createSupplierSchema.parse(getRequestBody(request));
 			reply.code(201);
-			return useCases.createSupplier.execute({ ...body, userId: user.userId });
+			return useCases.createSupplier.execute({
+				...body,
+				storeId: user.storeId,
+				userId: user.userId,
+			});
 		},
 	);
 
@@ -441,6 +449,7 @@ export async function catalogRoutes(
 			const user = getAuthenticatedUser(request);
 			const params = idParamsSchema.parse(getRequestParams(request));
 			const supplier = await useCases.getSupplier.execute({
+				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
 			});
@@ -479,6 +488,7 @@ export async function catalogRoutes(
 			return useCases.updateSupplier.execute({
 				...body,
 				id: params.id,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -513,6 +523,7 @@ export async function catalogRoutes(
 			const user = getAuthenticatedUser(request);
 			const params = idParamsSchema.parse(getRequestParams(request));
 			await useCases.deleteSupplier.execute({
+				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
 			});
@@ -549,6 +560,7 @@ export async function catalogRoutes(
 			const user = getAuthenticatedUser(request);
 			const params = idParamsSchema.parse(getRequestParams(request));
 			return useCases.listSupplierResponsibles.execute({
+				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
 			});
@@ -594,6 +606,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createSupplierResponsible.execute({
 				...body,
+				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
 			});
@@ -640,6 +653,7 @@ export async function catalogRoutes(
 			return useCases.updateSupplierResponsible.execute({
 				...body,
 				id: params.responsibleId,
+				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
 			});
@@ -680,6 +694,7 @@ export async function catalogRoutes(
 			);
 			await useCases.deleteSupplierResponsible.execute({
 				responsibleId: params.responsibleId,
+				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
 			});
@@ -716,7 +731,11 @@ export async function catalogRoutes(
 		async (request: FastifyRequest) => {
 			const user = getAuthenticatedUser(request);
 			const query = listQuerySchema.parse(getRequestQuery(request));
-			return useCases.listProducts.execute({ query, userId: user.userId });
+			return useCases.listProducts.execute({
+				query,
+				storeId: user.storeId,
+				userId: user.userId,
+			});
 		},
 	);
 
@@ -749,7 +768,11 @@ export async function catalogRoutes(
 			const user = getAuthenticatedUser(request);
 			const body = createProductSchema.parse(getRequestBody(request));
 			reply.code(201);
-			return useCases.createProduct.execute({ ...body, userId: user.userId });
+			return useCases.createProduct.execute({
+				...body,
+				storeId: user.storeId,
+				userId: user.userId,
+			});
 		},
 	);
 
@@ -780,6 +803,7 @@ export async function catalogRoutes(
 			const params = idParamsSchema.parse(getRequestParams(request));
 			const product = await useCases.getProduct.execute({
 				productId: params.id,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 			if (!product) throw new NotFoundError('Produto não encontrado.');
@@ -817,6 +841,7 @@ export async function catalogRoutes(
 			return useCases.updateProduct.execute({
 				...body,
 				id: params.id,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -863,6 +888,7 @@ export async function catalogRoutes(
 			return useCases.prepareProductImageUpload.execute({
 				...body,
 				productId: params.productId,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -899,6 +925,7 @@ export async function catalogRoutes(
 			const query = listQuerySchema.parse(getRequestQuery(request));
 			return useCases.listPurchaseOrders.execute({
 				query,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -938,6 +965,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createPurchaseOrder.execute({
 				...body,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -976,6 +1004,7 @@ export async function catalogRoutes(
 			return useCases.updatePurchaseOrder.execute({
 				...body,
 				id: params.id,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -1010,7 +1039,11 @@ export async function catalogRoutes(
 		async (request: FastifyRequest) => {
 			const user = getAuthenticatedUser(request);
 			const query = listQuerySchema.parse(getRequestQuery(request));
-			return useCases.listReceivings.execute({ query, userId: user.userId });
+			return useCases.listReceivings.execute({
+				query,
+				storeId: user.storeId,
+				userId: user.userId,
+			});
 		},
 	);
 
@@ -1045,6 +1078,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createReceiving.execute({
 				...body,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -1080,6 +1114,7 @@ export async function catalogRoutes(
 			return useCases.updateReceiving.execute({
 				...body,
 				id: params.id,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -1119,6 +1154,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createInventoryAdjustment.execute({
 				...body,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -1158,6 +1194,7 @@ export async function catalogRoutes(
 				.parse(getRequestQuery(request));
 			return useCases.listInventoryMovements.execute({
 				productId: query.productId,
+				storeId: user.storeId,
 				userId: user.userId,
 			});
 		},
@@ -1168,8 +1205,14 @@ function getAuthenticatedUser(request: FastifyRequest) {
 	if (!request.user) {
 		throw new Error('Usuário autenticado não encontrado na requisição');
 	}
+	if (!request.storeContext) {
+		throw new Error('Contexto de loja não encontrado na requisição');
+	}
 
-	return request.user;
+	return {
+		...request.user,
+		storeId: request.storeContext.storeId,
+	};
 }
 
 function getRequestBody(request: FastifyRequest) {

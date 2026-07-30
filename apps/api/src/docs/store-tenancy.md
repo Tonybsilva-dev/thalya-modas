@@ -1,6 +1,6 @@
 # Isolamento operacional por loja
 
-Status: Fases 1 e 2 concluídas; Fases 3 e 4 pendentes.
+Status: Fases 1, 2 e 3 concluídas; Fase 4 pendente.
 
 ## Problema atual
 
@@ -68,7 +68,7 @@ fallback. Contas sem loja recebem `403`; contas com mais de uma loja e sem o
 header recebem `400`. O fallback deve ser removido quando o seletor de lojas
 estiver disponível.
 
-## Tabelas a migrar
+## Tabelas migradas
 
 - `suppliers`
 - `supplier_responsibles`
@@ -79,8 +79,7 @@ estiver disponível.
 - `purchase_order_items`
 - `receivings`
 
-Índices únicos atualmente baseados em `userId` passam a usar `storeId`, por
-exemplo:
+Os índices únicos baseados em `userId` passaram a usar `storeId`:
 
 - `Supplier`: `@@unique([storeId, document])`
 - `Product`: `@@unique([storeId, sku])`
@@ -105,11 +104,13 @@ exemplo:
 
 ### Fase 3 — Colunas e backfill
 
-- adicionar `storeId` inicialmente opcional às tabelas operacionais;
-- preencher pelo proprietário atual;
-- verificar que não restaram valores nulos ou ambíguos;
-- trocar índices únicos para o escopo da loja;
-- tornar `storeId` obrigatório.
+- [x] adicionar `storeId` inicialmente opcional às tabelas operacionais;
+- [x] resolver uma única loja acessível para registros raiz existentes;
+- [x] propagar a loja pelas relações pai-filho;
+- [x] abortar a migration em caso de dados nulos, ambíguos ou cruzados;
+- [x] trocar índices únicos para o escopo da loja;
+- [x] tornar `storeId` obrigatório e adicionar chaves estrangeiras;
+- [x] preencher novas gravações com o contexto validado da Fase 2.
 
 ### Fase 4 — Repositórios
 
@@ -129,4 +130,6 @@ A auditoria utilizou somente contagens:
 
 O backfill de associações foi aplicado na Fase 1. O contexto HTTP da Fase 2
 impede que a seleção enviada pelo cliente seja aceita sem validação no servidor.
-As colunas operacionais continuam baseadas em `userId` até a Fase 3.
+Na Fase 3, as oito tabelas operacionais receberam `storeId` obrigatório. Os
+filtros continuam combinando `userId` e `storeId` durante a transição; a Fase 4
+remove `userId` do isolamento e o mantém apenas como ator/auditoria.

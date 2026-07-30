@@ -1,5 +1,6 @@
 import type {
 	CatalogListQuery,
+	CatalogScope,
 	CreateInventoryAdjustmentInput,
 	CreateProductInput,
 	CreatePurchaseOrderInput,
@@ -24,26 +25,29 @@ import type {
 export interface CatalogRepository {
 	createSupplier(input: CreateSupplierInput): Promise<Supplier>;
 	findSupplierById(
-		userId: string,
+		scope: CatalogScope,
 		supplierId: string,
 	): Promise<Supplier | null>;
 	findSupplierByDocument(
-		userId: string,
+		scope: CatalogScope,
 		document: string,
 	): Promise<Supplier | null>;
-	listSuppliers(userId: string, query?: CatalogListQuery): Promise<Supplier[]>;
+	listSuppliers(
+		scope: CatalogScope,
+		query?: CatalogListQuery,
+	): Promise<Supplier[]>;
 	updateSupplier(input: UpdateSupplierInput): Promise<Supplier>;
-	deleteSupplier(userId: string, supplierId: string): Promise<void>;
+	deleteSupplier(scope: CatalogScope, supplierId: string): Promise<void>;
 	createSupplierResponsible(
 		input: CreateSupplierResponsibleInput,
 	): Promise<SupplierResponsible>;
 	deleteSupplierResponsible(
-		userId: string,
+		scope: CatalogScope,
 		supplierId: string,
 		responsibleId: string,
 	): Promise<void>;
 	listSupplierResponsibles(
-		userId: string,
+		scope: CatalogScope,
 		supplierId: string,
 	): Promise<SupplierResponsible[]>;
 	updateSupplierResponsible(
@@ -51,29 +55,35 @@ export interface CatalogRepository {
 	): Promise<SupplierResponsible>;
 
 	createProduct(input: CreateProductInput): Promise<Product>;
-	findProductById(userId: string, productId: string): Promise<Product | null>;
-	findProductBySku(userId: string, sku: string): Promise<Product | null>;
-	listProducts(userId: string, query?: CatalogListQuery): Promise<Product[]>;
+	findProductById(
+		scope: CatalogScope,
+		productId: string,
+	): Promise<Product | null>;
+	findProductBySku(scope: CatalogScope, sku: string): Promise<Product | null>;
+	listProducts(
+		scope: CatalogScope,
+		query?: CatalogListQuery,
+	): Promise<Product[]>;
 	updateProduct(input: UpdateProductInput): Promise<Product>;
 
 	createInventoryAdjustment(
 		input: CreateInventoryAdjustmentInput,
 	): Promise<InventoryMovement>;
 	listInventoryMovements(
-		userId: string,
+		scope: CatalogScope,
 		productId?: string,
 	): Promise<InventoryMovement[]>;
 
 	createPurchaseOrder(input: CreatePurchaseOrderInput): Promise<PurchaseOrder>;
 	listPurchaseOrders(
-		userId: string,
+		scope: CatalogScope,
 		query?: CatalogListQuery,
 	): Promise<PurchaseOrder[]>;
 	updatePurchaseOrder(input: UpdatePurchaseOrderInput): Promise<PurchaseOrder>;
 
 	createReceiving(input: CreateReceivingInput): Promise<Receiving>;
 	listReceivings(
-		userId: string,
+		scope: CatalogScope,
 		query?: CatalogListQuery,
 	): Promise<Receiving[]>;
 	updateReceiving(input: UpdateReceivingInput): Promise<Receiving>;
