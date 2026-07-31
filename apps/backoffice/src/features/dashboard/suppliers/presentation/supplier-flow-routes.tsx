@@ -1,6 +1,12 @@
 "use client";
 
-import type { ComponentType, FormEvent, ReactNode } from "react";
+import type {
+  ComponentType,
+  FocusEvent,
+  FormEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  ReactNode,
+} from "react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -13,6 +19,7 @@ import {
 } from "nuqs";
 import {
   ArrowLeft,
+  CheckCircle,
   CurrencyDollar,
   EnvelopeSimple,
   FloppyDisk,
@@ -96,15 +103,6 @@ const supplierDefaults: SupplierFormInput = {
   status: "active",
 };
 
-const supplierPlaceholders = {
-  document: "12.345.678/0001-90",
-  email: "compras@modabrasil.com",
-  minimumOrder: "R$ 1.500,00",
-  name: "Moda Brasil Atacado",
-  notes: "Fornecedor ativo com pedidos abertos e historico de compras.",
-  phone: "(85) 98888-1200",
-};
-
 function useSupplierBasePath() {
   const params = useParams<{ role?: string }>();
   const role = params.role ?? "manager";
@@ -133,10 +131,16 @@ function getFormData(form: HTMLFormElement) {
   return Object.fromEntries(new FormData(form).entries());
 }
 
-function getZodErrors(error: z.ZodError) {
+function getZodErrors(
+  error: z.ZodError,
+  resolveMessage: (field: string, fallback: string) => string = (
+    _field,
+    fallback,
+  ) => fallback,
+) {
   return error.issues.reduce<FieldErrors>((acc, issue) => {
     const key = String(issue.path[0] ?? "");
-    if (key && !acc[key]) acc[key] = issue.message;
+    if (key && !acc[key]) acc[key] = resolveMessage(key, issue.message);
     return acc;
   }, {});
 }
@@ -172,6 +176,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   const t = useTranslations("dashboard.suppliers.flow");
   const assignedResponsibleId = useSupplierFlowStore((state) => state.assignedResponsibleId);
   const localResponsibles = useSupplierFlowStore((state) => state.responsibles);
+  const supplierDraft = useSupplierFlowStore((state) => state.supplierDraft);
   const setSupplierDraft = useSupplierFlowStore((state) => state.setSupplierDraft);
   const resetFlow = useSupplierFlowStore((state) => state.resetFlow);
   const [section, setSection] = useQueryState("section", parseAsString.withDefault("data"));
@@ -184,6 +189,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const formAlertRef = useRef<HTMLDivElement>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const isEdit = mode === "edit";
   const supplierId = params.supplierId;
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
@@ -208,7 +214,9 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
     queryKey: ["receivings", "supplier", supplierId],
     queryFn: () => listReceivings({ page: 1, perPage: 100, supplierId }),
   });
-  const responsibles = responsiblesQuery.data ?? localResponsibles;
+  const responsibles = isEdit
+    ? (responsiblesQuery.data ?? [])
+    : localResponsibles;
   const primaryResponsibleId =
     responsibles.find((responsible) => responsible.id === assignedResponsibleId)?.id ??
     responsibles.find((responsible) => responsible.isPrimary)?.id;
@@ -235,9 +243,28 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
     if (mode === "create") resetFlow();
   }, [mode, resetFlow]);
 
+  useEffect(() => {
+    if (!isDirty) return;
+
+    function preventAccidentalExit(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", preventAccidentalExit);
+    return () => window.removeEventListener("beforeunload", preventAccidentalExit);
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (!section || section === "data") return;
+    const target = document.getElementById(`supplier-section-${section}`);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [section]);
+
   const values = {
     ...supplierDefaults,
     ...(persistedSupplier ?? {}),
+    ...(!isEdit ? supplierDraft : {}),
     category,
     contactName: assignedResponsible?.name,
     deliveryTerm,
@@ -248,39 +275,24 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   const mutation = useMutation({
     mutationFn: async (input: SupplierFormInput) => {
       if (isEdit && supplierId && isUuid(supplierId)) {
-        const supplier = await updateSupplier({ ...input, supplierId });
-        return { responsibleFailures: 0, supplier };
+        return updateSupplier({ ...input, supplierId });
       }
 
       if (isEdit) {
         throw new Error("Invalid supplier identifier.");
       }
 
-      const supplier = await createSupplier(input);
-      const responsibleResults = await Promise.allSettled(
-        localResponsibles.map((responsible) =>
-          createSupplierResponsible(supplier.id, responsible),
-        ),
-      );
-      return {
-        responsibleFailures: responsibleResults.filter(
-          (result) => result.status === "rejected",
-        ).length,
-        supplier,
-      };
+      return createSupplier(input, localResponsibles);
     },
     onError: (error) => {
       setFormError(getApiErrorMessage(error, t("errors.save")));
       revealFormAlert();
     },
-    onSuccess: ({ responsibleFailures, supplier }) => {
+    onSuccess: (supplier) => {
+      setIsDirty(false);
       void queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       resetFlow();
-      const notice = isEdit
-        ? "updated"
-        : responsibleFailures > 0
-          ? "createdPartial"
-          : "created";
+      const notice = isEdit ? "updated" : "created";
       router.push(`${basePath}?notice=${notice}&supplier=${supplier.id}`);
     },
   });
@@ -294,7 +306,44 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
     if (!isEdit) {
       setSupplierDraft({ [target.name]: target.value });
     }
+    setIsDirty(true);
     clearFieldError(target.name);
+  }
+
+  function handleFieldBlur(event: FocusEvent<HTMLFormElement>) {
+    const target = event.target;
+    if (
+      !(target instanceof HTMLInputElement) &&
+      !(target instanceof HTMLTextAreaElement)
+    ) {
+      return;
+    }
+
+    const result = supplierFormSchema.safeParse({
+      ...getFormData(event.currentTarget),
+      status,
+    });
+    if (result.success) {
+      clearFieldError(target.name);
+      return;
+    }
+
+    const issue = result.error.issues.find(
+      (currentIssue) => currentIssue.path[0] === target.name,
+    );
+    if (issue) {
+      setErrors((current) => ({
+        ...current,
+        [target.name]: t(`validation.supplier.${target.name}`),
+      }));
+    }
+  }
+
+  function handleFormKeyDown(event: ReactKeyboardEvent<HTMLFormElement>) {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      event.currentTarget.requestSubmit();
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -307,7 +356,11 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
     });
 
     if (!result.success) {
-      setErrors(getZodErrors(result.error));
+      setErrors(
+        getZodErrors(result.error, (field) =>
+          t(`validation.supplier.${field}`),
+        ),
+      );
       revealFormAlert();
       return;
     }
@@ -334,6 +387,12 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
       });
       formAlertRef.current?.focus({ preventScroll: true });
     });
+  }
+
+  function leaveForm() {
+    if (isDirty && !window.confirm(t("unsaved.confirm"))) return;
+    setIsDirty(false);
+    router.push(basePath);
   }
 
   if (isEdit && !isPersistedSupplier) {
@@ -381,15 +440,19 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
         <form
           key={persistedSupplier?.updatedAt ?? mode}
           className="grid gap-5"
+          onBlur={handleFieldBlur}
           onChange={handleDraftChange}
+          onKeyDown={handleFormKeyDown}
           onSubmit={handleSubmit}
         >
           <SupplierFormHeader
             basePath={basePath}
-            isPending={mutation.isPending}
+            isDirty={isDirty}
             mode={mode}
+            onCancel={leaveForm}
             section={section}
             setSection={setSection}
+            status={status}
           />
 
           {formError || Object.keys(errors).length > 0 ? (
@@ -420,29 +483,40 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
           <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="grid gap-5">
               <SupplierDataCard
-                assignedResponsible={assignedResponsible}
                 errors={errors}
                 onCategoryChange={(value) => {
                   if (!isEdit) setSupplierDraft({ category: value });
                   setCategory(value);
+                  setIsDirty(true);
                   clearFieldError("category");
                 }}
                 values={values}
               />
+              <SupplierContactsCard
+                error={responsiblesQuery.error}
+                isLoading={responsiblesQuery.isPending && isPersistedSupplier}
+                onOpenResponsible={() => void setModal("responsible")}
+                onRetry={() => void responsiblesQuery.refetch()}
+                responsibles={responsibles}
+              />
               <SupplierCommercialCard
                 errors={errors}
+                isEdit={isEdit}
                 onDeliveryTermChange={(value) => {
                   if (!isEdit) setSupplierDraft({ deliveryTerm: value });
                   setDeliveryTerm(value);
+                  setIsDirty(true);
                   clearFieldError("deliveryTerm");
                 }}
                 onPaymentTermChange={(value) => {
                   if (!isEdit) setSupplierDraft({ paymentTerm: value });
                   setPaymentTerm(value);
+                  setIsDirty(true);
                   clearFieldError("paymentTerm");
                 }}
                 onStatusChange={(value) => {
                   setStatus(value);
+                  setIsDirty(true);
                   clearFieldError("status");
                 }}
                 status={status}
@@ -456,8 +530,6 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
                 orders={(ordersQuery.data ?? []).filter(
                   (order) => order.supplierId === supplierId,
                 )}
-                onOpenDelete={() => void setModal("delete")}
-                onOpenResponsible={() => void setModal("responsible")}
                 receivings={(receivingsQuery.data ?? []).filter(
                   (receiving) => receiving.supplierId === supplierId,
                 )}
@@ -467,10 +539,21 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
               <SupplierCreateSummary
                 onOpenResponsible={() => void setModal("responsible")}
                 responsiblesCount={responsibles.length}
+                values={values}
               />
             )}
           </div>
 
+          {isEdit ? (
+            <SupplierDangerZone onOpenDelete={() => void setModal("delete")} />
+          ) : null}
+
+          <SupplierFormActions
+            isDirty={isDirty}
+            isEdit={isEdit}
+            isPending={mutation.isPending}
+            onCancel={leaveForm}
+          />
         </form>
 
         {modal === "delete" ? (
@@ -483,7 +566,10 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
         ) : null}
         {modal === "responsible" ? (
           <SupplierResponsibleModal
-            onClose={() => void setModal(null)}
+            onClose={() => {
+              if (!isEdit && localResponsibles.length > 0) setIsDirty(true);
+              void setModal(null);
+            }}
             supplier={persistedSupplier}
             supplierId={supplierId}
           />
@@ -556,26 +642,34 @@ function SupplierRouteState({
 
 function SupplierFormHeader({
   basePath,
-  isPending,
+  isDirty,
   mode,
+  onCancel,
   section,
   setSection,
+  status,
 }: {
   basePath: string;
-  isPending: boolean;
+  isDirty: boolean;
   mode: "create" | "edit";
+  onCancel: () => void;
   section: string;
   setSection: (value: string) => unknown;
+  status: SupplierFormInput["status"];
 }) {
   const isEdit = mode === "edit";
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <header className="grid gap-4">
       <div className="grid gap-1.5">
         <SupplierBreadcrumb
           basePath={basePath}
           currentLabel={isEdit ? t("editTitle") : t("createTitle")}
+          onRootClick={(event) => {
+            event.preventDefault();
+            onCancel();
+          }}
           rootLabel={t("breadcrumbRoot")}
         />
         <h1 className="text-2xl font-bold leading-tight text-foreground md:text-[28px]">
@@ -584,13 +678,31 @@ function SupplierFormHeader({
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
           {isEdit ? t("editDescription") : t("createDescription")}
         </p>
-        <div className="mt-2 flex w-fit gap-1 border border-border bg-card p-1">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <Badge variant={status === "active" ? "success" : "outline"}>
+            {status === "active" ? t("status.active") : t("status.inactive")}
+          </Badge>
+          {isDirty ? (
+            <Badge
+              className="border-warning/30 bg-warning/10 text-foreground"
+              variant="outline"
+            >
+              {t("unsaved.badge")}
+            </Badge>
+          ) : null}
+        </div>
+        <nav
+          aria-label={t("sectionNavigation")}
+          className="mt-2 flex w-fit max-w-full gap-1 overflow-x-auto border border-border bg-card p-1"
+        >
           {[
             ["data", t("dataTitle")],
+            ["contacts", t("contacts.title")],
             ["commercial", t("commercialTitle")],
             ["notes", t("notesTitle")],
           ].map(([value, label]) => (
             <button
+              aria-current={section === value ? "location" : undefined}
               key={value}
               className={cn(
                 "h-8 px-3 text-xs font-semibold text-muted-foreground transition-colors",
@@ -607,32 +719,17 @@ function SupplierFormHeader({
               {label}
             </button>
           ))}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button asChild className="h-10 px-4" variant="outline">
-          <Link href={basePath}>
-            <ArrowLeft className="size-4" />
-            {t("cancel")}
-          </Link>
-        </Button>
-        <Button className="h-10 px-4" disabled={isPending} type="submit">
-          {isEdit ? <FloppyDisk className="size-4" /> : <Plus className="size-4" />}
-          {isPending ? t("saving") : isEdit ? t("saveChanges") : t("saveSupplier")}
-        </Button>
+        </nav>
       </div>
     </header>
   );
 }
 
 function SupplierDataCard({
-  assignedResponsible,
   errors,
   onCategoryChange,
   values,
 }: {
-  assignedResponsible?: SupplierResponsibleInput & { id: string };
   errors: FieldErrors;
   onCategoryChange: (category: SupplierCategory) => void;
   values: SupplierFormInput;
@@ -653,7 +750,8 @@ function SupplierDataCard({
             icon={Storefront}
             label={t("fields.name")}
             name="name"
-            placeholder={supplierPlaceholders.name}
+            placeholder={t("placeholders.name")}
+            required
           />
           <FormField
             defaultValue={values.document}
@@ -662,7 +760,8 @@ function SupplierDataCard({
             label={t("fields.document")}
             mask="00.000.000/0000-00"
             name="document"
-            placeholder={supplierPlaceholders.document}
+            placeholder={t("placeholders.document")}
+            required
           />
           <FormField
             defaultValue={values.phone}
@@ -671,7 +770,8 @@ function SupplierDataCard({
             label={t("fields.phone")}
             mask={[{ mask: "(00) 0000-0000" }, { mask: "(00) 00000-0000" }]}
             name="phone"
-            placeholder={supplierPlaceholders.phone}
+            placeholder={t("placeholders.phone")}
+            required
           />
           <FormField
             defaultValue={values.email}
@@ -679,7 +779,8 @@ function SupplierDataCard({
             icon={EnvelopeSimple}
             label={t("fields.email")}
             name="email"
-            placeholder={supplierPlaceholders.email}
+            placeholder={t("placeholders.email")}
+            required
             type="email"
           />
           <SelectField
@@ -690,34 +791,136 @@ function SupplierDataCard({
               label: t(`categories.${value}`),
               value,
             }))}
+            required
             value={values.category}
           />
-          {assignedResponsible ? (
-            <div className="grid gap-1.5 md:col-span-2">
-              <Label>{t("fields.contactName")}</Label>
-              <input name="contactName" type="hidden" value={assignedResponsible.name} />
-              <div className="flex items-center gap-3 border border-border bg-card p-3">
-                <div className="flex size-9 items-center justify-center bg-primary text-xs font-bold text-primary-foreground">
-                  {getInitials(assignedResponsible.name)}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SupplierContactsCard({
+  error,
+  isLoading,
+  onOpenResponsible,
+  onRetry,
+  responsibles,
+}: {
+  error: Error | null;
+  isLoading: boolean;
+  onOpenResponsible: () => void;
+  onRetry: () => void;
+  responsibles: Array<SupplierResponsibleInput & { id: string }>;
+}) {
+  const t = useTranslations("dashboard.suppliers.flow");
+  const primary =
+    responsibles.find((responsible) => responsible.isPrimary) ?? responsibles[0];
+
+  return (
+    <Card id="supplier-section-contacts" className="scroll-mt-6">
+      <CardContent className="grid gap-4 p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <SectionHeading
+            description={t("contacts.description")}
+            title={t("contacts.title")}
+          />
+          <Button
+            className="h-9 shrink-0 px-3"
+            onClick={onOpenResponsible}
+            type="button"
+            variant="outline"
+          >
+            <UserPlus className="size-4" />
+            {responsibles.length > 0
+              ? t("contacts.manage")
+              : t("contacts.add")}
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div
+            aria-label={t("responsibleModal.loading")}
+            className="h-20 animate-pulse bg-muted"
+            role="status"
+          />
+        ) : error ? (
+          <div
+            className="grid justify-items-start gap-3 border border-destructive/30 bg-destructive/5 p-4"
+            role="alert"
+          >
+            <div className="grid gap-1">
+              <strong className="text-sm text-foreground">
+                {t("contacts.loadErrorTitle")}
+              </strong>
+              <p className="text-sm text-muted-foreground">
+                {getApiErrorMessage(error, t("errors.responsibleLoad"))}
+              </p>
+            </div>
+            <Button className="h-9 px-3" onClick={onRetry} type="button" variant="outline">
+              {t("tryAgain")}
+            </Button>
+          </div>
+        ) : responsibles.length > 0 ? (
+          <div className="grid gap-2">
+            {responsibles.map((responsible) => (
+              <button
+                className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border border-border bg-background p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                key={responsible.id}
+                onClick={onOpenResponsible}
+                type="button"
+              >
+                <div className="flex size-9 items-center justify-center bg-secondary text-xs font-bold text-secondary-foreground">
+                  {getInitials(responsible.name)}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-foreground">
-                    {assignedResponsible.name}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="truncate text-sm text-foreground">
+                      {responsible.name}
+                    </strong>
+                    {(primary?.id === responsible.id || responsible.isPrimary) ? (
+                      <Badge variant="secondary">
+                        {t("responsibleModal.assigned")}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {responsible.role} ·{" "}
+                    {t(`responsibleModal.${responsible.contactType}`)}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {assignedResponsible.role} - {assignedResponsible.email}
+                    {responsible.email} · {responsible.phone}
                   </p>
                 </div>
-                <Badge variant="secondary">{t("responsibleModal.assigned")}</Badge>
-              </div>
+                <Badge
+                  variant={responsible.status === "active" ? "success" : "outline"}
+                >
+                  {responsible.status === "active"
+                    ? t("status.active")
+                    : t("status.inactive")}
+                </Badge>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="grid justify-items-start gap-3 border border-dashed border-border bg-muted/40 p-4">
+            <div className="flex size-9 items-center justify-center bg-background text-muted-foreground">
+              <UserPlus className="size-4" />
             </div>
-          ) : null}
-          {errors.contactName ? (
-            <p className="text-xs text-destructive md:col-span-2">
-              {errors.contactName}
-            </p>
-          ) : null}
-        </div>
+            <div className="grid gap-1">
+              <strong className="text-sm text-foreground">
+                {t("contacts.emptyTitle")}
+              </strong>
+              <p className="text-sm leading-5 text-muted-foreground">
+                {t("contacts.emptyDescription")}
+              </p>
+            </div>
+            <Button className="h-9 px-3" onClick={onOpenResponsible} type="button">
+              <UserPlus className="size-4" />
+              {t("contacts.add")}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -725,6 +928,7 @@ function SupplierDataCard({
 
 function SupplierCommercialCard({
   errors,
+  isEdit,
   onDeliveryTermChange,
   onPaymentTermChange,
   onStatusChange,
@@ -732,6 +936,7 @@ function SupplierCommercialCard({
   values,
 }: {
   errors: FieldErrors;
+  isEdit: boolean;
   onDeliveryTermChange: (term: SupplierTerm) => void;
   onPaymentTermChange: (term: SupplierTerm) => void;
   onStatusChange: (status: SupplierFormInput["status"]) => unknown;
@@ -757,6 +962,7 @@ function SupplierCommercialCard({
               label: t(`terms.${value}`),
               value,
             }))}
+            required
             value={values.deliveryTerm}
           />
           <SelectField
@@ -768,6 +974,7 @@ function SupplierCommercialCard({
               label: t(`terms.${value}`),
               value,
             }))}
+            required
             value={values.paymentTerm}
           />
           <FormField
@@ -776,19 +983,26 @@ function SupplierCommercialCard({
             icon={CurrencyDollar}
             label={t("fields.minimumOrder")}
             name="minimumOrder"
-            placeholder={supplierPlaceholders.minimumOrder}
+            placeholder={t("placeholders.minimumOrder")}
+            required
           />
           <SelectField
             error={errors.status}
-            label={t("fields.status")}
+            label={isEdit ? t("fields.status") : t("fields.initialStatus")}
             name="status"
             onValueChange={(value) => onStatusChange(value as SupplierFormInput["status"])}
             options={[
               { label: t("status.active"), value: "active" },
               { label: t("status.inactive"), value: "inactive" },
             ]}
+            required
             value={status}
           />
+          <p className="text-xs leading-5 text-muted-foreground md:col-span-2">
+            {status === "inactive"
+              ? t("status.inactiveDescription")
+              : t("status.activeDescription")}
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -812,7 +1026,12 @@ function SupplierNotesCard({
           title={t("notesTitle")}
         />
         <div className="grid gap-2">
-          <Label htmlFor="notes">{t("fields.notes")}</Label>
+          <Label htmlFor="notes">
+            {t("fields.notes")}{" "}
+            <span className="font-normal text-muted-foreground">
+              ({t("optional")})
+            </span>
+          </Label>
           <Textarea
             aria-describedby={errors.notes ? "notes-error" : undefined}
             aria-invalid={Boolean(errors.notes)}
@@ -820,7 +1039,7 @@ function SupplierNotesCard({
             defaultValue={values.notes}
             id="notes"
             name="notes"
-            placeholder={supplierPlaceholders.notes}
+            placeholder={t("placeholders.notes")}
           />
           {errors.notes ? (
             <p className="text-xs text-destructive" id="notes-error">
@@ -836,11 +1055,27 @@ function SupplierNotesCard({
 function SupplierCreateSummary({
   onOpenResponsible,
   responsiblesCount,
+  values,
 }: {
   onOpenResponsible: () => void;
   responsiblesCount: number;
+  values: SupplierFormInput;
 }) {
   const t = useTranslations("dashboard.suppliers.flow");
+  const checklist = [
+    {
+      completed: Boolean(values.name.trim() && values.document.trim()),
+      label: t("summary.fiscal"),
+    },
+    {
+      completed: responsiblesCount > 0,
+      label: t("summary.contact"),
+    },
+    {
+      completed: Boolean(values.deliveryTerm && values.paymentTerm),
+      label: t("summary.terms"),
+    },
+  ];
 
   return (
     <aside className="grid content-start gap-4">
@@ -852,14 +1087,21 @@ function SupplierCreateSummary({
           <h2 className="text-base font-bold text-foreground">
             {t("summary.checklist")}
           </h2>
-          {[
-            t("summary.fiscal"),
-            t("summary.contact"),
-            t("summary.terms"),
-          ].map((item) => (
-            <div key={item} className="flex items-center gap-2">
-              <Info className="size-4 text-primary" />
-              <span className="text-sm text-muted-foreground">{item}</span>
+          {checklist.map((item) => (
+            <div key={item.label} className="flex items-center gap-2">
+              {item.completed ? (
+                <CheckCircle className="size-4 text-success" weight="fill" />
+              ) : (
+                <Info className="size-4 text-muted-foreground" />
+              )}
+              <span
+                className={cn(
+                  "text-sm",
+                  item.completed ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {item.label}
+              </span>
             </div>
           ))}
           <div className="grid gap-3 border border-border bg-background p-3">
@@ -896,14 +1138,10 @@ function SupplierCreateSummary({
 
 function SupplierPerformanceRail({
   orders,
-  onOpenDelete,
-  onOpenResponsible,
   receivings,
   supplier,
 }: {
   orders: PurchaseOrder[];
-  onOpenDelete: () => void;
-  onOpenResponsible: () => void;
   receivings: Receiving[];
   supplier?: Supplier;
 }) {
@@ -933,7 +1171,7 @@ function SupplierPerformanceRail({
     [
       t("performance.leadTime"),
       supplier?.deliveryTerm
-        ? `${supplier.deliveryTerm} ${locale === "en" ? "days" : "dias"}`
+        ? t(`terms.${supplier.deliveryTerm}`)
         : "-",
     ],
     [t("performance.openOrders"), String(openOrders.length)],
@@ -948,34 +1186,103 @@ function SupplierPerformanceRail({
   ];
 
   return (
-    <aside className="grid content-start gap-3">
-      {metrics.map(([label, value]) => (
-        <Card key={label}>
-          <CardContent className="grid gap-1 p-4">
-            <p className="text-xs font-bold text-muted-foreground">{label}</p>
-            <strong className="text-xl font-bold text-foreground">{value}</strong>
-          </CardContent>
-        </Card>
-      ))}
-      <Button
-        className="h-10 justify-center"
-        onClick={onOpenResponsible}
-        type="button"
-        variant="outline"
-      >
-        <UserPlus className="size-4" />
-        {t("performance.manageResponsibles")}
-      </Button>
-      <Button
-        className="h-10 justify-center"
-        onClick={onOpenDelete}
-        type="button"
-        variant="destructive"
-      >
-        <Trash className="size-4" />
-        {t("performance.deleteSupplier")}
-      </Button>
+    <aside className="grid content-start gap-3 xl:sticky xl:top-5">
+      <Card>
+        <CardContent className="grid gap-4 p-5">
+          <SectionHeading
+            description={t("performance.description")}
+            title={t("performance.title")}
+          />
+          <div className="grid grid-cols-2 border-l border-t border-border">
+            {metrics.map(([label, value]) => (
+              <div
+                className="grid gap-1 border-b border-r border-border p-3"
+                key={label}
+              >
+                <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+                <strong className="text-lg font-bold text-foreground">{value}</strong>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </aside>
+  );
+}
+
+function SupplierDangerZone({
+  onOpenDelete,
+}: {
+  onOpenDelete: () => void;
+}) {
+  const t = useTranslations("dashboard.suppliers.flow");
+
+  return (
+    <Card className="border-destructive/30">
+      <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid gap-1">
+          <h2 className="text-base font-semibold text-foreground">
+            {t("danger.title")}
+          </h2>
+          <p className="max-w-3xl text-sm leading-5 text-muted-foreground">
+            {t("danger.description")}
+          </p>
+        </div>
+        <Button
+          className="h-10 shrink-0 px-4"
+          onClick={onOpenDelete}
+          type="button"
+          variant="destructive"
+        >
+          <Trash className="size-4" />
+          {t("performance.deleteSupplier")}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SupplierFormActions({
+  isDirty,
+  isEdit,
+  isPending,
+  onCancel,
+}: {
+  isDirty: boolean;
+  isEdit: boolean;
+  isPending: boolean;
+  onCancel: () => void;
+}) {
+  const t = useTranslations("dashboard.suppliers.flow");
+
+  return (
+    <div className="sticky bottom-3 z-20 flex flex-col gap-3 border border-border bg-card/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-foreground">
+          {isDirty ? t("unsaved.pending") : t("unsaved.saved")}
+        </p>
+        <p className="text-xs text-muted-foreground">{t("unsaved.shortcut")}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          className="h-10 px-4"
+          onClick={onCancel}
+          type="button"
+          variant="outline"
+        >
+          <ArrowLeft className="size-4" />
+          {t("cancel")}
+        </Button>
+        <Button
+          className="h-10 px-4"
+          disabled={isPending || (isEdit && !isDirty)}
+          type="submit"
+        >
+          {isEdit ? <FloppyDisk className="size-4" /> : <Plus className="size-4" />}
+          {isPending ? t("saving") : isEdit ? t("saveChanges") : t("saveSupplier")}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -1237,13 +1544,19 @@ function SupplierResponsibleModal({
     useState<SupplierFormInput["status"]>("active");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [mutationNotice, setMutationNotice] = useState<string | null>(null);
+  const [responsibleToDelete, setResponsibleToDelete] = useState<
+    (SupplierResponsibleInput & { id: string }) | null
+  >(null);
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
   const responsiblesQuery = useQuery({
     enabled: isPersistedSupplier,
     queryKey: ["suppliers", supplierId, "responsibles"],
     queryFn: () => listSupplierResponsibles(supplierId as string),
   });
-  const responsibles = responsiblesQuery.data ?? localResponsibles;
+  const responsibles = isPersistedSupplier
+    ? (responsiblesQuery.data ?? [])
+    : localResponsibles;
   const primaryResponsibleId =
     responsibles.find((responsible) => responsible.id === assignedResponsibleId)?.id ??
     responsibles.find((responsible) => responsible.isPrimary)?.id;
@@ -1268,6 +1581,7 @@ function SupplierResponsibleModal({
       setMutationError(getApiErrorMessage(error, t("errors.responsibleSave"))),
     onSuccess: () => {
       setMutationError(null);
+      setMutationNotice(t("responsibleModal.saved"));
       if (isPersistedSupplier) {
         void queryClient.invalidateQueries({
           queryKey: ["suppliers", supplierId, "responsibles"],
@@ -1290,6 +1604,8 @@ function SupplierResponsibleModal({
       setMutationError(getApiErrorMessage(error, t("errors.responsibleDelete"))),
     onSuccess: () => {
       setMutationError(null);
+      setMutationNotice(t("responsibleModal.deleted"));
+      setResponsibleToDelete(null);
       if (isPersistedSupplier) {
         void queryClient.invalidateQueries({
           queryKey: ["suppliers", supplierId, "responsibles"],
@@ -1301,6 +1617,7 @@ function SupplierResponsibleModal({
   function closeModal() {
     resetResponsibleDraft();
     setResponsibleId(null);
+    setResponsibleToDelete(null);
     onClose();
   }
 
@@ -1310,6 +1627,7 @@ function SupplierResponsibleModal({
     setIsPrimary(false);
     setContactType("orders");
     setStatus("active");
+    setMutationNotice(null);
   }
 
   function openEditForm(responsible: SupplierResponsibleInput & { id: string }) {
@@ -1318,6 +1636,7 @@ function SupplierResponsibleModal({
     setIsPrimary(responsible.isPrimary);
     setContactType(responsible.contactType);
     setStatus(responsible.status);
+    setMutationNotice(null);
   }
 
   function handleDraftChange(event: FormEvent<HTMLFormElement>) {
@@ -1340,7 +1659,11 @@ function SupplierResponsibleModal({
     });
 
     if (!result.success) {
-      setErrors(getZodErrors(result.error));
+      setErrors(
+        getZodErrors(result.error, (field) =>
+          t(`validation.responsible.${field}`),
+        ),
+      );
       return;
     }
 
@@ -1425,7 +1748,51 @@ function SupplierResponsibleModal({
               supplierDraft={supplierDraft}
             />
             {mutationError ? <FormError>{mutationError}</FormError> : null}
-            {responsiblesQuery.isPending && isPersistedSupplier ? (
+            {mutationNotice ? (
+              <div
+                className="flex items-center gap-2 border border-success/30 bg-success/10 px-3 py-2 text-sm text-foreground"
+                role="status"
+              >
+                <CheckCircle className="size-4 text-success" weight="fill" />
+                {mutationNotice}
+              </div>
+            ) : null}
+            {responsibleToDelete ? (
+              <div className="grid gap-4 border border-destructive/30 bg-destructive/5 p-4">
+                <div className="grid gap-1">
+                  <strong className="text-sm text-foreground">
+                    {t("responsibleModal.deleteTitle")}
+                  </strong>
+                  <p className="text-sm leading-5 text-muted-foreground">
+                    {t("responsibleModal.deleteDescription", {
+                      name: responsibleToDelete.name,
+                    })}
+                  </p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    className="h-9 px-3"
+                    onClick={() => setResponsibleToDelete(null)}
+                    type="button"
+                    variant="outline"
+                  >
+                    {t("cancel")}
+                  </Button>
+                  <Button
+                    className="h-9 px-3"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => deleteMutation.mutate(responsibleToDelete.id)}
+                    type="button"
+                    variant="destructive"
+                  >
+                    <Trash className="size-4" />
+                    {deleteMutation.isPending
+                      ? t("responsibleModal.deleting")
+                      : t("responsibleModal.delete")}
+                  </Button>
+                </div>
+              </div>
+            ) : responsiblesQuery.isPending && isPersistedSupplier ? (
               <div
                 className="h-20 animate-pulse border border-border bg-muted"
                 role="status"
@@ -1445,11 +1812,13 @@ function SupplierResponsibleModal({
               <SupplierResponsibleList
                 assignedResponsibleId={primaryResponsibleId}
                 onCreate={openCreateForm}
-                onDelete={(responsibleIdToDelete) => {
-                  if (window.confirm(t("responsibleModal.deleteConfirm"))) {
-                    deleteMutation.mutate(responsibleIdToDelete);
-                  }
-                }}
+                onDelete={(responsibleIdToDelete) =>
+                  setResponsibleToDelete(
+                    responsibles.find(
+                      (responsible) => responsible.id === responsibleIdToDelete,
+                    ) ?? null,
+                  )
+                }
                 onEdit={openEditForm}
                 responsibles={responsibles}
               />
@@ -1639,6 +2008,7 @@ function SupplierResponsibleForm({
             label={t("responsibleModal.name")}
             name="name"
             placeholder={t("responsibleModal.namePlaceholder")}
+            required
           />
           <PlainField
             defaultValue={selectedResponsible?.role}
@@ -1646,6 +2016,7 @@ function SupplierResponsibleForm({
             label={t("responsibleModal.role")}
             name="role"
             placeholder={t("responsibleModal.rolePlaceholder")}
+            required
           />
           <PlainField
             defaultValue={selectedResponsible?.phone}
@@ -1654,6 +2025,7 @@ function SupplierResponsibleForm({
             mask={[{ mask: "(00) 0000-0000" }, { mask: "(00) 00000-0000" }]}
             name="phone"
             placeholder={t("responsibleModal.phonePlaceholder")}
+            required
           />
           <PlainField
             defaultValue={selectedResponsible?.email}
@@ -1661,6 +2033,7 @@ function SupplierResponsibleForm({
             label={t("responsibleModal.email")}
             name="email"
             placeholder={t("responsibleModal.emailPlaceholder")}
+            required
             type="email"
           />
           <SelectField
@@ -1672,6 +2045,7 @@ function SupplierResponsibleForm({
               { label: t("responsibleModal.delivery"), value: "delivery" },
               { label: t("responsibleModal.financial"), value: "financial" },
             ]}
+            required
             value={contactType}
           />
           <SelectField
@@ -1682,6 +2056,7 @@ function SupplierResponsibleForm({
               { label: t("status.active"), value: "active" },
               { label: t("status.inactive"), value: "inactive" },
             ]}
+            required
             value={status}
           />
         </div>
@@ -1713,6 +2088,7 @@ function FormField({
   mask,
   name,
   placeholder,
+  required = false,
   type = "text",
 }: {
   defaultValue?: string;
@@ -1722,34 +2098,42 @@ function FormField({
   mask?: string | { mask: string }[];
   name: string;
   placeholder?: string;
+  required?: boolean;
   type?: string;
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={name}>{label}</Label>
+      <Label htmlFor={name}>
+        {label}
+        {required ? <span className="text-destructive"> *</span> : null}
+      </Label>
       <div className="relative">
         <Icon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         {mask ? (
           <MaskedInput
             aria-describedby={error ? `${name}-error` : undefined}
             aria-invalid={Boolean(error)}
+            aria-required={required}
             className="h-10 bg-card pl-9"
             defaultValue={defaultValue}
             id={name}
             mask={mask}
             name={name}
             placeholder={placeholder}
+            required={required}
             type={type}
           />
         ) : (
           <Input
             aria-describedby={error ? `${name}-error` : undefined}
             aria-invalid={Boolean(error)}
+            aria-required={required}
             className="h-10 bg-card pl-9"
             defaultValue={defaultValue}
             id={name}
             name={name}
             placeholder={placeholder}
+            required={required}
             type={type}
           />
         )}
@@ -1770,6 +2154,7 @@ function PlainField({
   mask,
   name,
   placeholder,
+  required = false,
   type = "text",
 }: {
   defaultValue?: string;
@@ -1778,32 +2163,40 @@ function PlainField({
   mask?: string | { mask: string }[];
   name: string;
   placeholder: string;
+  required?: boolean;
   type?: string;
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={name}>{label}</Label>
+      <Label htmlFor={name}>
+        {label}
+        {required ? <span className="text-destructive"> *</span> : null}
+      </Label>
       {mask ? (
         <MaskedInput
           aria-describedby={error ? `${name}-error` : undefined}
           aria-invalid={Boolean(error)}
+          aria-required={required}
           className="h-10 bg-background"
           defaultValue={defaultValue}
           id={name}
           mask={mask}
           name={name}
           placeholder={placeholder}
+          required={required}
           type={type}
         />
       ) : (
         <Input
           aria-describedby={error ? `${name}-error` : undefined}
           aria-invalid={Boolean(error)}
+          aria-required={required}
           className="h-10 bg-background"
           defaultValue={defaultValue}
           id={name}
           name={name}
           placeholder={placeholder}
+          required={required}
           type={type}
         />
       )}
@@ -1822,6 +2215,7 @@ function SelectField({
   name,
   onValueChange,
   options,
+  required = false,
   value,
 }: {
   error?: string;
@@ -1829,16 +2223,21 @@ function SelectField({
   name?: string;
   onValueChange: (value: string) => void;
   options: Array<{ label: string; value: string }>;
+  required?: boolean;
   value: string;
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={name}>{label}</Label>
+      <Label htmlFor={name}>
+        {label}
+        {required ? <span className="text-destructive"> *</span> : null}
+      </Label>
       {name ? <input name={name} type="hidden" value={value} /> : null}
       <Select onValueChange={onValueChange} value={value}>
         <SelectTrigger
           aria-describedby={error && name ? `${name}-error` : undefined}
           aria-invalid={Boolean(error)}
+          aria-required={required}
           className="h-10 bg-card"
           id={name}
         >

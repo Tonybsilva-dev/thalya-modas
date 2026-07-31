@@ -182,6 +182,15 @@ export type CreateSupplierInput = CatalogScope & {
 	notes?: string;
 	paymentTerm?: SupplierTerm;
 	phone?: string;
+	responsibles?: Array<{
+		contactType: SupplierResponsibleContactType;
+		email: string;
+		isPrimary: boolean;
+		name: string;
+		phone: string;
+		role: string;
+		status: SupplierStatus;
+	}>;
 	status?: SupplierStatus;
 };
 

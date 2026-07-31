@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,11 +8,15 @@ import {
   ArrowClockwise,
   CaretLeft,
   CaretRight,
+  CheckCircle,
   DownloadSimple,
   DotsThreeVertical,
+  EnvelopeSimple,
   PencilSimple,
+  Phone,
   Trash,
   UserPlus,
+  X,
 } from "@phosphor-icons/react";
 import {
   Badge,
@@ -182,12 +186,8 @@ function useSuppliersWorkspace() {
 
 function SuppliersHeader({
   locale,
-  search,
-  setSearch,
 }: {
   locale: Locale;
-  search: string;
-  setSearch: (value: string | null) => unknown;
 }) {
   const { header } = suppliersContentByLocale[locale];
   const basePath = useSuppliersBasePath();
@@ -203,17 +203,7 @@ function SuppliersHeader({
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,300px)_auto_auto]">
-        <div className="relative">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            aria-label={header.searchPlaceholder}
-            className="h-11 bg-card pl-10"
-            onChange={(event) => void setSearch(event.target.value || null)}
-            placeholder={header.searchPlaceholder}
-            value={search}
-          />
-        </div>
+      <div className="flex flex-wrap gap-3">
         <Button asChild className="h-11 justify-center px-4" variant="outline">
           <Link href={`${basePath}/purchase-orders/create`}>
             <PlusIcon className="size-4" />
@@ -228,6 +218,51 @@ function SuppliersHeader({
         </Button>
       </div>
     </header>
+  );
+}
+
+function SupplierSearch({
+  locale,
+  search,
+  setSearch,
+}: {
+  locale: Locale;
+  search: string;
+  setSearch: (value: string | null) => unknown;
+}) {
+  const [draft, setDraft] = useState(search);
+  const placeholder = suppliersContentByLocale[locale].header.searchPlaceholder;
+
+  useEffect(() => {
+    if (draft === search) return;
+    const timeout = window.setTimeout(() => {
+      void setSearch(draft || null);
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [draft, search, setSearch]);
+
+  return (
+    <div className="relative min-w-0 flex-1 sm:max-w-sm">
+      <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        aria-label={placeholder}
+        className="h-10 bg-background pl-10 pr-9"
+        onChange={(event) => setDraft(event.target.value)}
+        placeholder={placeholder}
+        value={draft}
+      />
+      {draft ? (
+        <button
+          aria-label={getText(locale, "clearSearch")}
+          className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => setDraft("")}
+          type="button"
+        >
+          <X className="size-4" />
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -360,6 +395,8 @@ function SupplierTableCard({
   selectedId,
   selectedRows,
   setPage,
+  setSearch,
+  setStatus,
   status,
   suppliers,
   suppliersError,
@@ -378,12 +415,15 @@ function SupplierTableCard({
   selectedId?: string | null;
   selectedRows: Set<string>;
   setPage: (page: number) => unknown;
+  setSearch: (value: string | null) => unknown;
+  setStatus: (value: string | null) => unknown;
   status: string;
   suppliers: Supplier[];
   suppliersError: Error | null;
 }) {
   const basePath = useSuppliersBasePath();
-  const hasFilters = Boolean(q || (status && status !== "all") || page > 1);
+  const hasActiveFilters = Boolean(q || (status && status !== "all"));
+  const hasFilters = hasActiveFilters || page > 1;
   const allSelected =
     suppliers.length > 0 && suppliers.every((supplier) => selectedRows.has(supplier.id));
 
@@ -410,8 +450,49 @@ function SupplierTableCard({
           </Button>
         </div>
 
+        <div className="grid gap-3 border-y border-border py-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <SupplierSearch
+              key={q}
+              locale={locale}
+              search={q}
+              setSearch={setSearch}
+            />
+            <SupplierFilterBar
+              locale={locale}
+              setStatus={setStatus}
+              status={status}
+            />
+          </div>
+          {hasActiveFilters ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted-foreground">
+                {getText(locale, "activeFilters")}:
+              </span>
+              {q ? (
+                <Badge variant="secondary">
+                  {getText(locale, "search")}: {q}
+                </Badge>
+              ) : null}
+              {status && status !== "all" ? (
+                <Badge variant="secondary">
+                  {getText(locale, "status")}: {getStatusLabel(locale, status as Supplier["status"])}
+                </Badge>
+              ) : null}
+              <Button
+                className="h-7 px-2 text-xs"
+                onClick={onClearFilters}
+                variant="ghost"
+              >
+                <X className="size-3.5" />
+                {getText(locale, "clearFilters")}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
         {isLoading ? (
-          <SupplierTableLoading />
+          <SupplierTableLoading locale={locale} />
         ) : suppliersError ? (
           <StatePanel
             actionLabel={getText(locale, "tryAgain")}
@@ -437,7 +518,7 @@ function SupplierTableCard({
           />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -523,6 +604,72 @@ function SupplierTableCard({
                   })}
                 </TableBody>
               </Table>
+            </div>
+            <div className="grid gap-3 md:hidden">
+              {suppliers.map((supplier) => {
+                const primary =
+                  supplier.responsibles.find((responsible) => responsible.isPrimary) ??
+                  supplier.responsibles[0];
+                const isSelected = selectedId
+                  ? selectedId === supplier.id
+                  : supplier.id === suppliers[0]?.id;
+
+                return (
+                  <article
+                    className={cn(
+                      "grid gap-3 border border-border bg-background p-4 transition-colors",
+                      isSelected && "border-primary/50 bg-muted/50",
+                    )}
+                    key={supplier.id}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        aria-label={`${getText(locale, "select")} ${supplier.name}`}
+                        checked={selectedRows.has(supplier.id)}
+                        onCheckedChange={() => onToggle(supplier.id)}
+                      />
+                      <button
+                        className="grid min-w-0 flex-1 cursor-pointer gap-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => onSelect(supplier.id)}
+                        type="button"
+                      >
+                        <strong className="truncate text-sm font-semibold text-foreground">
+                          {supplier.name}
+                        </strong>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDocument(supplier.document) || getText(locale, "noDocument")}
+                        </span>
+                      </button>
+                      <SupplierActionsMenu
+                        basePath={basePath}
+                        locale={locale}
+                        supplier={supplier}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
+                      <div className="grid gap-1">
+                        <span className="text-muted-foreground">{getText(locale, "contact")}</span>
+                        <strong className="truncate text-foreground">
+                          {primary?.name ?? getText(locale, "noResponsible")}
+                        </strong>
+                      </div>
+                      <div className="grid justify-items-end gap-1 text-right">
+                        <span className="text-muted-foreground">{getText(locale, "status")}</span>
+                        <Badge variant={supplier.status === "active" ? "success" : "outline"}>
+                          {getStatusLabel(locale, supplier.status)}
+                        </Badge>
+                      </div>
+                      <div className="col-span-2 grid gap-1">
+                        <span className="text-muted-foreground">{getText(locale, "terms")}</span>
+                        <strong className="text-foreground">
+                          {getTermLabel(locale, supplier.deliveryTerm)} /{" "}
+                          {getTermLabel(locale, supplier.paymentTerm)}
+                        </strong>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
 
             <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -624,9 +771,13 @@ function SupplierActionsMenu({
   );
 }
 
-function SupplierTableLoading() {
+function SupplierTableLoading({ locale }: { locale: Locale }) {
   return (
-    <div aria-label="Carregando fornecedores" className="grid gap-2" role="status">
+    <div
+      aria-label={getText(locale, "loadingSuppliers")}
+      className="grid gap-2"
+      role="status"
+    >
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
@@ -681,7 +832,7 @@ function StatePanel({
   );
 }
 
-function SupplierBulkSelectionRail({
+function SupplierBulkActionsBar({
   isPending,
   locale,
   onChangeStatus,
@@ -697,38 +848,30 @@ function SupplierBulkSelectionRail({
   selectedSuppliers: Supplier[];
 }) {
   return (
-    <aside className="grid min-w-0 content-start gap-3 xl:w-[340px]">
-      <Card className="border-primary/40">
-        <CardContent className="grid gap-4 p-5">
-          <div className="grid gap-1">
-            <Badge className="w-fit" variant="secondary">
-              {selectedSuppliers.length} {getText(locale, "selected").toLowerCase()}
-            </Badge>
-            <h2 className="text-lg font-semibold text-foreground">
-              {getText(locale, "bulkSelectionTitle")}
-            </h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {getText(locale, "bulkSelectionDescription")}
-            </p>
-          </div>
-          <div className="grid gap-2 border-y border-border py-3">
-            {selectedSuppliers.slice(0, 4).map((supplier) => (
-              <div className="flex items-center gap-2" key={supplier.id}>
-                <div className="flex size-7 shrink-0 items-center justify-center bg-muted text-[10px] font-bold text-muted-foreground">
-                  {getInitials(supplier.name)}
-                </div>
-                <span className="truncate text-sm text-foreground">{supplier.name}</span>
-              </div>
-            ))}
-            {selectedSuppliers.length > 4 ? (
-              <p className="text-xs text-muted-foreground">
-                +{selectedSuppliers.length - 4} {getText(locale, "moreSelected")}
-              </p>
-            ) : null}
-          </div>
-          <div className="grid gap-2">
+    <div
+      aria-live="polite"
+      className="sticky bottom-3 z-20 flex flex-col gap-3 border border-primary/40 bg-card/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center"
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <CheckCircle className="size-5 shrink-0 text-primary" weight="fill" />
+        <div className="min-w-0">
+          <strong className="block text-sm text-foreground">
+            {selectedSuppliers.length} {getText(locale, "selected").toLowerCase()}
+          </strong>
+          <p className="truncate text-xs text-muted-foreground">
+            {selectedSuppliers
+              .slice(0, 3)
+              .map((supplier) => supplier.name)
+              .join(", ")}
+            {selectedSuppliers.length > 3
+              ? ` +${selectedSuppliers.length - 3}`
+              : ""}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
             <Button
-              className="h-9 justify-start px-3"
+              className="h-9 px-3"
               disabled={isPending}
               onClick={() => onChangeStatus("active")}
               variant="outline"
@@ -736,7 +879,7 @@ function SupplierBulkSelectionRail({
               {getText(locale, "activate")}
             </Button>
             <Button
-              className="h-9 justify-start px-3"
+              className="h-9 px-3"
               disabled={isPending}
               onClick={() => onChangeStatus("inactive")}
               variant="outline"
@@ -744,7 +887,7 @@ function SupplierBulkSelectionRail({
               {getText(locale, "deactivate")}
             </Button>
             <Button
-              className="h-9 justify-start px-3"
+              className="h-9 px-3"
               onClick={onExport}
               variant="outline"
             >
@@ -752,16 +895,15 @@ function SupplierBulkSelectionRail({
               {getText(locale, "export")}
             </Button>
             <Button
-              className="h-9 justify-start px-3"
+              aria-label={getText(locale, "clearSelection")}
+              className="size-9 p-0"
               onClick={onClear}
               variant="ghost"
             >
-              {getText(locale, "clearSelection")}
+              <X className="size-4" />
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </aside>
+      </div>
+    </div>
   );
 }
 
@@ -778,9 +920,11 @@ function SupplierDetailRail({
   receivings: Receiving[];
   supplier?: Supplier;
 }) {
+  const basePath = useSuppliersBasePath();
+
   if (!supplier) {
     return (
-      <aside className="grid min-w-0 content-start gap-3 xl:w-[340px]">
+      <aside className="hidden min-w-0 content-start gap-3 xl:grid xl:w-[340px]">
         <Card>
           <CardContent className="grid gap-2 p-5 text-center">
             <BoxIcon className="mx-auto size-6 text-muted-foreground" />
@@ -800,9 +944,14 @@ function SupplierDetailRail({
   const supplierReceivings = receivings.filter(
     (receiving) => receiving.supplierId === supplier.id,
   );
-  const nextReceiving = supplierReceivings.find((receiving) =>
-    ["scheduled", "checking", "delayed"].includes(receiving.status),
-  );
+  const nextReceiving = supplierReceivings
+    .filter((receiving) =>
+      ["scheduled", "checking", "delayed"].includes(receiving.status),
+    )
+    .sort(
+      (first, second) =>
+        new Date(first.expectedAt).getTime() - new Date(second.expectedAt).getTime(),
+    )[0];
   const openOrders = supplierOrders.filter(
     (order) => !["completed", "cancelled"].includes(order.status),
   );
@@ -811,7 +960,7 @@ function SupplierDetailRail({
     supplier.responsibles[0];
 
   return (
-    <aside className="grid min-w-0 content-start gap-3 xl:w-[340px]">
+    <aside className="hidden min-w-0 content-start gap-3 xl:sticky xl:top-5 xl:grid xl:w-[340px]">
       <Card className="bg-secondary text-secondary-foreground">
         <CardContent className="grid gap-3 p-4">
           <div className="flex items-center gap-3">
@@ -825,6 +974,14 @@ function SupplierDetailRail({
                 {getStatusLabel(locale, supplier.status)}
               </p>
             </div>
+            <Button asChild className="size-8 p-0" variant="secondary">
+              <Link
+                aria-label={`${getText(locale, "edit")} ${supplier.name}`}
+                href={`${basePath}/${supplier.id}/edit`}
+              >
+                <PencilSimple className="size-4" />
+              </Link>
+            </Button>
           </div>
           <DetailRow
             label={getText(locale, "responsible")}
@@ -841,6 +998,35 @@ function SupplierDetailRail({
               openOrders.reduce((total, order) => total + order.totalCost, 0),
             )}
           />
+          {primary ? (
+            <div className="grid gap-2 border-t border-white/15 pt-3">
+              {primary.email ? (
+                <a
+                  className="flex items-center gap-2 truncate text-xs text-white/85 transition-colors hover:text-white"
+                  href={`mailto:${primary.email}`}
+                >
+                  <EnvelopeSimple className="size-4 shrink-0" />
+                  <span className="truncate">{primary.email}</span>
+                </a>
+              ) : null}
+              {primary.phone ? (
+                <a
+                  className="flex items-center gap-2 text-xs text-white/85 transition-colors hover:text-white"
+                  href={`tel:${primary.phone}`}
+                >
+                  <Phone className="size-4 shrink-0" />
+                  {primary.phone}
+                </a>
+              ) : null}
+            </div>
+          ) : (
+            <Button asChild className="h-8 justify-start" variant="secondary">
+              <Link href={`${basePath}/${supplier.id}/edit?section=contacts`}>
+                <UserPlus className="size-4" />
+                {getText(locale, "addContact")}
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -887,9 +1073,19 @@ function SupplierDetailRail({
               />
             </>
           ) : (
-            <p className="text-sm leading-6 text-muted-foreground">
-              {getText(locale, "noReceiving")}
-            </p>
+            <div className="grid gap-3">
+              <p className="text-sm leading-6 text-muted-foreground">
+                {getText(locale, "noReceiving")}
+              </p>
+              {supplier.status === "active" ? (
+                <Button asChild className="h-8 justify-start" variant="outline">
+                  <Link href={`${basePath}/purchase-orders/create?supplierId=${supplier.id}`}>
+                    <PlusIcon className="size-4" />
+                    {getText(locale, "newOrder")}
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
           )}
         </CardContent>
       </Card>
@@ -938,15 +1134,18 @@ export function SuppliersRoute() {
   const [notice] = useQueryState("notice", parseAsString);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkNotice, setBulkNotice] = useState<string | null>(null);
   const selectedSuppliers = useMemo(
     () => workspace.suppliers.filter((supplier) => selectedRows.has(supplier.id)),
     [selectedRows, workspace.suppliers],
   );
   const statusMutation = useMutation({
     mutationFn: async (status: "active" | "inactive") => {
+      const count = selectedSuppliers.length;
       await Promise.all(
         selectedSuppliers.map((supplier) => updateSupplierStatus(supplier.id, status)),
       );
+      return { count, status };
     },
     onError: (error) =>
       setBulkError(
@@ -954,15 +1153,25 @@ export function SuppliersRoute() {
           ? error.payload.userMessage
           : getText(workspace.locale, "bulkError"),
       ),
-    onMutate: () => setBulkError(null),
-    onSuccess: () => {
+    onMutate: () => {
       setBulkError(null);
+      setBulkNotice(null);
+    },
+    onSuccess: ({ count, status }) => {
+      setBulkError(null);
+      setBulkNotice(getBulkSuccessText(workspace.locale, status, count));
       setSelectedRows(new Set());
       void queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     },
   });
   const dueReceivings = workspace.summary?.dueReceivings ?? 0;
   const content = suppliersContentByLocale[workspace.locale];
+
+  useEffect(() => {
+    if (!bulkNotice) return;
+    const timeout = window.setTimeout(() => setBulkNotice(null), 5_000);
+    return () => window.clearTimeout(timeout);
+  }, [bulkNotice]);
 
   function toggleRow(supplierId: string) {
     setSelectedRows((current) => {
@@ -992,6 +1201,7 @@ export function SuppliersRoute() {
   }
 
   function clearFilters() {
+    setSelectedRows(new Set());
     void workspace.filters.setQ(null);
     void workspace.filters.setStatus(null);
     void workspace.filters.setPage(1);
@@ -1003,12 +1213,17 @@ export function SuppliersRoute() {
       operatorRole={content.sidebar.operatorRole}
       status={getSidebarStatus(workspace.locale, dueReceivings)}
     >
-      <SuppliersHeader
-        locale={workspace.locale}
-        search={workspace.filters.q}
-        setSearch={workspace.filters.setQ}
-      />
+      <SuppliersHeader locale={workspace.locale} />
       <NoticeBanner locale={workspace.locale} notice={notice} />
+      {bulkNotice ? (
+        <div
+          className="flex items-center gap-2 border border-success/30 bg-success/10 px-4 py-3 text-sm text-foreground"
+          role="status"
+        >
+          <CheckCircle className="size-4 text-success" weight="fill" />
+          {bulkNotice}
+        </div>
+      ) : null}
       {bulkError ? (
         <div
           className="border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
@@ -1030,41 +1245,60 @@ export function SuppliersRoute() {
         locale={workspace.locale}
         summary={workspace.summary}
       />
-      <SupplierFilterBar
-        locale={workspace.locale}
-        setStatus={workspace.filters.setStatus}
-        status={workspace.filters.status}
-      />
-      <div className="grid min-h-0 min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
-        <SupplierTableCard
-          hasNextPage={workspace.hasNextPage}
-          isLoading={workspace.isInitialLoading}
-          locale={workspace.locale}
-          onClearFilters={clearFilters}
-          onExport={downloadSuppliersCsv}
-          onSelect={(supplierId) => void workspace.setSelectedId(supplierId)}
-          onToggle={toggleRow}
-          onToggleAll={toggleAll}
-          page={workspace.filters.page}
-          q={workspace.filters.q}
-          refetch={workspace.refetch}
-          selectedId={workspace.selectedId}
-          selectedRows={selectedRows}
-          setPage={workspace.filters.setPage}
-          status={workspace.filters.status}
-          suppliers={workspace.suppliers}
-          suppliersError={workspace.suppliersError}
-        />
-        {selectedSuppliers.length > 0 ? (
-          <SupplierBulkSelectionRail
+      <div
+        className={cn(
+          "grid min-h-0 min-w-0 gap-5",
+          selectedSuppliers.length === 0 &&
+            "xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]",
+        )}
+      >
+        <div className="grid min-w-0 content-start gap-3">
+          <SupplierTableCard
+            hasNextPage={workspace.hasNextPage}
+            isLoading={workspace.isInitialLoading}
+            locale={workspace.locale}
+            onClearFilters={clearFilters}
+            onExport={(suppliers) =>
+              downloadSuppliersCsv(suppliers, workspace.locale)
+            }
+            onSelect={(supplierId) => void workspace.setSelectedId(supplierId)}
+            onToggle={toggleRow}
+            onToggleAll={toggleAll}
+            page={workspace.filters.page}
+            q={workspace.filters.q}
+            refetch={workspace.refetch}
+            selectedId={workspace.selectedId}
+            selectedRows={selectedRows}
+            setPage={(page) => {
+              setSelectedRows(new Set());
+              return workspace.filters.setPage(page);
+            }}
+            setSearch={(value) => {
+              setSelectedRows(new Set());
+              return workspace.filters.setQ(value);
+            }}
+            setStatus={(value) => {
+              setSelectedRows(new Set());
+              return workspace.filters.setStatus(value);
+            }}
+            status={workspace.filters.status}
+            suppliers={workspace.suppliers}
+            suppliersError={workspace.suppliersError}
+          />
+          {selectedSuppliers.length > 0 ? (
+            <SupplierBulkActionsBar
             isPending={statusMutation.isPending}
             locale={workspace.locale}
             onChangeStatus={(status) => statusMutation.mutate(status)}
             onClear={() => setSelectedRows(new Set())}
-            onExport={() => downloadSuppliersCsv(selectedSuppliers)}
+              onExport={() =>
+                downloadSuppliersCsv(selectedSuppliers, workspace.locale)
+              }
             selectedSuppliers={selectedSuppliers}
           />
-        ) : (
+          ) : null}
+        </div>
+        {selectedSuppliers.length === 0 ? (
           <SupplierDetailRail
             isLoading={workspace.isOperationalLoading}
             locale={workspace.locale}
@@ -1072,22 +1306,29 @@ export function SuppliersRoute() {
             receivings={workspace.receivings}
             supplier={workspace.selectedSupplier}
           />
-        )}
+        ) : null}
       </div>
     </DashboardShell>
   );
 }
 
-function downloadSuppliersCsv(suppliers: Supplier[]) {
+function downloadSuppliersCsv(suppliers: Supplier[], locale: Locale) {
   const rows = [
-    ["Nome", "Documento", "E-mail", "Telefone", "Categoria", "Status"],
+    [
+      getText(locale, "supplier"),
+      getText(locale, "document"),
+      getText(locale, "email"),
+      getText(locale, "phone"),
+      getText(locale, "category"),
+      getText(locale, "status"),
+    ],
     ...suppliers.map((supplier) => [
       supplier.name,
       supplier.document ?? "",
       supplier.email ?? "",
       supplier.phone ?? "",
       supplier.category ?? "",
-      supplier.status,
+      getStatusLabel(locale, supplier.status),
     ]),
   ];
   const csv = rows
@@ -1102,7 +1343,12 @@ function downloadSuppliersCsv(suppliers: Supplier[]) {
   );
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "fornecedores.csv";
+  anchor.download =
+    locale === "en"
+      ? "suppliers.csv"
+      : locale === "es"
+        ? "proveedores.csv"
+        : "fornecedores.csv";
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -1144,13 +1390,13 @@ function getInitials(value: string) {
 
 function getStatusLabel(locale: Locale, status: Supplier["status"]) {
   return status === "active"
-    ? getText(locale, "active")
-    : getText(locale, "inactive");
+    ? getText(locale, "activeSingular")
+    : getText(locale, "inactiveSingular");
 }
 
 function getTermLabel(locale: Locale, term?: string) {
   if (!term) return "-";
-  return `${term} ${locale === "en" ? "days" : "dias"}`;
+  return `${term} ${locale === "en" ? "days" : locale === "es" ? "días" : "dias"}`;
 }
 
 function getCategoryLabel(locale: Locale, category?: Supplier["category"]) {
@@ -1215,11 +1461,46 @@ function getNotice(locale: Locale, notice: string) {
   return notices[notice]?.[index];
 }
 
+function getBulkSuccessText(
+  locale: Locale,
+  status: "active" | "inactive",
+  count: number,
+) {
+  if (locale === "en") {
+    return `${count} ${count === 1 ? "supplier" : "suppliers"} ${
+      status === "active" ? "activated" : "deactivated"
+    } successfully.`;
+  }
+  if (locale === "es") {
+    const action =
+      status === "active"
+        ? count === 1
+          ? "activado"
+          : "activados"
+        : count === 1
+          ? "desactivado"
+          : "desactivados";
+    return `${count} ${count === 1 ? "proveedor" : "proveedores"} ${action} correctamente.`;
+  }
+  const action =
+    status === "active"
+      ? count === 1
+        ? "ativado"
+        : "ativados"
+      : count === 1
+        ? "inativado"
+        : "inativados";
+  return `${count} ${count === 1 ? "fornecedor" : "fornecedores"} ${action} com sucesso.`;
+}
+
 function getText(locale: Locale, key: string) {
   const copy: Record<string, [string, string, string]> = {
     actions: ["Ações", "Actions", "Acciones"],
     activate: ["Ativar", "Activate", "Activar"],
     active: ["Ativos", "Active", "Activos"],
+    activeSingular: ["Ativo", "Active", "Activo"],
+    activeFilters: ["Filtros ativos", "Active filters", "Filtros activos"],
+    addContact: ["Adicionar contato", "Add contact", "Agregar contacto"],
     allSuppliers: ["Todos fornecedores", "All suppliers", "Todos los proveedores"],
     bulkError: [
       "Não foi possível atualizar os fornecedores selecionados.",
@@ -1243,6 +1524,7 @@ function getText(locale: Locale, key: string) {
     ],
     category: ["Categoria", "Category", "Categoría"],
     clearFilters: ["Limpar filtros", "Clear filters", "Limpiar filtros"],
+    clearSearch: ["Limpar busca", "Clear search", "Limpiar búsqueda"],
     clearSelection: ["Limpar seleção", "Clear selection", "Limpiar selección"],
     commercialTerms: ["Condições comerciais", "Commercial terms", "Condiciones comerciales"],
     contact: ["Contato principal", "Primary contact", "Contacto principal"],
@@ -1252,6 +1534,7 @@ function getText(locale: Locale, key: string) {
     delete: ["Excluir", "Delete", "Eliminar"],
     deleteSupplier: ["Excluir fornecedor", "Delete supplier", "Eliminar proveedor"],
     delivery: ["Entrega", "Delivery", "Entrega"],
+    document: ["Documento", "Document", "Documento"],
     edit: ["Editar", "Edit", "Editar"],
     editSupplier: ["Editar fornecedor", "Edit supplier", "Editar proveedor"],
     emptyDescription: [
@@ -1260,9 +1543,11 @@ function getText(locale: Locale, key: string) {
       "Crea el primer proveedor para seguir contactos, condiciones y órdenes.",
     ],
     emptyTitle: ["Nenhum fornecedor cadastrado", "No suppliers yet", "Aún no hay proveedores"],
+    email: ["E-mail", "Email", "Correo electrónico"],
     export: ["Exportar CSV", "Export CSV", "Exportar CSV"],
     forecast: ["Previsão", "Forecast", "Previsión"],
     inactive: ["Inativos", "Inactive", "Inactivos"],
+    inactiveSingular: ["Inativo", "Inactive", "Inactivo"],
     inactiveOrderHint: [
       "Ative o fornecedor antes de criar um pedido.",
       "Activate the supplier before creating a purchase order.",
@@ -1274,6 +1559,11 @@ function getText(locale: Locale, key: string) {
       "Verifique a conexão e tente novamente.",
       "Check your connection and try again.",
       "Comprueba la conexión e inténtalo de nuevo.",
+    ],
+    loadingSuppliers: [
+      "Carregando fornecedores",
+      "Loading suppliers",
+      "Cargando proveedores",
     ],
     manageResponsibles: ["Gerenciar responsáveis", "Manage contacts", "Gestionar responsables"],
     minimumOrder: ["Pedido mínimo", "Minimum order", "Pedido mínimo"],
@@ -1312,10 +1602,12 @@ function getText(locale: Locale, key: string) {
       "Algunos indicadores operativos no pudieron actualizarse.",
     ],
     payment: ["Pagamento", "Payment", "Pago"],
+    phone: ["Telefone", "Phone", "Teléfono"],
     previous: ["Anterior", "Previous", "Anterior"],
     previousPage: ["Página anterior", "Previous page", "Página anterior"],
     responsible: ["Responsável", "Contact", "Responsable"],
     responsibles: ["Responsáveis", "Contacts", "Responsables"],
+    search: ["Busca", "Search", "Búsqueda"],
     select: ["Selecionar", "Select", "Seleccionar"],
     selectAll: ["Selecionar todos", "Select all", "Seleccionar todos"],
     selected: ["Selecionados", "Selected", "Seleccionados"],

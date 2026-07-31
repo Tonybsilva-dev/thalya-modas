@@ -62,12 +62,31 @@
         "loadingDescription": "Estamos obteniendo los datos más recientes del proveedor.",
         "backToList": "Volver a proveedores",
         "tryAgain": "Intentar nuevamente",
+        "sectionNavigation": "Secciones del proveedor",
+        "optional": "opcional",
         "dataTitle": "Datos del proveedor",
         "dataDescription": "Datos fiscales y contacto comercial principal.",
         "commercialTitle": "Condiciones comerciales",
         "commercialDescription": "Condiciones predeterminadas usadas en ordenes de compra y recepcion.",
         "notesTitle": "Observaciones",
         "notesDescription": "Notas internas visibles para compras, recepcion y finanzas.",
+        "contacts": {
+          "title": "Contactos del proveedor",
+          "description": "Personas contactadas para pedidos, entregas y asuntos financieros.",
+          "add": "Agregar contacto",
+          "manage": "Gestionar contactos",
+          "emptyTitle": "No hay contactos registrados",
+          "emptyDescription": "Agrega al menos un contacto para agilizar pedidos y recepciones.",
+          "loadErrorTitle": "No se pudieron cargar los contactos"
+        },
+        "placeholders": {
+          "name": "Moda Brasil Mayorista",
+          "document": "12.345.678/0001-90",
+          "phone": "(85) 98888-1200",
+          "email": "compras@proveedor.com",
+          "minimumOrder": "R$ 1.500,00",
+          "notes": "Registra acuerdos, ventanas de entrega u orientaciones internas."
+        },
         "fields": {
           "name": "Nombre comercial",
           "document": "Documento fiscal",
@@ -78,12 +97,22 @@
           "deliveryTerm": "Plazo de entrega",
           "paymentTerm": "Plazo de pago",
           "minimumOrder": "Pedido minimo",
-          "status": "Estado inicial",
+          "status": "Estado",
+          "initialStatus": "Estado inicial",
           "notes": "Observaciones internas"
         },
         "status": {
           "active": "Activo",
-          "inactive": "Inactivo"
+          "inactive": "Inactivo",
+          "activeDescription": "Los proveedores activos pueden usarse en nuevas órdenes de compra.",
+          "inactiveDescription": "Los proveedores inactivos permanecen en el historial, pero no pueden recibir nuevas órdenes."
+        },
+        "unsaved": {
+          "badge": "Cambios sin guardar",
+          "pending": "Hay cambios pendientes",
+          "saved": "No hay cambios pendientes",
+          "shortcut": "Usa Ctrl+S o ⌘S para guardar.",
+          "confirm": "Hay cambios sin guardar. ¿Deseas salir de todos modos?"
         },
         "categories": {
           "women_fashion": "Moda femenina",
@@ -106,18 +135,45 @@
           "fiscal": "Datos fiscales completos",
           "contact": "Contacto principal definido",
           "terms": "Condiciones de compra revisadas",
-          "responsibles": "Responsables",
+          "responsibles": "Contactos",
           "none": "Ninguno registrado",
           "count": "{count, plural, one {# registrado} other {# registrados}}",
-          "addResponsible": "Agregar responsable"
+          "addResponsible": "Agregar contacto"
         },
         "performance": {
+          "title": "Resumen operativo",
+          "description": "Indicadores calculados a partir de órdenes y recepciones.",
           "onTime": "Puntualidad",
           "leadTime": "Lead time",
           "openOrders": "Ordenes abiertas",
           "openValue": "Valor abierto",
           "manageResponsibles": "Gestionar responsables",
           "deleteSupplier": "Eliminar proveedor"
+        },
+        "danger": {
+          "title": "Zona de riesgo",
+          "description": "La eliminación es permanente. Para impedir solo nuevos pedidos, cambia el estado a inactivo."
+        },
+        "validation": {
+          "supplier": {
+            "name": "Ingresa el nombre comercial.",
+            "document": "Ingresa un documento fiscal válido.",
+            "phone": "Ingresa un teléfono válido.",
+            "email": "Ingresa un correo electrónico válido.",
+            "category": "Selecciona una categoría.",
+            "deliveryTerm": "Selecciona el plazo de entrega.",
+            "paymentTerm": "Selecciona el plazo de pago.",
+            "minimumOrder": "Ingresa el pedido mínimo.",
+            "status": "Selecciona el estado."
+          },
+          "responsible": {
+            "name": "Ingresa el nombre del contacto.",
+            "role": "Ingresa el cargo.",
+            "phone": "Ingresa un teléfono válido.",
+            "email": "Ingresa un correo electrónico válido.",
+            "contactType": "Selecciona el tipo de contacto.",
+            "status": "Selecciona el estado."
+          }
         },
         "deleteModal": {
           "title": "Eliminar proveedor?",
@@ -127,18 +183,18 @@
           "confirm": "Eliminar proveedor"
         },
         "responsibleModal": {
-          "title": "Agregar responsable",
-          "listTitle": "Responsables registrados",
+          "title": "Agregar contacto",
+          "listTitle": "Contactos del proveedor",
           "listDescription": "Contactos vinculados solo a este proveedor.",
-          "editTitle": "Editar responsable",
+          "editTitle": "Editar contacto",
           "description": "Agrega un contacto para pedidos, entregas o finanzas.",
-          "addNew": "Nuevo responsable",
-          "empty": "Ningun responsable registrado.",
+          "addNew": "Nuevo contacto",
+          "empty": "Ningún contacto registrado.",
           "loading": "Cargando responsables.",
-          "assigned": "Responsable principal",
+          "assigned": "Contacto principal",
           "close": "Cerrar",
           "newSupplier": "Nuevo proveedor",
-          "name": "Nombre del responsable",
+          "name": "Nombre del contacto",
           "namePlaceholder": "Ej.: Camila Santos",
           "role": "Cargo",
           "rolePlaceholder": "Ej.: Comercial",
@@ -151,13 +207,18 @@
           "delivery": "Entregas",
           "financial": "Financiero",
           "status": "Estado",
-          "primary": "Usar como responsable principal",
+          "primary": "Usar como contacto principal",
           "primaryDescription": "Este contacto aparece primero en las acciones rapidas del proveedor.",
           "count": "2 responsables registrados",
           "edit": "Editar",
           "delete": "Eliminar",
           "deleteConfirm": "¿Deseas eliminar este responsable?",
-          "save": "Guardar responsable",
+          "deleteTitle": "¿Eliminar este contacto?",
+          "deleteDescription": "{name} será eliminado de este proveedor. Esta acción no se puede deshacer.",
+          "deleting": "Eliminando...",
+          "saved": "Contacto guardado correctamente.",
+          "deleted": "Contacto eliminado correctamente.",
+          "save": "Guardar contacto",
           "saving": "Guardando..."
         },
         "errors": {
@@ -169,9 +230,9 @@
           "invalidId": "El identificador del proveedor no es válido.",
           "notFound": "Proveedor no encontrado",
           "delete": "No fue posible eliminar el proveedor.",
-          "responsibleLoad": "No fue posible cargar los responsables.",
-          "responsibleSave": "No fue posible guardar el responsable.",
-          "responsibleDelete": "No fue posible eliminar el responsable."
+          "responsibleLoad": "No se pudieron cargar los contactos.",
+          "responsibleSave": "No se pudo guardar el contacto.",
+          "responsibleDelete": "No se pudo eliminar el contacto."
         }
       },
       "purchaseOrder": {

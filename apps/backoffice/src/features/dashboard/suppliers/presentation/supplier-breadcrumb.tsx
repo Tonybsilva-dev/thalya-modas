@@ -1,3 +1,4 @@
+import type { MouseEventHandler } from "react";
 import Link from "next/link";
 import {
   Breadcrumb,
@@ -11,10 +12,12 @@ import {
 export function SupplierBreadcrumb({
   basePath,
   currentLabel,
+  onRootClick,
   rootLabel,
 }: {
   basePath: string;
   currentLabel: string;
+  onRootClick?: MouseEventHandler<HTMLAnchorElement>;
   rootLabel: string;
 }) {
   return (
@@ -25,6 +28,7 @@ export function SupplierBreadcrumb({
             <Link
               className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               href={basePath}
+              onClick={onRootClick}
             >
               {rootLabel}
             </Link>

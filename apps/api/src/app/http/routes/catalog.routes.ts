@@ -81,7 +81,17 @@ const receivingStatusSchema = z.enum([
 	'delayed',
 ]);
 
-const createSupplierSchema = z.object({
+const createSupplierResponsibleSchema = z.object({
+	contactType: supplierResponsibleContactTypeSchema,
+	email: z.string().trim().email(),
+	isPrimary: z.boolean(),
+	name: z.string().trim().min(2),
+	phone: z.string().trim().min(10).max(11),
+	role: z.string().trim().min(2),
+	status: supplierStatusSchema,
+});
+
+const supplierFieldsSchema = z.object({
 	category: supplierCategorySchema.optional(),
 	deliveryTerm: supplierTermSchema.optional(),
 	document: z.string().trim().min(11).max(14).optional(),
@@ -94,21 +104,29 @@ const createSupplierSchema = z.object({
 	status: supplierStatusSchema.optional(),
 });
 
-const updateSupplierSchema = createSupplierSchema.partial();
+const createSupplierSchema = supplierFieldsSchema.extend({
+	responsibles: z
+		.array(createSupplierResponsibleSchema)
+		.max(20)
+		.optional()
+		.superRefine((responsibles, context) => {
+			if (
+				responsibles &&
+				responsibles.filter((responsible) => responsible.isPrimary).length > 1
+			) {
+				context.addIssue({
+					code: 'custom',
+					message: 'Apenas um contato pode ser o responsável principal.',
+				});
+			}
+		}),
+});
+
+const updateSupplierSchema = supplierFieldsSchema.partial();
 
 const supplierResponsibleParamsSchema = z.object({
 	id: z.string().uuid(),
 	responsibleId: z.string().uuid(),
-});
-
-const createSupplierResponsibleSchema = z.object({
-	contactType: supplierResponsibleContactTypeSchema,
-	email: z.string().trim().email(),
-	isPrimary: z.boolean(),
-	name: z.string().trim().min(2),
-	phone: z.string().trim().min(10).max(11),
-	role: z.string().trim().min(2),
-	status: supplierStatusSchema,
 });
 
 const updateSupplierResponsibleSchema =

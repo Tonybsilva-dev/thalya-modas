@@ -158,7 +158,10 @@ export function getSupplier(supplierId: string) {
   return apiRequest<Supplier>(`/suppliers/${supplierId}`);
 }
 
-export function createSupplier(input: SupplierFormInput) {
+export function createSupplier(
+  input: SupplierFormInput,
+  responsibles: Array<SupplierResponsibleInput & { id?: string }> = [],
+) {
   return apiRequest<Supplier>("/suppliers", {
     body: JSON.stringify({
       category: input.category,
@@ -170,6 +173,15 @@ export function createSupplier(input: SupplierFormInput) {
       notes: input.notes,
       paymentTerm: input.paymentTerm,
       phone: normalizeDigits(input.phone),
+      responsibles: responsibles.map((responsible) => ({
+        contactType: responsible.contactType,
+        email: responsible.email,
+        isPrimary: responsible.isPrimary,
+        name: responsible.name,
+        phone: normalizeDigits(responsible.phone),
+        role: responsible.role,
+        status: responsible.status,
+      })),
       status: input.status,
     }),
     method: "POST",

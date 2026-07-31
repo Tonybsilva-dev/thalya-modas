@@ -108,6 +108,58 @@ describe('Catalog - Integração', () => {
 		});
 	});
 
+	it('deve criar fornecedor e contatos em uma única operação', async () => {
+		const token = await registerAndGetToken();
+		const response = await makeRequest(server, {
+			body: {
+				document: randomUUID().replaceAll('-', '').slice(0, 14),
+				email: `atomic-${randomUUID()}@thalya.test`,
+				name: 'Fornecedor com contatos',
+				phone: '85999998888',
+				responsibles: [
+					{
+						contactType: 'orders',
+						email: 'compras@fornecedor.test',
+						isPrimary: true,
+						name: 'Camila Santos',
+						phone: '85988887777',
+						role: 'Comercial',
+						status: 'active',
+					},
+					{
+						contactType: 'financial',
+						email: 'financeiro@fornecedor.test',
+						isPrimary: false,
+						name: 'Rafael Lima',
+						phone: '85977776666',
+						role: 'Financeiro',
+						status: 'active',
+					},
+				],
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/suppliers',
+		});
+
+		expect(response.statusCode).toBe(201);
+		expect(response.body).toMatchObject({
+			name: 'Fornecedor com contatos',
+			responsibles: [
+				{
+					email: 'compras@fornecedor.test',
+					isPrimary: true,
+					name: 'Camila Santos',
+				},
+				{
+					email: 'financeiro@fornecedor.test',
+					isPrimary: false,
+					name: 'Rafael Lima',
+				},
+			],
+		});
+	});
+
 	it('deve criar fornecedor inativo e recuperar os prazos comerciais', async () => {
 		const token = await registerAndGetToken();
 		const createResponse = await makeRequest(server, {

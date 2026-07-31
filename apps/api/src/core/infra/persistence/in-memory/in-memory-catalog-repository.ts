@@ -70,8 +70,20 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 			userId: input.userId,
 		};
 
+		const responsibles = (input.responsibles ?? []).map((responsible) => ({
+			...responsible,
+			createdAt: now,
+			id: randomUUID(),
+			storeId: input.storeId,
+			supplierId: supplier.id,
+			updatedAt: now,
+			userId: input.userId,
+		}));
 		this.suppliers.set(supplier.id, supplier);
-		return clone(supplier);
+		for (const responsible of responsibles) {
+			this.responsibles.set(responsible.id, responsible);
+		}
+		return this.hydrateSupplier(supplier);
 	}
 
 	async findSupplierById(
