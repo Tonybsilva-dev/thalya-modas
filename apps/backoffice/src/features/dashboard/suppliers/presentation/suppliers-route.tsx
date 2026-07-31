@@ -38,6 +38,7 @@ import {
 import { useLocale } from "next-intl";
 import { parseAsString, useQueryState } from "nuqs";
 
+import { ApiRequestError } from "@/src/shared/api/http-client";
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 
 import { useSuppliersFilters } from "../../shared/application/dashboard-filters";
@@ -947,7 +948,13 @@ export function SuppliersRoute() {
         selectedSuppliers.map((supplier) => updateSupplierStatus(supplier.id, status)),
       );
     },
-    onError: () => setBulkError(getText(workspace.locale, "bulkError")),
+    onError: (error) =>
+      setBulkError(
+        error instanceof ApiRequestError
+          ? error.payload.userMessage
+          : getText(workspace.locale, "bulkError"),
+      ),
+    onMutate: () => setBulkError(null),
     onSuccess: () => {
       setBulkError(null);
       setSelectedRows(new Set());

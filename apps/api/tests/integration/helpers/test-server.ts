@@ -1,6 +1,8 @@
+import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import type { FastifyInstance } from 'fastify';
 import fastify from 'fastify';
+import { getCorsConfig } from '../../../src/app/http/config/cors.config';
 import { getSwaggerConfig } from '../../../src/app/http/config/swagger.config';
 import { AppContainer } from '../../../src/app/http/container';
 import { healthcheckRoutes } from '../../../src/app/http/healthcheck/healthcheck.routes';
@@ -63,6 +65,9 @@ export async function createTestServer(
 			},
 		},
 	});
+
+	// Mantém os testes de integração alinhados à política CORS da API real.
+	await server.register(cors, getCorsConfig());
 
 	// Registra middleware de traceId PRIMEIRO para garantir que os hooks sejam executados
 	await server.register(traceIdPlugin);
@@ -143,7 +148,7 @@ export async function createTestServer(
  * Wrapper sobre o método inject() do Fastify
  */
 export interface TestRequest {
-	method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+	method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS';
 	url: string;
 	headers?: Record<string, string>;
 	body?: unknown;

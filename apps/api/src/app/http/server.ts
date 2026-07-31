@@ -21,6 +21,7 @@ import {
 } from '../../core/infra/persistence';
 import type { R2StorageConfig } from '../../core/infra/storage/r2-presigned-upload';
 import { env } from '../../shared/env';
+import { getCorsConfig } from './config/cors.config';
 import { getSwaggerConfig } from './config/swagger.config';
 import { getSwaggerUIConfig } from './config/swagger-ui.config';
 import { AppContainer } from './container';
@@ -75,14 +76,7 @@ async function build() {
 	});
 
 	// Registra CORS
-	await server.register(cors, {
-		origin:
-			env.CORS_ORIGINS.length > 0
-				? env.CORS_ORIGINS
-				: env.NODE_ENV !== 'production',
-		credentials: true,
-		exposedHeaders: ['X-Store-Id'],
-	});
+	await server.register(cors, getCorsConfig());
 	if (env.NODE_ENV !== 'development') {
 		// Registra Rate Limiting Global
 		await server.register(rateLimit, {

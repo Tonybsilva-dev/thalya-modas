@@ -22,6 +22,27 @@ describe('Catalog - Integração', () => {
 		await server.close();
 	});
 
+	it('deve autorizar preflight CORS para atualizar e excluir fornecedores', async () => {
+		const response = await makeRequest(server, {
+			headers: {
+				'access-control-request-headers': 'content-type,x-store-id',
+				'access-control-request-method': 'PATCH',
+				origin: 'http://localhost:3000',
+			},
+			method: 'OPTIONS',
+			url: `/suppliers/${randomUUID()}`,
+		});
+
+		expect(response.statusCode).toBe(204);
+		expect(response.headers['access-control-allow-methods']).toContain('PATCH');
+		expect(response.headers['access-control-allow-methods']).toContain(
+			'DELETE',
+		);
+		expect(response.headers['access-control-allow-origin']).toBe(
+			'http://localhost:3000',
+		);
+	});
+
 	it('deve exigir autenticação nas rotas de catálogo', async () => {
 		const response = await makeRequest(server, {
 			method: 'GET',
