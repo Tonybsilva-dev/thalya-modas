@@ -193,8 +193,8 @@ function SuppliersHeader({
   const basePath = useSuppliersBasePath();
 
   return (
-    <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-      <div className="grid gap-1.5">
+    <header className="grid min-w-0 max-w-full gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+      <div className="grid min-w-0 gap-1.5">
         <h1 className="text-2xl font-semibold leading-tight text-foreground md:text-[28px]">
           {header.title}
         </h1>
@@ -203,7 +203,7 @@ function SuppliersHeader({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex min-w-0 flex-wrap gap-3">
         <Button asChild className="h-11 justify-center px-4" variant="outline">
           <Link href={`${basePath}/purchase-orders/create`}>
             <PlusIcon className="size-4" />
@@ -305,13 +305,13 @@ function SupplierMetrics({
   ];
 
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className="grid min-w-0 max-w-full gap-4 sm:grid-cols-2 2xl:grid-cols-4">
       {metrics.map(([label, value, description, tone], index) => {
         const Icon = metricIcons[index] ?? ChartIcon;
 
         return (
-          <Card key={label} className="animate-nitro-scale-in">
-            <CardContent className="grid gap-3 p-4">
+          <Card key={label} className="min-w-0 max-w-full animate-nitro-scale-in">
+            <CardContent className="grid min-w-0 gap-3 p-4">
               <div className="flex items-center gap-3">
                 <p className="flex-1 text-sm text-muted-foreground">{label}</p>
                 <div
@@ -360,7 +360,7 @@ function SupplierFilterBar({
   ];
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
       {filters.map(([value, label]) => {
         const active = status === value;
 
@@ -428,8 +428,8 @@ function SupplierTableCard({
     suppliers.length > 0 && suppliers.every((supplier) => selectedRows.has(supplier.id));
 
   return (
-    <Card className="min-h-[520px]">
-      <CardContent className="grid gap-4 p-5">
+    <Card className="min-h-[520px] min-w-0 max-w-full">
+      <CardContent className="grid min-w-0 max-w-full gap-4 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold text-foreground">
@@ -450,8 +450,8 @@ function SupplierTableCard({
           </Button>
         </div>
 
-        <div className="grid gap-3 border-y border-border py-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="grid min-w-0 gap-3 border-y border-border py-4">
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
             <SupplierSearch
               key={q}
               locale={locale}
@@ -518,7 +518,7 @@ function SupplierTableCard({
           />
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden min-w-0 max-w-full overscroll-x-contain md:block md:overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -605,7 +605,7 @@ function SupplierTableCard({
                 </TableBody>
               </Table>
             </div>
-            <div className="grid gap-3 md:hidden">
+            <div className="grid min-w-0 max-w-full gap-3 md:hidden">
               {suppliers.map((supplier) => {
                 const primary =
                   supplier.responsibles.find((responsible) => responsible.isPrimary) ??
@@ -647,7 +647,7 @@ function SupplierTableCard({
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
-                      <div className="grid gap-1">
+                      <div className="grid min-w-0 gap-1">
                         <span className="text-muted-foreground">{getText(locale, "contact")}</span>
                         <strong className="truncate text-foreground">
                           {primary?.name ?? getText(locale, "noResponsible")}
@@ -924,9 +924,9 @@ function SupplierDetailRail({
 
   if (!supplier) {
     return (
-      <aside className="hidden min-w-0 content-start gap-3 xl:grid xl:w-[340px]">
-        <Card>
-          <CardContent className="grid gap-2 p-5 text-center">
+      <aside className="hidden min-w-0 max-w-full content-start gap-3 2xl:grid">
+        <Card className="min-w-0 max-w-full">
+          <CardContent className="grid min-w-0 gap-2 p-5 text-center">
             <BoxIcon className="mx-auto size-6 text-muted-foreground" />
             <h2 className="text-base font-semibold text-foreground">
               {getText(locale, "noSelection")}
@@ -960,10 +960,10 @@ function SupplierDetailRail({
     supplier.responsibles[0];
 
   return (
-    <aside className="hidden min-w-0 content-start gap-3 xl:sticky xl:top-5 xl:grid xl:w-[340px]">
-      <Card className="bg-secondary text-secondary-foreground">
-        <CardContent className="grid gap-3 p-4">
-          <div className="flex items-center gap-3">
+    <aside className="hidden min-w-0 max-w-full content-start gap-3 md:grid xl:grid-cols-3 2xl:sticky 2xl:top-5 2xl:grid-cols-1">
+      <Card className="min-w-0 max-w-full bg-secondary text-secondary-foreground">
+        <CardContent className="grid min-w-0 gap-3 p-4">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-12 shrink-0 items-center justify-center bg-primary text-sm font-bold text-primary-foreground">
               {getInitials(supplier.name)}
             </div>
@@ -974,7 +974,7 @@ function SupplierDetailRail({
                 {getStatusLabel(locale, supplier.status)}
               </p>
             </div>
-            <Button asChild className="size-8 p-0" variant="secondary">
+            <Button asChild className="size-8 shrink-0 p-0" variant="secondary">
               <Link
                 aria-label={`${getText(locale, "edit")} ${supplier.name}`}
                 href={`${basePath}/${supplier.id}/edit`}
@@ -999,10 +999,10 @@ function SupplierDetailRail({
             )}
           />
           {primary ? (
-            <div className="grid gap-2 border-t border-white/15 pt-3">
+            <div className="grid min-w-0 gap-2 border-t border-white/15 pt-3">
               {primary.email ? (
                 <a
-                  className="flex items-center gap-2 truncate text-xs text-white/85 transition-colors hover:text-white"
+                  className="flex min-w-0 items-center gap-2 truncate text-xs text-white/85 transition-colors hover:text-white"
                   href={`mailto:${primary.email}`}
                 >
                   <EnvelopeSimple className="size-4 shrink-0" />
@@ -1030,8 +1030,8 @@ function SupplierDetailRail({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="grid gap-3 p-4">
+      <Card className="min-w-0 max-w-full">
+        <CardContent className="grid min-w-0 gap-3 p-4">
           <h2 className="text-base font-semibold text-foreground">
             {getText(locale, "commercialTerms")}
           </h2>
@@ -1050,8 +1050,8 @@ function SupplierDetailRail({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="grid gap-3 p-4">
+      <Card className="min-w-0 max-w-full">
+        <CardContent className="grid min-w-0 gap-3 p-4">
           <h2 className="text-base font-semibold text-foreground">
             {getText(locale, "nextReceiving")}
           </h2>
@@ -1073,8 +1073,8 @@ function SupplierDetailRail({
               />
             </>
           ) : (
-            <div className="grid gap-3">
-              <p className="text-sm leading-6 text-muted-foreground">
+            <div className="grid min-w-0 gap-3">
+              <p className="break-words text-sm leading-6 text-muted-foreground">
                 {getText(locale, "noReceiving")}
               </p>
               {supplier.status === "active" ? (
@@ -1096,18 +1096,22 @@ function SupplierDetailRail({
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs text-white/80">{label}</span>
-      <strong className="truncate text-xs font-semibold">{value}</strong>
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <span className="min-w-0 text-xs text-white/80">{label}</span>
+      <strong className="max-w-[60%] truncate text-right text-xs font-semibold">
+        {value}
+      </strong>
     </div>
   );
 }
 
 function PlainDetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <strong className="truncate text-xs font-semibold text-foreground">{value}</strong>
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <span className="min-w-0 text-xs text-muted-foreground">{label}</span>
+      <strong className="max-w-[60%] truncate text-right text-xs font-semibold text-foreground">
+        {value}
+      </strong>
     </div>
   );
 }
@@ -1247,12 +1251,12 @@ export function SuppliersRoute() {
       />
       <div
         className={cn(
-          "grid min-h-0 min-w-0 gap-5",
+          "grid min-h-0 min-w-0 max-w-full gap-5",
           selectedSuppliers.length === 0 &&
-            "xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]",
+            "2xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]",
         )}
       >
-        <div className="grid min-w-0 content-start gap-3">
+        <div className="grid min-w-0 max-w-full content-start gap-3">
           <SupplierTableCard
             hasNextPage={workspace.hasNextPage}
             isLoading={workspace.isInitialLoading}

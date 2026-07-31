@@ -444,7 +444,7 @@ export function DashboardShell({
   status,
 }: DashboardShellProps) {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen max-w-full overflow-x-clip bg-background text-foreground">
       <MobileHeader />
       <MobileNavigationDrawer
         activeItem={activeItem}
@@ -452,7 +452,7 @@ export function DashboardShell({
         settingsActive={settingsActive}
         status={status}
       />
-      <div className="flex min-h-screen items-stretch">
+      <div className="flex min-h-screen min-w-0 max-w-full items-stretch overflow-x-clip">
         <StoreSidebar
           activeItem={activeItem}
           className="sticky top-0 hidden h-screen lg:flex"
@@ -460,7 +460,7 @@ export function DashboardShell({
           settingsActive={settingsActive}
           status={status}
         />
-        <section className="grid min-w-0 flex-1 content-start gap-5 p-4 md:p-6 lg:p-8">
+        <section className="grid min-w-0 max-w-full flex-1 content-start gap-5 overflow-x-clip p-4 md:p-6 lg:max-w-[calc(100vw-280px)] lg:p-8">
           {children}
         </section>
       </div>
