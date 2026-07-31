@@ -30,9 +30,24 @@
       "about": "Acerca de"
     },
     "shell": {
-      "openSettings": "Abrir configuracion",
+      "accountMenu": "Abrir menu de cuenta y preferencias",
       "openNavigation": "Abrir navegacion",
       "closeNavigation": "Cerrar navegacion",
+      "settingsSection": "Configuración",
+      "quickPreferences": "Preferencias rápidas",
+      "language": "Idioma",
+      "languages": {
+        "pt-BR": "Portugués (Brasil)",
+        "en": "Inglés",
+        "es": "Español"
+      },
+      "settings": {
+        "general": "Configuración general",
+        "store": "Datos de la tienda",
+        "payments": "Pagos",
+        "teamSecurity": "Equipo y seguridad",
+        "notifications": "Notificaciones"
+      },
       "userFallback": "Usuario",
       "roles": {
         "admin": "Administrador",
@@ -43,8 +58,9 @@
         "operator": "Operador",
         "super_admin": "Super administrador"
       },
-      "signOut": "Cerrar sesion",
-      "signingOut": "Cerrando sesion..."
+      "signOut": "Cerrar sesión",
+      "signingOut": "Cerrando sesión...",
+      "signOutError": "No se pudo cerrar la sesión. Inténtalo de nuevo."
     },
     "suppliers": {
       "flow": {

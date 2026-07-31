@@ -30,9 +30,24 @@
       "about": "About"
     },
     "shell": {
-      "openSettings": "Open settings",
+      "accountMenu": "Open account and preferences menu",
       "openNavigation": "Open navigation",
       "closeNavigation": "Close navigation",
+      "settingsSection": "Settings",
+      "quickPreferences": "Quick preferences",
+      "language": "Language",
+      "languages": {
+        "pt-BR": "Portuguese (Brazil)",
+        "en": "English",
+        "es": "Spanish"
+      },
+      "settings": {
+        "general": "General settings",
+        "store": "Store details",
+        "payments": "Payments",
+        "teamSecurity": "Team and security",
+        "notifications": "Notifications"
+      },
       "userFallback": "User",
       "roles": {
         "admin": "Admin",
@@ -44,7 +59,8 @@
         "super_admin": "Super admin"
       },
       "signOut": "Sign out",
-      "signingOut": "Signing out..."
+      "signingOut": "Signing out...",
+      "signOutError": "Could not end the session. Please try again."
     },
     "suppliers": {
       "flow": {
