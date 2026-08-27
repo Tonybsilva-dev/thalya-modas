@@ -64,6 +64,10 @@ export interface CatalogRepository {
 		productId: string,
 	): Promise<Product | null>;
 	findProductBySku(scope: CatalogScope, sku: string): Promise<Product | null>;
+	findProductByBarcode(
+		scope: CatalogScope,
+		barcode: string,
+	): Promise<Product | null>;
 	listProducts(
 		scope: CatalogScope,
 		query?: CatalogListQuery,
@@ -95,4 +99,9 @@ export interface CatalogRepository {
 	prepareProductImageUpload(
 		input: PrepareProductImageUploadInput,
 	): Promise<PreparedProductImageUpload>;
+	deleteProductImageAsset(
+		scope: CatalogScope,
+		productId: string,
+		assetId: string,
+	): Promise<void>;
 }

@@ -108,6 +108,88 @@ describe('Catalog - Integração', () => {
 		});
 	});
 
+	it('deve cadastrar produto avulso, localizar por código e bloquear estoque', async () => {
+		const token = await registerAndGetToken();
+		const barcode = `789${Date.now()}`;
+		const productResponse = await makeRequest(server, {
+			body: {
+				barcode,
+				inventoryControl: 'untracked',
+				name: 'Embalagem avulsa',
+				salePrice: 4.9,
+				sku: `U-${randomUUID().slice(0, 8)}`,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/products',
+		});
+
+		expect(productResponse.statusCode).toBe(201);
+		expect(productResponse.body).toMatchObject({
+			barcode,
+			currentStock: 0,
+			inventoryControl: 'untracked',
+			minimumStock: 0,
+			name: 'Embalagem avulsa',
+		});
+
+		const lookupResponse = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			url: `/products/barcode/${barcode}`,
+		});
+		expect(lookupResponse.statusCode).toBe(200);
+		expect(lookupResponse.body).toMatchObject({ barcode });
+
+		const productId = (productResponse.body as { id: string }).id;
+		const adjustmentResponse = await makeRequest(server, {
+			body: {
+				productId,
+				quantity: 1,
+				reason: 'Entrada indevida',
+				type: 'in',
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/inventory/adjustments',
+		});
+		expect(adjustmentResponse.statusCode).toBe(400);
+		expect(adjustmentResponse.body).toMatchObject({
+			message: 'Produto sem controle de estoque não aceita movimentações.',
+		});
+	});
+
+	it('deve impedir código de barras duplicado dentro da mesma loja', async () => {
+		const token = await registerAndGetToken();
+		const barcode = `790${Date.now()}`;
+		const first = await makeRequest(server, {
+			body: {
+				barcode,
+				name: 'Primeiro produto',
+				sku: `P-${randomUUID().slice(0, 8)}`,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/products',
+		});
+		const duplicate = await makeRequest(server, {
+			body: {
+				barcode,
+				name: 'Segundo produto',
+				sku: `P-${randomUUID().slice(0, 8)}`,
+			},
+			headers: { authorization: `Bearer ${token}` },
+			method: 'POST',
+			url: '/products',
+		});
+
+		expect(first.statusCode).toBe(201);
+		expect(duplicate.statusCode).toBe(400);
+		expect(duplicate.body).toMatchObject({
+			message: 'Produto com este código de barras já existe.',
+		});
+	});
+
 	it('deve criar fornecedor e contatos em uma única operação', async () => {
 		const token = await registerAndGetToken();
 		const response = await makeRequest(server, {
@@ -198,10 +280,9 @@ describe('Catalog - Integração', () => {
 		});
 	});
 
-	it('deve impedir SKU duplicado por usuário', async () => {
+	it('deve gerar SKU único e imutável para cada produto', async () => {
 		const token = await registerAndGetToken();
-		const sku = `SKU-${randomUUID().slice(0, 8)}`;
-		const body = { name: 'Calca alfaiataria', sku };
+		const body = { name: 'Calca alfaiataria', sku: 'SKU-INFORMADO' };
 
 		const first = await makeRequest(server, {
 			body,
@@ -217,10 +298,22 @@ describe('Catalog - Integração', () => {
 		});
 
 		expect(first.statusCode).toBe(201);
-		expect(second.statusCode).toBe(400);
-		expect(second.body).toMatchObject({
-			code: 'TM-DOM-400',
+		expect(second.statusCode).toBe(201);
+		const firstProduct = first.body as { id: string; sku: string };
+		const secondProduct = second.body as { sku: string };
+		expect(firstProduct.sku).toMatch(/^PRD-[A-F0-9]{32}$/);
+		expect(secondProduct.sku).toMatch(/^PRD-[A-F0-9]{32}$/);
+		expect(secondProduct.sku).not.toBe(firstProduct.sku);
+		expect(firstProduct.sku).not.toBe('SKU-INFORMADO');
+
+		const update = await makeRequest(server, {
+			body: { sku: 'SKU-ALTERADO' },
+			headers: { authorization: `Bearer ${token}` },
+			method: 'PATCH',
+			url: `/products/${firstProduct.id}`,
 		});
+		expect(update.statusCode).toBe(200);
+		expect(update.body).toMatchObject({ sku: firstProduct.sku });
 	});
 
 	it('deve gerenciar responsáveis do fornecedor mantendo apenas um principal', async () => {
@@ -714,6 +807,19 @@ describe('Catalog - Integração', () => {
 		expect(firstUploadKey).toMatch(
 			new RegExp(`^${currentStoreBucketKey}/products/${productId}/`),
 		);
+		const assetId = (valid.body as { asset: { id: string } }).asset.id;
+		const cleanup = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'DELETE',
+			url: `/products/${productId}/assets/${assetId}`,
+		});
+		expect(cleanup.statusCode).toBe(204);
+		const productWithoutFailedAsset = await makeRequest(server, {
+			headers: { authorization: `Bearer ${token}` },
+			method: 'GET',
+			url: `/products/${productId}`,
+		});
+		expect(productWithoutFailedAsset.body).toMatchObject({ images: [] });
 
 		const firstStoreBucketKey = currentStoreBucketKey;
 		const secondToken = await registerAndGetToken();

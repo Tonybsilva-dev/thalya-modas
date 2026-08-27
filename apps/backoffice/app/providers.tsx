@@ -10,6 +10,8 @@ import { getDocumentLang, getMessages } from "@/src/shared/i18n/messages";
 import { useAppUiStore } from "@/src/shared/state/app-ui-store";
 import { ThemeController } from "@/src/shared/theme/theme-controller";
 
+const DEFAULT_TIME_ZONE = "America/Fortaleza";
+
 export function AppProviders({ children }: { children: ReactNode }) {
   const locale = useAppUiStore((state) => state.locale);
   const [queryClient] = useState(
@@ -30,7 +32,12 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [locale]);
 
   return (
-    <NextIntlClientProvider key={locale} locale={locale} messages={getMessages(locale)}>
+    <NextIntlClientProvider
+      key={locale}
+      locale={locale}
+      messages={getMessages(locale)}
+      timeZone={DEFAULT_TIME_ZONE}
+    >
       <QueryClientProvider client={queryClient}>
         <NuqsAdapter>
           <ThemeController />

@@ -37,6 +37,7 @@ import type {
 	UpdateSupplierResponsibleInput,
 } from '../../../domain/entities/catalog';
 import type { CatalogRepository } from '../../../domain/repositories/catalog-repository';
+import { createProductSku } from '../../../domain/value-objects/product-sku';
 import {
 	createR2PresignedUpload,
 	type R2StorageConfig,
@@ -386,9 +387,15 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async createProduct(input: CreateProductInput): Promise<Product> {
-		const existing = await this.findProductBySku(input, input.sku);
-		if (existing) {
-			throw new DomainError('Produto com este SKU já existe.');
+		const id = randomUUID();
+		if (input.barcode) {
+			const productWithBarcode = await this.findProductByBarcode(
+				input,
+				input.barcode,
+			);
+			if (productWithBarcode) {
+				throw new DomainError('Produto com este código de barras já existe.');
+			}
 		}
 
 		if (input.supplierId) {
@@ -397,13 +404,22 @@ export class PrismaCatalogRepository implements CatalogRepository {
 
 		const product = await this.prisma.product.create({
 			data: {
+				barcode: input.barcode,
 				costPrice: input.costPrice,
-				currentStock: input.currentStock ?? 0,
+				currentStock:
+					input.inventoryControl === 'untracked'
+						? 0
+						: (input.currentStock ?? 0),
 				description: input.description,
-				minimumStock: input.minimumStock ?? 0,
+				id,
+				inventoryControl: input.inventoryControl ?? 'tracked',
+				minimumStock:
+					input.inventoryControl === 'untracked'
+						? 0
+						: (input.minimumStock ?? 0),
 				name: input.name,
 				salePrice: input.salePrice,
-				sku: input.sku,
+				sku: createProductSku(id),
 				status: 'active',
 				storeId: input.storeId,
 				supplierId: input.supplierId,
@@ -446,6 +462,18 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		return product ? toDomainProduct(product) : null;
 	}
 
+	async findProductByBarcode(
+		scope: CatalogScope,
+		barcode: string,
+	): Promise<Product | null> {
+		const product = await this.prisma.product.findFirst({
+			where: { barcode, storeId: scope.storeId },
+			include: { images: true },
+		});
+
+		return product ? toDomainProduct(product) : null;
+	}
+
 	async listProducts(
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
@@ -479,11 +507,23 @@ export class PrismaCatalogRepository implements CatalogRepository {
 			throw new NotFoundError('Produto não encontrado.');
 		}
 
-		if (input.sku && input.sku !== product.sku) {
-			const existing = await this.findProductBySku(input, input.sku);
-			if (existing) {
-				throw new DomainError('Produto com este SKU já existe.');
+		if (input.barcode && input.barcode !== product.barcode) {
+			const productWithBarcode = await this.findProductByBarcode(
+				input,
+				input.barcode,
+			);
+			if (productWithBarcode) {
+				throw new DomainError('Produto com este código de barras já existe.');
 			}
+		}
+		const inventoryControl = input.inventoryControl ?? product.inventoryControl;
+		if (
+			inventoryControl === 'untracked' &&
+			((input.currentStock ?? 0) > 0 || (input.minimumStock ?? 0) > 0)
+		) {
+			throw new DomainError(
+				'Produto sem controle de estoque não aceita saldo ou estoque mínimo.',
+			);
 		}
 
 		if (input.supplierId) {
@@ -512,6 +552,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 			});
 			if (!product) {
 				throw new NotFoundError('Produto não encontrado.');
+			}
+			if (product.inventoryControl === 'untracked') {
+				throw new DomainError(
+					'Produto sem controle de estoque não aceita movimentações.',
+				);
 			}
 
 			const previousStock = product.currentStock;
@@ -792,6 +837,23 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		};
 	}
 
+	async deleteProductImageAsset(
+		scope: CatalogScope,
+		productId: string,
+		assetId: string,
+	): Promise<void> {
+		const asset = await this.prisma.productImageAsset.findFirst({
+			where: {
+				id: assetId,
+				productId,
+				storeId: scope.storeId,
+				userId: scope.userId,
+			},
+		});
+		if (!asset) throw new NotFoundError('Imagem do produto não encontrada.');
+		await this.prisma.productImageAsset.delete({ where: { id: asset.id } });
+	}
+
 	private async ensureSupplier(scope: CatalogScope, supplierId: string) {
 		const supplier = await this.prisma.supplier.findFirst({
 			where: {
@@ -848,6 +910,7 @@ function getProductSearchWhere(
 		OR: [
 			{ name: { contains: search, mode: Prisma.QueryMode.insensitive } },
 			{ sku: { contains: search, mode: Prisma.QueryMode.insensitive } },
+			{ barcode: { contains: search, mode: Prisma.QueryMode.insensitive } },
 			{ description: { contains: search, mode: Prisma.QueryMode.insensitive } },
 		],
 	};
@@ -949,17 +1012,24 @@ function getProductUpdateData(
 	input: UpdateProductInput,
 ): Prisma.ProductUpdateInput {
 	const data: Prisma.ProductUpdateInput = {};
+	if (Object.hasOwn(input, 'barcode')) data.barcode = input.barcode;
 	if (Object.hasOwn(input, 'costPrice')) data.costPrice = input.costPrice;
 	if (Object.hasOwn(input, 'currentStock')) {
 		data.currentStock = input.currentStock;
 	}
 	if (Object.hasOwn(input, 'description')) data.description = input.description;
+	if (Object.hasOwn(input, 'inventoryControl')) {
+		data.inventoryControl = input.inventoryControl;
+		if (input.inventoryControl === 'untracked') {
+			data.currentStock = 0;
+			data.minimumStock = 0;
+		}
+	}
 	if (Object.hasOwn(input, 'minimumStock')) {
 		data.minimumStock = input.minimumStock;
 	}
 	if (Object.hasOwn(input, 'name')) data.name = input.name;
 	if (Object.hasOwn(input, 'salePrice')) data.salePrice = input.salePrice;
-	if (Object.hasOwn(input, 'sku')) data.sku = input.sku;
 	if (Object.hasOwn(input, 'status')) data.status = input.status;
 	if (Object.hasOwn(input, 'supplierId')) {
 		data.supplier = input.supplierId
@@ -1055,12 +1125,14 @@ function toDomainSupplierResponsible(
 
 function toDomainProduct(product: PrismaProductWithImages): Product {
 	return {
+		barcode: product.barcode ?? undefined,
 		costPrice: product.costPrice?.toNumber(),
 		createdAt: product.createdAt.toISOString(),
 		currentStock: product.currentStock,
 		description: product.description ?? undefined,
 		id: product.id,
 		images: product.images.map(toDomainProductImageAsset),
+		inventoryControl: product.inventoryControl as Product['inventoryControl'],
 		minimumStock: product.minimumStock,
 		name: product.name,
 		salePrice: product.salePrice?.toNumber(),

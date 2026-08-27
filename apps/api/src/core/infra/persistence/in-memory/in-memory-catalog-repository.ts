@@ -27,6 +27,7 @@ import type {
 	UpdateSupplierResponsibleInput,
 } from '../../../domain/entities/catalog';
 import type { CatalogRepository } from '../../../domain/repositories/catalog-repository';
+import { createProductSku } from '../../../domain/value-objects/product-sku';
 import {
 	createR2PresignedUpload,
 	type R2StorageConfig,
@@ -345,9 +346,15 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	}
 
 	async createProduct(input: CreateProductInput): Promise<Product> {
-		const existing = await this.findProductBySku(input, input.sku);
-		if (existing) {
-			throw new DomainError('Produto com este SKU já existe.');
+		const id = randomUUID();
+		if (input.barcode) {
+			const productWithBarcode = await this.findProductByBarcode(
+				input,
+				input.barcode,
+			);
+			if (productWithBarcode) {
+				throw new DomainError('Produto com este código de barras já existe.');
+			}
 		}
 
 		if (input.supplierId) {
@@ -359,16 +366,20 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 
 		const now = new Date().toISOString();
 		const product: Product = {
+			barcode: input.barcode,
 			costPrice: input.costPrice,
 			createdAt: now,
-			currentStock: input.currentStock ?? 0,
+			currentStock:
+				input.inventoryControl === 'untracked' ? 0 : (input.currentStock ?? 0),
 			description: input.description,
-			id: randomUUID(),
+			id,
 			images: [],
-			minimumStock: input.minimumStock ?? 0,
+			inventoryControl: input.inventoryControl ?? 'tracked',
+			minimumStock:
+				input.inventoryControl === 'untracked' ? 0 : (input.minimumStock ?? 0),
 			name: input.name,
 			salePrice: input.salePrice,
-			sku: input.sku,
+			sku: createProductSku(id),
 			status: 'active',
 			storeId: input.storeId,
 			supplierId: input.supplierId,
@@ -400,6 +411,16 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		return product ? clone(product) : null;
 	}
 
+	async findProductByBarcode(
+		scope: CatalogScope,
+		barcode: string,
+	): Promise<Product | null> {
+		const product = Array.from(this.products.values()).find(
+			(item) => item.storeId === scope.storeId && item.barcode === barcode,
+		);
+		return product ? clone(product) : null;
+	}
+
 	async listProducts(
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
@@ -410,7 +431,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 					item.userId === scope.userId && item.storeId === scope.storeId,
 			),
 			query,
-			(item) => [item.name, item.sku, item.description],
+			(item) => [item.name, item.sku, item.barcode, item.description],
 		).map(clone);
 	}
 
@@ -424,11 +445,23 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 			throw new NotFoundError('Produto não encontrado.');
 		}
 
-		if (input.sku && input.sku !== product.sku) {
-			const existing = await this.findProductBySku(input, input.sku);
-			if (existing) {
-				throw new DomainError('Produto com este SKU já existe.');
+		if (input.barcode && input.barcode !== product.barcode) {
+			const productWithBarcode = await this.findProductByBarcode(
+				input,
+				input.barcode,
+			);
+			if (productWithBarcode) {
+				throw new DomainError('Produto com este código de barras já existe.');
 			}
+		}
+		const inventoryControl = input.inventoryControl ?? product.inventoryControl;
+		if (
+			inventoryControl === 'untracked' &&
+			((input.currentStock ?? 0) > 0 || (input.minimumStock ?? 0) > 0)
+		) {
+			throw new DomainError(
+				'Produto sem controle de estoque não aceita saldo ou estoque mínimo.',
+			);
 		}
 
 		if (input.supplierId) {
@@ -440,13 +473,20 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 
 		const updated: Product = {
 			...product,
+			barcode: input.barcode ?? product.barcode,
 			costPrice: input.costPrice ?? product.costPrice,
-			currentStock: input.currentStock ?? product.currentStock,
+			currentStock:
+				input.inventoryControl === 'untracked'
+					? 0
+					: (input.currentStock ?? product.currentStock),
 			description: input.description ?? product.description,
-			minimumStock: input.minimumStock ?? product.minimumStock,
+			inventoryControl,
+			minimumStock:
+				input.inventoryControl === 'untracked'
+					? 0
+					: (input.minimumStock ?? product.minimumStock),
 			name: input.name ?? product.name,
 			salePrice: input.salePrice ?? product.salePrice,
-			sku: input.sku ?? product.sku,
 			status: input.status ?? product.status,
 			supplierId: input.supplierId ?? product.supplierId,
 			updatedAt: new Date().toISOString(),
@@ -466,6 +506,11 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 			product.storeId !== input.storeId
 		) {
 			throw new NotFoundError('Produto não encontrado.');
+		}
+		if (product.inventoryControl === 'untracked') {
+			throw new DomainError(
+				'Produto sem controle de estoque não aceita movimentações.',
+			);
 		}
 
 		const previousStock = product.currentStock;
@@ -742,6 +787,27 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 			asset: clone(asset),
 			upload,
 		};
+	}
+
+	async deleteProductImageAsset(
+		scope: CatalogScope,
+		productId: string,
+		assetId: string,
+	): Promise<void> {
+		const product = this.products.get(productId);
+		const asset = product?.images.find((image) => image.id === assetId);
+		if (
+			!product ||
+			!asset ||
+			product.storeId !== scope.storeId ||
+			product.userId !== scope.userId
+		) {
+			throw new NotFoundError('Imagem do produto não encontrada.');
+		}
+		this.products.set(productId, {
+			...product,
+			images: product.images.filter((image) => image.id !== assetId),
+		});
 	}
 
 	private async ensureSupplier(scope: CatalogScope, supplierId: string) {

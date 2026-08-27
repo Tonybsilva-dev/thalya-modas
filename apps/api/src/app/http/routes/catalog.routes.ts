@@ -7,8 +7,10 @@ import {
 	CreateReceivingUseCase,
 	CreateSupplierResponsibleUseCase,
 	CreateSupplierUseCase,
+	DeleteProductImageAssetUseCase,
 	DeleteSupplierResponsibleUseCase,
 	DeleteSupplierUseCase,
+	GetProductByBarcodeUseCase,
 	GetProductUseCase,
 	GetSupplierOperationalSummaryUseCase,
 	GetSupplierUseCase,
@@ -50,6 +52,14 @@ const productImageParamsSchema = z.object({
 	productId: z.string().uuid(),
 });
 
+const productImageAssetParamsSchema = productImageParamsSchema.extend({
+	assetId: z.string().uuid(),
+});
+
+const productBarcodeParamsSchema = z.object({
+	barcode: z.string().trim().min(4).max(48),
+});
+
 const supplierStatusSchema = z.enum(['active', 'inactive']);
 const supplierCategorySchema = z.enum([
 	'women_fashion',
@@ -65,6 +75,14 @@ const supplierResponsibleContactTypeSchema = z.enum([
 	'financial',
 ]);
 const productStatusSchema = z.enum(['active', 'inactive']);
+const productInventoryControlSchema = z.enum(['tracked', 'untracked']);
+const barcodeSchema = z
+	.string()
+	.trim()
+	.min(4)
+	.max(48)
+	.regex(/^[0-9A-Za-z._-]+$/, 'Código de barras inválido.')
+	.transform((value) => value.toUpperCase());
 const purchaseOrderStatusSchema = z.enum([
 	'draft',
 	'confirmed',
@@ -160,18 +178,35 @@ const supplierOperationalSummarySchema = z.object({
 	totalSuppliers: z.number().int().nonnegative(),
 });
 
-const createProductSchema = z.object({
+const productMutableFieldsSchema = z.object({
+	barcode: barcodeSchema.optional(),
 	costPrice: z.number().nonnegative().optional(),
 	currentStock: z.number().int().nonnegative().optional(),
 	description: z.string().trim().optional(),
+	inventoryControl: productInventoryControlSchema.optional(),
 	minimumStock: z.number().int().nonnegative().optional(),
 	name: z.string().trim().min(2),
 	salePrice: z.number().nonnegative().optional(),
-	sku: z.string().trim().min(2),
 	supplierId: z.string().uuid().optional(),
 });
 
-const updateProductSchema = createProductSchema.partial().extend({
+const createProductSchema = productMutableFieldsSchema.superRefine(
+	(product, context) => {
+		if (
+			product.inventoryControl === 'untracked' &&
+			((product.currentStock ?? 0) > 0 || (product.minimumStock ?? 0) > 0)
+		) {
+			context.addIssue({
+				code: 'custom',
+				message:
+					'Produto sem controle de estoque não aceita saldo ou estoque mínimo.',
+				path: ['inventoryControl'],
+			});
+		}
+	},
+);
+
+const updateProductSchema = productMutableFieldsSchema.partial().extend({
 	status: productStatusSchema.optional(),
 });
 
@@ -187,12 +222,14 @@ const productAssetSchema = z.object({
 	userId: z.string(),
 });
 
-const productSchema = createProductSchema.extend({
+const productSchema = productMutableFieldsSchema.extend({
 	createdAt: z.string(),
 	currentStock: z.number(),
 	id: z.string(),
 	images: z.array(productAssetSchema),
+	inventoryControl: productInventoryControlSchema,
 	minimumStock: z.number(),
+	sku: z.string(),
 	status: productStatusSchema,
 	updatedAt: z.string(),
 	userId: z.string(),
@@ -345,7 +382,13 @@ export async function catalogRoutes(
 			container.catalogRepository,
 		),
 		deleteSupplier: new DeleteSupplierUseCase(container.catalogRepository),
+		deleteProductImageAsset: new DeleteProductImageAssetUseCase(
+			container.catalogRepository,
+		),
 		getProduct: new GetProductUseCase(container.catalogRepository),
+		getProductByBarcode: new GetProductByBarcodeUseCase(
+			container.catalogRepository,
+		),
 		getSupplierOperationalSummary: new GetSupplierOperationalSummaryUseCase(
 			container.catalogRepository,
 		),
@@ -843,6 +886,44 @@ export async function catalogRoutes(
 	);
 
 	fastify.get(
+		'/products/barcode/:barcode',
+		{
+			schema: {
+				description: 'Obtém produto por código de barras',
+				params: createRequestSchema({ params: productBarcodeParamsSchema })
+					.params,
+				tags: ['products'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				response: {
+					200: createResponseSchema(productSchema, 'Produto encontrado'),
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (request: FastifyRequest) => {
+			const user = getAuthenticatedUser(request);
+			const params = productBarcodeParamsSchema.parse(
+				getRequestParams(request),
+			);
+			const product = await useCases.getProductByBarcode.execute({
+				barcode: params.barcode.toUpperCase(),
+				storeId: user.storeId,
+				userId: user.userId,
+			});
+			if (!product) throw new NotFoundError('Produto não encontrado.');
+			return product;
+		},
+	);
+
+	fastify.get(
 		'/products/:id',
 		{
 			schema: {
@@ -958,6 +1039,47 @@ export async function catalogRoutes(
 				storeId: user.storeId,
 				userId: user.userId,
 			});
+		},
+	);
+
+	fastify.delete(
+		'/products/:productId/assets/:assetId',
+		{
+			schema: {
+				description: 'Remove registro de imagem não enviada do produto',
+				params: createRequestSchema({ params: productImageAssetParamsSchema })
+					.params,
+				tags: ['products'],
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				response: {
+					204: { description: 'Registro de imagem removido', type: 'null' },
+					401: createResponseSchema(
+						authErrorSchema,
+						'Token ausente ou inválido',
+					),
+					403: createResponseSchema(
+						authErrorSchema,
+						'Funcionalidade desabilitada',
+					),
+				},
+			},
+			preHandler,
+		},
+		async (
+			request: FastifyRequest,
+			reply: { code: (status: number) => void },
+		) => {
+			const user = getAuthenticatedUser(request);
+			const params = productImageAssetParamsSchema.parse(
+				getRequestParams(request),
+			);
+			await useCases.deleteProductImageAsset.execute({
+				assetId: params.assetId,
+				productId: params.productId,
+				storeId: user.storeId,
+				userId: user.userId,
+			});
+			reply.code(204);
 		},
 	);
 

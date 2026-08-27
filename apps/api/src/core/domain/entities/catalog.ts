@@ -12,6 +12,7 @@ export type SupplierResponsibleContactType =
 	| 'financial';
 
 export type ProductStatus = 'active' | 'inactive';
+export type ProductInventoryControl = 'tracked' | 'untracked';
 
 export type InventoryAdjustmentType = 'in' | 'out' | 'correction';
 export type PurchaseOrderStatus =
@@ -98,7 +99,9 @@ export type Product = {
 	storeId: string;
 	name: string;
 	sku: string;
+	barcode?: string;
 	description?: string;
+	inventoryControl: ProductInventoryControl;
 	supplierId?: string;
 	costPrice?: number;
 	salePrice?: number;
@@ -225,8 +228,9 @@ export type UpdateSupplierResponsibleInput = Partial<
 
 export type CreateProductInput = CatalogScope & {
 	name: string;
-	sku: string;
+	barcode?: string;
 	description?: string;
+	inventoryControl?: ProductInventoryControl;
 	supplierId?: string;
 	costPrice?: number;
 	salePrice?: number;

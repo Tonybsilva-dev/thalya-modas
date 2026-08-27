@@ -1,10 +1,32 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryState } from "nuqs";
 import {
+  Barcode,
+  Camera,
+  DotsThreeVertical,
+  Package,
+  PencilSimple,
+  Plus,
+  WarningCircle,
+} from "@phosphor-icons/react";
+import {
+  Alert,
+  AlertDescription,
   Badge,
   Button,
   Card,
   CardContent,
+  EmptyState,
+  EmptyStateActions,
+  EmptyStateContent,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
   Input,
   Table,
   TableBody,
@@ -14,306 +36,181 @@ import {
   TableRow,
   cn,
 } from "@thalya-modas/ui";
-import { useLocale } from "next-intl";
 
-import { normalizeLocale } from "@/src/shared/i18n/locales";
-
-import { useDashboardInventoryQuery } from "../../shared/application/dashboard-api";
+import { listAllSuppliers } from "../../suppliers/application/suppliers-api";
 import { useInventoryFilters } from "../../shared/application/dashboard-filters";
-import {
-  BoxIcon,
-  ChartIcon,
-  CheckIcon,
-  ClockIcon,
-  PlusIcon,
-  SearchIcon,
-} from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
-import { inventoryContentByLocale } from "../domain/inventory-content";
+import {
+  findProductByBarcode,
+  type Product,
+  useProductsQuery,
+} from "../application/products-api";
+import { BarcodeScannerDialog } from "./barcode-scanner-dialog";
 
-const toneStyles: Record<string, string> = {
-  success: "bg-success text-success-foreground",
-  info: "bg-info text-info-foreground",
-  warning: "bg-warning text-warning-foreground",
-  muted: "bg-muted text-muted-foreground",
-};
+const filters = [
+  ["all", "Todos"],
+  ["tracked", "Estoque controlado"],
+  ["untracked", "Avulsos (U)"],
+  ["low", "Abaixo do mínimo"],
+  ["inactive", "Inativos"],
+] as const;
 
-const metricIcons = [BoxIcon, ClockIcon, CheckIcon, ChartIcon];
-
-function useInventoryContent() {
-  const fallback = inventoryContentByLocale[normalizeLocale(useLocale())];
-  const { query } = useInventoryFilters();
-  const { data } = useDashboardInventoryQuery(query);
-
-  if (!data) return fallback;
-
-  return {
-    ...fallback,
-    metrics: data.summary.map((metric) => [
-      metric.label,
-      metric.value,
-      metric.description,
-      metric.tone,
-    ]),
-    table: {
-      ...fallback.table,
-      rows: data.products.map((product) => [
-        String(product.product ?? ""),
-        String(product.sku ?? ""),
-        String(product.stock ?? ""),
-        String(product.minimum ?? ""),
-        "Loja",
-        String(product.status ?? ""),
-      ]),
-    },
-    activity: data.movements.map((movement) => [
-      `${String(movement.type ?? "")} ${String(movement.sku ?? "")}`,
-      String(movement.date ?? ""),
-    ]),
-  };
+function formatCurrency(value?: number) {
+  if (value === undefined) return "Não informado";
+  return new Intl.NumberFormat("pt-BR", { currency: "BRL", style: "currency" }).format(value);
 }
 
-function InventoryHeader() {
-  const { q: search, setQ: setSearch } = useInventoryFilters();
-  const { header } = useInventoryContent();
-
-  return (
-    <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-      <div className="grid gap-1.5">
-        <h1 className="text-2xl font-semibold leading-tight text-foreground md:text-[28px]">
-          {header.title}
-        </h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {header.description}
-        </p>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-[minmax(0,300px)_auto_auto]">
-        <div className="relative">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="h-11 bg-card pl-10"
-            onChange={(event) => void setSearch(event.target.value || null)}
-            placeholder={header.searchPlaceholder}
-            value={search}
-          />
-        </div>
-        <Button className="h-11 justify-center px-4" variant="secondary">
-          <BoxIcon className="size-4" />
-          {header.scanLabel}
-        </Button>
-        <Button className="h-11 justify-center px-4">
-          <PlusIcon className="size-4" />
-          {header.actionLabel}
-        </Button>
-      </div>
-    </header>
-  );
+function displayName(product: Product) {
+  return product.inventoryControl === "untracked" ? `(U) ${product.name}` : product.name;
 }
 
-function InventoryMetrics() {
-  const content = useInventoryContent();
-
-  return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {content.metrics.map(([label, value, description, tone], index) => {
-        const Icon = metricIcons[index] ?? ChartIcon;
-
-        return (
-          <Card key={label} className="animate-nitro-scale-in">
-            <CardContent className="grid gap-3 p-4">
-              <div className="flex items-center gap-3">
-                <p className="flex-1 text-sm text-muted-foreground">{label}</p>
-                <div className={cn("flex size-8 items-center justify-center", toneStyles[tone])}>
-                  <Icon className="size-4" />
-                </div>
-              </div>
-              <strong className="text-[26px] font-semibold leading-none text-foreground">
-                {value}
-              </strong>
-              <p className="text-xs text-muted-foreground">{description}</p>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </section>
-  );
-}
-
-function InventoryFilterBar() {
-  const { setStatus: setFilter, status: filter } = useInventoryFilters();
-  const content = useInventoryContent();
-
-  return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
-      {content.filters.map(([value, label]) => {
-        const active = filter === value;
-
-        return (
-          <Button
-            key={value}
-            className={cn("h-9 shrink-0 px-3", active && "bg-secondary")}
-            onClick={() => void setFilter(value === "all" ? null : value)}
-            variant={active ? "secondary" : "outline"}
-          >
-            {label}
-          </Button>
-        );
-      })}
-    </div>
-  );
-}
-
-function statusVariant(status: string) {
-  if (["Low", "Critical", "Supplier", "Baixo", "Critico", "Fornecedor", "Bajo", "Proveedor"].includes(status)) {
-    return "warning";
-  }
-
-  return "outline";
-}
-
-function InventoryTableCard() {
-  const { table } = useInventoryContent();
-  const tableHeads =
-    "heads" in table
-      ? table.heads
-      : ["Item", "SKU", "On hand", "Reserved", "Channel", "Status"];
-
-  return (
-    <Card className="min-h-[560px]">
-      <CardContent className="grid gap-4 p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="grid gap-1">
-            <h2 className="text-lg font-semibold text-foreground">{table.title}</h2>
-            <p className="text-sm text-muted-foreground">{table.description}</p>
-          </div>
-          <Button className="h-9 px-3" variant="outline">
-            {table.exportLabel}
-          </Button>
-        </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {tableHeads.map((head, index) => (
-                <TableHead key={head} className={index === tableHeads.length - 1 ? "text-right" : undefined}>
-                  {head}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {table.rows.map(([item, sku, onHand, reserved, channel, status]) => (
-              <TableRow key={sku}>
-                <TableCell className="min-w-[260px] font-medium text-foreground">
-                  {item}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{sku}</TableCell>
-                <TableCell className="text-muted-foreground">{onHand}</TableCell>
-                <TableCell className="text-muted-foreground">{reserved}</TableCell>
-                <TableCell className="text-muted-foreground">{channel}</TableCell>
-                <TableCell className="text-right">
-                  <Badge variant={statusVariant(status)}>{status}</Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function InventoryBulkActions() {
-  const { bulkActions } = useInventoryContent();
-
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:gap-3">
-        <BoxIcon className="size-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">{bulkActions.selected}</span>
-        <p className="text-sm text-muted-foreground">{bulkActions.hint}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function InventoryDetailRail() {
-  const content = useInventoryContent();
-  const { activity, reorderPlan, selectedItem } = content;
-  const labels = "labels" in content ? content.labels : { recentActivity: "Recent activity" };
-
-  return (
-    <aside className="grid gap-3 xl:w-[340px]">
-      <Card className="bg-secondary text-secondary-foreground">
-        <CardContent className="grid gap-3 p-2.5">
-          <div
-            className="h-[88px] bg-cover bg-center"
-            style={{ backgroundImage: `url(${selectedItem.image})` }}
-          />
-          <div className="grid gap-1 px-1 pb-1">
-            <p className="text-xs font-semibold">{selectedItem.eyebrow}</p>
-            <h2 className="text-base font-semibold">{selectedItem.name}</h2>
-            <p className="text-xs text-white/80">{selectedItem.description}</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="grid gap-3 p-4">
-          <h2 className="text-[17px] font-semibold text-foreground">{reorderPlan.title}</h2>
-          <div className="grid gap-1">
-            {reorderPlan.rows.map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between gap-3 py-1">
-                <span className="text-sm text-muted-foreground">{label}</span>
-                <strong className="text-sm font-semibold text-foreground">{value}</strong>
-              </div>
-            ))}
-          </div>
-          <Button className="mt-1 h-10 justify-center">
-            <PlusIcon className="size-4" />
-            {reorderPlan.actionLabel}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="grid gap-3 p-4">
-          <h2 className="text-[17px] font-semibold text-foreground">{labels.recentActivity}</h2>
-          {activity.map(([title, time]) => (
-            <div key={title} className="flex gap-2.5 py-0.5">
-              <ClockIcon className="mt-0.5 size-4 text-muted-foreground" />
-              <div className="grid gap-0.5">
-                <span className="text-xs text-foreground">{title}</span>
-                <span className="text-[10px] text-muted-foreground">{time}</span>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </aside>
-  );
+function useInventoryBasePath() {
+  const params = useParams<{ role?: string }>();
+  return `/${params.role ?? "manager"}/dashboard/inventory`;
 }
 
 export function InventoryRoute() {
-  const { sidebar } = useInventoryContent();
+  const basePath = useInventoryBasePath();
+  const router = useRouter();
+  const { q, setQ, setStatus, status } = useInventoryFilters();
+  const [selectedId, setSelectedId] = useQueryState("selected");
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanError, setScanError] = useState<string>();
+  const productsQuery = useProductsQuery({ q, perPage: 100 });
+  const suppliersQuery = useQuery({
+    queryKey: ["suppliers", "product-options"],
+    queryFn: () => listAllSuppliers(),
+    staleTime: 60_000,
+  });
+  const supplierNames = useMemo(
+    () => new Map((suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier.name])),
+    [suppliersQuery.data],
+  );
+  const products = productsQuery.data ?? [];
+  const filteredProducts = products.filter((product) => {
+    if (status === "tracked") return product.inventoryControl === "tracked" && product.status === "active";
+    if (status === "untracked") return product.inventoryControl === "untracked" && product.status === "active";
+    if (status === "low") return product.inventoryControl === "tracked" && product.status === "active" && product.currentStock <= product.minimumStock;
+    if (status === "inactive") return product.status === "inactive";
+    return true;
+  });
+  const selected = products.find((product) => product.id === selectedId) ?? filteredProducts[0];
+  const activeProducts = products.filter((product) => product.status === "active");
+  const trackedProducts = activeProducts.filter((product) => product.inventoryControl === "tracked");
+  const metrics = [
+    { description: `${activeProducts.length} ativos`, icon: Package, label: "Produtos", value: products.length.toString() },
+    { description: "Somente itens controlados", icon: Barcode, label: "Unidades em estoque", value: trackedProducts.reduce((sum, product) => sum + product.currentStock, 0).toString() },
+    { description: "Requerem acompanhamento", icon: WarningCircle, label: "Abaixo do mínimo", value: trackedProducts.filter((product) => product.currentStock <= product.minimumStock).length.toString() },
+    { description: "Venda sem limite de saldo", icon: DotsThreeVertical, label: "Produtos avulsos", value: activeProducts.filter((product) => product.inventoryControl === "untracked").length.toString() },
+  ];
+
+  async function handleScannedCode(code: string) {
+    setScanError(undefined);
+    try {
+      const product = await findProductByBarcode(code);
+      router.push(
+        product
+          ? `${basePath}/products/${product.id}/edit`
+          : `${basePath}/products/create?barcode=${encodeURIComponent(code)}`,
+      );
+    } catch {
+      setScanError("Não foi possível consultar o código agora. Tente novamente ou cadastre manualmente.");
+    }
+  }
 
   return (
-    <DashboardShell
-      activeItem="Inventory"
-      operatorRole={sidebar.operatorRole}
-      status={sidebar.status}
-    >
-      <InventoryHeader />
-      <InventoryMetrics />
-      <InventoryFilterBar />
-      <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="grid min-w-0 gap-4">
-          <InventoryTableCard />
-          <InventoryBulkActions />
+    <DashboardShell activeItem="Inventory" operatorRole="Gestão de catálogo" status="Produtos e estoque">
+      <header className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="grid min-w-0 gap-1.5">
+          <h1 className="text-2xl font-semibold leading-tight text-foreground md:text-[28px]">Produtos e estoque</h1>
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            Cadastre produtos, leia etiquetas, associe fornecedores e acompanhe apenas os itens que precisam de controle de saldo.
+          </p>
         </div>
-        <InventoryDetailRail />
-      </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button className="h-11" onClick={() => setScannerOpen(true)} variant="secondary">
+            <Camera aria-hidden="true" className="size-4" />
+            Escanear código
+          </Button>
+          <Button asChild className="h-11"><Link href={`${basePath}/products/create`}><Plus aria-hidden="true" className="size-4" />Novo produto</Link></Button>
+        </div>
+      </header>
+
+      {scanError && <Alert variant="destructive"><WarningCircle aria-hidden="true" /><AlertDescription>{scanError}</AlertDescription></Alert>}
+
+      <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map(({ description, icon: Icon, label, value }) => (
+          <Card key={label}>
+            <CardContent className="grid gap-3 p-4">
+              <div className="flex items-center gap-3"><p className="min-w-0 flex-1 text-sm text-muted-foreground">{label}</p><div className="flex size-8 shrink-0 items-center justify-center bg-muted text-muted-foreground"><Icon aria-hidden="true" className="size-4" /></div></div>
+              <strong className="text-[26px] font-semibold leading-none text-foreground">{value}</strong>
+              <p className="text-xs text-muted-foreground">{description}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      <Card className="min-w-0">
+        <CardContent className="grid min-w-0 gap-4 p-4 sm:p-5">
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="grid gap-1"><h2 className="text-lg font-semibold text-foreground">Catálogo da loja</h2><p className="text-sm text-muted-foreground">Produtos cadastrados e sua situação atual.</p></div>
+            <Input className="h-10 w-full lg:max-w-sm" onChange={(event) => void setQ(event.target.value || null)} placeholder="Buscar nome, SKU ou código de barras" value={q} />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {filters.map(([value, label]) => (
+              <Button className={cn("h-9 shrink-0 px-3", status === value && "bg-secondary")} key={value} onClick={() => void setStatus(value === "all" ? null : value)} variant={status === value || (value === "all" && status === "all") ? "secondary" : "outline"}>{label}</Button>
+            ))}
+          </div>
+
+          {productsQuery.isLoading ? (
+            <div className="min-h-56 p-6 text-sm text-muted-foreground">Carregando produtos…</div>
+          ) : productsQuery.isError ? (
+            <Alert variant="destructive"><WarningCircle aria-hidden="true" /><AlertDescription>Não foi possível carregar os produtos.</AlertDescription></Alert>
+          ) : filteredProducts.length === 0 ? (
+            <EmptyState>
+              <EmptyStateContent>
+                <EmptyStateIcon><Package aria-hidden="true" /></EmptyStateIcon>
+                <EmptyStateTitle>{products.length === 0 ? "Nenhum produto cadastrado" : "Nenhum produto encontrado"}</EmptyStateTitle>
+                <EmptyStateDescription>{products.length === 0 ? "Comece lendo uma etiqueta ou cadastrando o primeiro produto manualmente." : "Altere a busca ou os filtros para visualizar outros produtos."}</EmptyStateDescription>
+                <EmptyStateActions>
+                  <Button onClick={() => setScannerOpen(true)} variant="secondary"><Camera aria-hidden="true" className="size-4" />Escanear</Button>
+                  <Button asChild><Link href={`${basePath}/products/create`}><Plus aria-hidden="true" className="size-4" />Cadastrar produto</Link></Button>
+                </EmptyStateActions>
+              </EmptyStateContent>
+            </EmptyState>
+          ) : (
+            <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="min-w-0 overflow-x-auto">
+                <Table className="min-w-[760px]">
+                  <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead>Código</TableHead><TableHead>Fornecedor</TableHead><TableHead>Saldo</TableHead><TableHead>Venda</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ação</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((product) => (
+                      <TableRow className={cn("cursor-pointer", selected?.id === product.id && "bg-muted/60")} key={product.id} onClick={() => void setSelectedId(product.id)}>
+                        <TableCell><div className="grid gap-0.5"><strong className="max-w-[260px] truncate text-foreground">{displayName(product)}</strong><span className="text-xs text-muted-foreground">{product.sku}</span></div></TableCell>
+                        <TableCell className="text-muted-foreground">{product.barcode ?? "—"}</TableCell>
+                        <TableCell className="max-w-44 truncate text-muted-foreground">{product.supplierId ? supplierNames.get(product.supplierId) ?? "Fornecedor" : "Sem fornecedor"}</TableCell>
+                        <TableCell>{product.inventoryControl === "untracked" ? <span className="text-muted-foreground">Sem limite</span> : product.currentStock}</TableCell>
+                        <TableCell>{formatCurrency(product.salePrice)}</TableCell>
+                        <TableCell><Badge variant={product.status === "active" ? "success" : "outline"}>{product.status === "active" ? "Ativo" : "Inativo"}</Badge></TableCell>
+                        <TableCell className="text-right"><Button asChild className="size-9 p-0" onClick={(event) => event.stopPropagation()} variant="ghost"><Link aria-label={`Editar ${product.name}`} href={`${basePath}/products/${product.id}/edit`}><PencilSimple aria-hidden="true" className="size-4" /></Link></Button></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {selected && (
+                <aside className="grid min-w-0 content-start gap-3">
+                  <Card className="bg-secondary text-secondary-foreground"><CardContent className="grid gap-3 p-4"><div className="flex items-start gap-3"><div className="flex size-11 shrink-0 items-center justify-center bg-primary text-primary-foreground">{selected.inventoryControl === "untracked" ? "U" : <Package aria-hidden="true" className="size-5" />}</div><div className="min-w-0"><h3 className="break-words font-semibold">{displayName(selected)}</h3><p className="text-xs opacity-80">{selected.sku}</p></div></div><p className="text-sm opacity-90">{selected.description || "Sem descrição cadastrada."}</p></CardContent></Card>
+                  <Card><CardContent className="grid gap-3 p-4"><h3 className="font-semibold text-foreground">Resumo comercial</h3><div className="grid gap-2 text-sm"><div className="flex justify-between gap-3"><span className="text-muted-foreground">Custo</span><strong>{formatCurrency(selected.costPrice)}</strong></div><div className="flex justify-between gap-3"><span className="text-muted-foreground">Venda</span><strong>{formatCurrency(selected.salePrice)}</strong></div><div className="flex justify-between gap-3"><span className="text-muted-foreground">Estoque</span><strong>{selected.inventoryControl === "untracked" ? "Não controlado" : `${selected.currentStock} un.`}</strong></div></div><Button asChild className="mt-1"><Link href={`${basePath}/products/${selected.id}/edit`}><PencilSimple aria-hidden="true" className="size-4" />Editar produto</Link></Button></CardContent></Card>
+                </aside>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <BarcodeScannerDialog onCode={(code) => void handleScannedCode(code)} onOpenChange={setScannerOpen} open={scannerOpen} />
     </DashboardShell>
   );
 }

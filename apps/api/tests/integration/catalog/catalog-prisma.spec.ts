@@ -106,7 +106,6 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 				currentStock: 5,
 				minimumStock: 2,
 				name: 'Vestido prisma',
-				sku: 'PRISMA-VD-001',
 				supplierId,
 			},
 			headers: { authorization: `Bearer ${token}` },
@@ -114,7 +113,11 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 			url: '/products',
 		});
 		expect(productResponse.statusCode).toBe(201);
-		const productId = (productResponse.body as { id: string }).id;
+		const { id: productId, sku: productSku } = productResponse.body as {
+			id: string;
+			sku: string;
+		};
+		expect(productSku).toMatch(/^PRD-[A-F0-9]{32}$/);
 
 		const adjustmentResponse = await makeRequest(server, {
 			body: {
@@ -163,7 +166,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		});
 		expect(persistedProduct).toMatchObject({
 			currentStock: 9,
-			sku: 'PRISMA-VD-001',
+			sku: productSku,
 			storeId: currentStoreId,
 		});
 		expect(persistedProduct?.images).toHaveLength(1);
@@ -183,7 +186,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 						name: 'Vestido prisma',
 						productId,
 						quantity: 2,
-						sku: 'PRISMA-VD-001',
+						sku: productSku,
 						unitCost: 77.5,
 					},
 				],
@@ -273,7 +276,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		]);
 	});
 
-	it('deve impedir documento e SKU duplicados dentro da mesma loja', async () => {
+	it('deve impedir documento duplicado e gerar SKUs distintos na mesma loja', async () => {
 		const token = await registerAndGetToken();
 		const member = await registerUserOnly();
 		await prisma.storeMembership.create({
@@ -306,7 +309,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 
 		const productBody = {
 			name: 'Produto Duplicado Prisma',
-			sku: 'PRISMA-DUP-001',
+			sku: 'SKU-IGNORADO',
 		};
 		const firstProduct = await makeRequest(server, {
 			body: productBody,
@@ -321,7 +324,13 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 			url: '/products',
 		});
 		expect(firstProduct.statusCode).toBe(201);
-		expect(secondProduct.statusCode).toBe(400);
+		expect(secondProduct.statusCode).toBe(201);
+		expect((firstProduct.body as { sku: string }).sku).toMatch(
+			/^PRD-[A-F0-9]{32}$/,
+		);
+		expect((secondProduct.body as { sku: string }).sku).not.toBe(
+			(firstProduct.body as { sku: string }).sku,
+		);
 	});
 
 	it('deve persistir status inicial e prazos comerciais do fornecedor', async () => {

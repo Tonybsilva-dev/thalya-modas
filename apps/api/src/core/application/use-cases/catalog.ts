@@ -132,6 +132,14 @@ export class GetProductUseCase {
 	}
 }
 
+export class GetProductByBarcodeUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: CatalogScope & { barcode: string }) {
+		return this.catalogRepository.findProductByBarcode(input, input.barcode);
+	}
+}
+
 export class UpdateProductUseCase {
 	constructor(private readonly catalogRepository: CatalogRepository) {}
 
@@ -212,5 +220,17 @@ export class PrepareProductImageUploadUseCase {
 
 	execute(input: PrepareProductImageUploadInput) {
 		return this.catalogRepository.prepareProductImageUpload(input);
+	}
+}
+
+export class DeleteProductImageAssetUseCase {
+	constructor(private readonly catalogRepository: CatalogRepository) {}
+
+	execute(input: CatalogScope & { assetId: string; productId: string }) {
+		return this.catalogRepository.deleteProductImageAsset(
+			input,
+			input.productId,
+			input.assetId,
+		);
 	}
 }

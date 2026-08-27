@@ -182,7 +182,9 @@ model Product {
   supplierId   String?  @map("supplier_id")
   name         String
   sku          String
+  barcode      String?
   description  String?
+  inventoryControl String @default("tracked") @map("inventory_control")
   costPrice    Decimal? @map("cost_price") @db.Decimal(12, 2)
   salePrice    Decimal? @map("sale_price") @db.Decimal(12, 2)
   currentStock Int      @default(0) @map("current_stock")
@@ -199,6 +201,7 @@ model Product {
   purchaseOrderItems PurchaseOrderItem[]
 
   @@unique([storeId, sku])
+  @@unique([storeId, barcode])
   @@index([userId])
   @@index([storeId])
   @@index([supplierId])
