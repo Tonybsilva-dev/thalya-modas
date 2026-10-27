@@ -1,76 +1,13 @@
 import * as React from "react";
-
+import { Card as BaseCard, CardContent as BaseContent } from "@trinketos/ui/card";
 import { cn } from "../lib/utils";
+export { CardHeader, CardTitle, CardDescription, CardFooter } from "@trinketos/ui/card";
 
-function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "rounded-none border border-border bg-card text-card-foreground shadow-sm transition-[border-color,box-shadow,transform] duration-base ease-nitro",
-        className,
-      )}
-      {...props}
-    />
-  );
+export function Card({ className, children, ...props }: Omit<React.ComponentProps<typeof BaseCard>, "children"> & { children?: React.ReactNode }) {
+  return <BaseCard children={children} className={cn("gap-0 border border-border py-0 shadow-none ring-0", className)} {...props} />;
 }
-
-function CardHeader({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("flex flex-col gap-1.5 border-b border-border p-5", className)}
-      {...props}
-    />
-  );
-}
-
-function CardTitle({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h3
-      className={cn("text-base leading-none font-semibold tracking-normal", className)}
-      {...props}
-    />
-  );
-}
-
-function CardDescription({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLParagraphElement>) {
-  return (
-    <p className={cn("text-sm text-muted-foreground", className)} {...props} />
-  );
-}
-
-function CardContent({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5", className)} {...props} />;
-}
-
-function CardFooter({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("flex items-center gap-2 border-t border-border p-5", className)}
-      {...props}
-    />
-  );
-}
-
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
-  CardContent,
-};
+export const CardContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof BaseContent>>(
+  function CardContent({ className, ...props }, ref) {
+    return <BaseContent ref={ref} className={cn("p-4", className)} {...props} />;
+  },
+);

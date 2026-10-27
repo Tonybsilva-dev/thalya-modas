@@ -1,4 +1,5 @@
 "use client";
+import { CustomerRegisterRoute } from "./customer-register-route";
 
 import Link from "next/link";
 import {
@@ -14,7 +15,7 @@ import {
   TableHeader,
   TableRow,
   cn,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import { useLocale } from "next-intl";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
@@ -319,7 +320,7 @@ function CustomerListRail() {
   );
 }
 
-export function CustomersRoute() {
+export function LegacyCustomersRoute() {
   const { sidebar } = useCustomersContent();
   return (
     <DashboardShell activeItem="Customers" operatorRole={sidebar.operatorRole} status={sidebar.status}>
@@ -336,3 +337,5 @@ export function CustomersRoute() {
     </DashboardShell>
   );
 }
+
+export function CustomersRoute() { return <CustomerRegisterRoute />; }

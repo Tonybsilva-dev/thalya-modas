@@ -75,6 +75,10 @@ export type DashboardInventory = {
 };
 
 export type DashboardCustomers = {
+	total?: number;
+	page?: number;
+	perPage?: number;
+	totalPages?: number;
 	summary: DashboardMetric[];
 	customers: DashboardTableRow[];
 	segments: Array<{

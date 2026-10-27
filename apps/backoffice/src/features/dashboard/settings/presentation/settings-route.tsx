@@ -1,8 +1,9 @@
 "use client";
+import { OperationalSettings } from "./operational-settings";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Badge, Button, Card, CardContent, Switch, cn } from "@thalya-modas/ui";
+import { Badge, Button, Card, CardContent, Switch, cn } from "@store-flow/ui";
 import { useLocale } from "next-intl";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
@@ -167,7 +168,7 @@ function SettingsRail({ section }: { section: SettingsSection }) {
   );
 }
 
-export function SettingsRoute({ section }: SettingsRouteProps) {
+export function LegacySettingsRoute({ section }: SettingsRouteProps) {
   const { sidebar } = useSettingsContent();
 
   return (
@@ -185,3 +186,5 @@ export function SettingsRoute({ section }: SettingsRouteProps) {
     </DashboardShell>
   );
 }
+
+export function SettingsRoute({section}:{section:SettingsSection | "plan"}) {return <OperationalSettings section={section} />;}

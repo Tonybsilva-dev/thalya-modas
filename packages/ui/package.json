@@ -1,5 +1,5 @@
 {
-  "name": "@thalya-modas/ui",
+  "name": "@store-flow/ui",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,8 +12,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit",
-    "lint": "echo \"No lint configured for @thalya-modas/ui yet\"",
-    "test": "echo \"No tests configured for @thalya-modas/ui yet\""
+    "lint": "echo \"No lint configured for @store-flow/ui yet\"",
+    "test": "echo \"No tests configured for @store-flow/ui yet\""
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -28,6 +28,9 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@trinketos/ui": "0.2.0",
+    "@visx/group": "3.12.0",
+    "@visx/shape": "3.12.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.4.0",

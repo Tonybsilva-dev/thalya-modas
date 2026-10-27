@@ -7,7 +7,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 const meta = {
   title: "Components/Navigation/Breadcrumb",

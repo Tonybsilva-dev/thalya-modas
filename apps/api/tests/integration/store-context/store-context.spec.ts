@@ -44,7 +44,7 @@ describe('Contexto HTTP de loja', () => {
 
 		expect(response.statusCode).toBe(400);
 		expect(response.body).toMatchObject({
-			code: 'TM-DOM-400',
+			code: 'SF-DOM-400',
 			error: 'DomainError',
 			message: 'Informe X-Store-Id para selecionar a loja ativa.',
 		});
@@ -82,7 +82,7 @@ describe('Contexto HTTP de loja', () => {
 
 		expect(response.statusCode).toBe(403);
 		expect(response.body).toMatchObject({
-			code: 'TM-AUTHZ-403',
+			code: 'SF-AUTHZ-403',
 			error: 'ForbiddenError',
 			message: 'Você não tem acesso à loja informada.',
 		});
@@ -96,7 +96,7 @@ describe('Contexto HTTP de loja', () => {
 
 		expect(response.statusCode).toBe(400);
 		expect(response.body).toMatchObject({
-			code: 'TM-VAL-400',
+			code: 'SF-VAL-400',
 			error: 'ValidationError',
 		});
 	});
@@ -108,7 +108,7 @@ describe('Contexto HTTP de loja', () => {
 
 		expect(response.statusCode).toBe(403);
 		expect(response.body).toMatchObject({
-			code: 'TM-AUTHZ-403',
+			code: 'SF-AUTHZ-403',
 			error: 'ForbiddenError',
 			message: 'Nenhuma loja está associada a este usuário.',
 		});
@@ -117,7 +117,7 @@ describe('Contexto HTTP de loja', () => {
 	async function register() {
 		const response = await makeRequest(server, {
 			body: {
-				email: `store-context-${randomUUID()}@thalya.test`,
+				email: `store-context-${randomUUID()}@storeflow.test`,
 				name: 'Context User',
 				password: 'Secure123',
 			},

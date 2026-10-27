@@ -1,6 +1,6 @@
 export type ThemeMode = "light" | "dark" | "system";
 
-export const themeCookieName = "@thalya-modas:theme";
+export const themeCookieName = "@store-flow:theme";
 
 export function isThemeMode(value: string | null | undefined): value is ThemeMode {
   return value === "light" || value === "dark" || value === "system";

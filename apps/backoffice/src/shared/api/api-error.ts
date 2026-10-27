@@ -10,13 +10,13 @@ export type ApiErrorCategory =
   | "validation";
 
 export type ApiErrorCode =
-  | "TM-AUTH-401"
-  | "TM-VAL-400"
-  | "TM-DOM-400"
-  | "TM-AUTHZ-403"
-  | "TM-FEAT-403"
-  | "TM-RES-404"
-  | "TM-SYS-500";
+  | "SF-AUTH-401"
+  | "SF-VAL-400"
+  | "SF-DOM-400"
+  | "SF-AUTHZ-403"
+  | "SF-FEAT-403"
+  | "SF-RES-404"
+  | "SF-SYS-500";
 
 export type ApiProblemDetails = {
   type?: string;
@@ -43,19 +43,23 @@ export type NormalizedApiError = ApiProblemDetails & {
 };
 
 const fallbackMessages: Record<string, string> = {
-  "TM-AUTH-401": "Entre novamente para continuar.",
-  "TM-VAL-400": "Revise os campos destacados e tente novamente.",
-  "TM-DOM-400": "Revise as informacoes e tente novamente.",
-  "TM-AUTHZ-403": "Voce nao tem permissao para executar esta acao.",
-  "TM-FEAT-403": "Funcionalidade temporariamente indisponivel.",
-  "TM-RES-404": "Nao encontramos o recurso solicitado.",
-  "TM-SYS-500": "Nao foi possivel concluir agora. Tente novamente em instantes.",
+  "SF-AUTH-401": "Entre novamente para continuar.",
+  "SF-VAL-400": "Revise os campos destacados e tente novamente.",
+  "SF-DOM-400": "Revise as informacoes e tente novamente.",
+  "SF-AUTHZ-403": "Voce nao tem permissao para executar esta acao.",
+  "SF-FEAT-403": "Funcionalidade temporariamente indisponivel.",
+  "SF-RES-404": "Nao encontramos o recurso solicitado.",
+  "SF-SYS-500": "Nao foi possivel concluir agora. Tente novamente em instantes.",
 };
 
 export function normalizeApiErrorPayload(
   status: number,
   payload: unknown,
 ): NormalizedApiError {
+  if (status >= 500 || (payload && typeof payload === "object" && ((payload as ApiProblemDetails).category === "internal" || (payload as ApiProblemDetails).code === "SF-SYS-500"))) {
+    const problem = payload as ApiProblemDetails | null;
+    return { ...fallbackError(status), traceId: typeof problem?.traceId === "string" ? problem.traceId : undefined };
+  }
   if (!payload || typeof payload !== "object") {
     return fallbackError(status);
   }
@@ -80,8 +84,10 @@ function fallbackError(status: number): NormalizedApiError {
     title: fallbackTitle(status),
     level: status >= 500 ? "error" : "warning",
     userMessage:
-      status >= 500
-        ? "Nao foi possivel concluir agora. Tente novamente em instantes."
+      status === 0
+        ? "Não foi possível conectar ao serviço. Tente novamente em instantes."
+        : status >= 500
+        ? "Não foi possível concluir agora. Tente novamente em instantes."
         : "Nao foi possivel concluir a solicitacao.",
   };
 }

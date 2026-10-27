@@ -16,7 +16,7 @@ COPY apps/api/package.json ./apps/api/package.json
 
 RUN apk add --no-cache python3 make g++
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @thalya-modas/api...
+    pnpm install --frozen-lockfile --filter @store-flow/api...
 
 FROM base AS development
 
@@ -32,19 +32,19 @@ FROM base AS build
 
 COPY apps/api ./apps/api
 
-RUN pnpm --filter @thalya-modas/api build
+RUN pnpm --filter @store-flow/api build
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm --filter @thalya-modas/api deploy \
-    --prod --legacy /opt/thalya-api
-RUN cd /opt/thalya-api \
+    pnpm --filter @store-flow/api deploy \
+    --prod --legacy /opt/storeflow-api
+RUN cd /opt/storeflow-api \
     && /workspace/apps/api/node_modules/.bin/prisma generate \
     --schema prisma/schema.prisma
 
 FROM node:22-alpine AS runtime
 
 RUN apk add --no-cache dumb-init libstdc++ \
-    && addgroup -S thalya \
-    && adduser -S thalya -G thalya
+    && addgroup -S storeflow \
+    && adduser -S storeflow -G storeflow
 
 WORKDIR /app
 
@@ -52,9 +52,9 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
 
-COPY --from=build --chown=thalya:thalya /opt/thalya-api ./
+COPY --from=build --chown=storeflow:storeflow /opt/storeflow-api ./
 
-USER thalya
+USER storeflow
 
 EXPOSE 3000
 

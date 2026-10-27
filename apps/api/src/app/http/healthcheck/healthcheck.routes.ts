@@ -1,109 +1,84 @@
 import { env } from '../../../shared/env';
 
-/** Schema JSON explícito para documentação Swagger (evita response vazio no OpenAPI). */
-const healthResponseJsonSchema = {
-	type: 'object' as const,
-	required: ['status', 'version', 'uptime', 'timestamp'],
-	properties: {
-		status: { type: 'string' as const, enum: ['ok'] },
-		version: { type: 'string' as const },
-		uptime: { type: 'number' as const },
-		timestamp: { type: 'string' as const, format: 'date-time' },
-	},
+type Probe = () => Promise<unknown>;
+type HealthOptions = {
+	checks?: { database?: Probe; redis?: Probe; queues?: Probe };
 };
-
-const deepHealthResponseJsonSchema = {
-	...healthResponseJsonSchema,
-	required: ['status', 'version', 'uptime', 'timestamp', 'checks'],
-	properties: {
-		...healthResponseJsonSchema.properties,
-		checks: {
-			type: 'object' as const,
-			properties: {
-				database: { type: 'string' as const, enum: ['ok', 'error'] },
-				cache: { type: 'string' as const, enum: ['ok', 'error'] },
-			},
-		},
+async function probe(check?: Probe) {
+	if (!check) return 'not_configured';
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	try {
+		await Promise.race([
+			check(),
+			new Promise((_, reject) => {
+				timer = setTimeout(() => reject(new Error('timeout')), 3500);
+			}),
+		]);
+		return 'ok';
+	} catch {
+		return 'error';
+	} finally {
+		clearTimeout(timer);
+	}
+}
+export async function healthcheckRoutes(
+	app: {
+		get(
+			path: string,
+			options: unknown,
+			handler: (
+				request: unknown,
+				reply: {
+					header(name: string, value: string): void;
+					code(code: number): { send(body: unknown): unknown };
+				},
+			) => Promise<unknown>,
+		): unknown;
 	},
-};
-
-// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
-export async function healthcheckRoutes(fastify: any) {
-	// Health check básico
-	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
-	(fastify as any).get(
+	options: HealthOptions = {},
+) {
+	const base = () => ({
+		version: env.API_VERSION,
+		uptime: process.uptime(),
+		timestamp: new Date().toISOString(),
+	});
+	app.get(
 		'/health',
 		{
 			schema: {
-				description: 'Health check básico do serviço',
 				tags: ['health'],
-				response: {
-					200: {
-						description: 'Serviço está funcionando',
-						...healthResponseJsonSchema,
-						example: {
-							status: 'ok',
-							version: env.API_VERSION,
-							uptime: 123.45,
-							timestamp: new Date().toISOString(),
-						},
-					},
-				},
+				description: 'Disponibilidade do processo da API',
 			},
 		},
-		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
-		async (request: any, reply: any) => {
-			// Garante que o header seja adicionado mesmo se o hook falhar
-			const traceId = request.traceId;
-			if (traceId) {
-				reply.header('X-Trace-Id', traceId);
-			}
-			return {
-				status: 'ok' as const,
-				version: env.API_VERSION,
-				uptime: process.uptime(),
-				timestamp: new Date().toISOString(),
-			};
-		},
+		async () => ({ status: 'ok', ...base() }),
 	);
-
-	// Health check detalhado (deep check)
-	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
-	(fastify as any).get(
+	app.get(
 		'/health/deep',
 		{
 			schema: {
-				description: 'Health check detalhado com verificação de dependências',
 				tags: ['health'],
-				response: {
-					200: {
-						description: 'Serviço e dependências estão funcionando',
-						...deepHealthResponseJsonSchema,
-						example: {
-							status: 'ok',
-							version: env.API_VERSION,
-							uptime: 123.45,
-							timestamp: new Date().toISOString(),
-							checks: {},
-						},
-					},
-				},
+				description:
+					'Verificação real de dependências; 503 quando uma dependência configurada falha',
 			},
 		},
-		async () => {
-			// TODO: Adicionar verificações reais de dependências quando implementadas
-			const checks = {
-				// database: await checkDatabase(),
-				// cache: await checkCache(),
-			};
-
-			return {
-				status: 'ok' as const,
-				version: env.API_VERSION,
-				uptime: process.uptime(),
-				timestamp: new Date().toISOString(),
+		async (_, reply) => {
+			reply.header('Cache-Control', 'no-store');
+			const entries = await Promise.all(
+				(['database', 'redis', 'queues'] as const).map(async (key) => [
+					key,
+					await probe(options.checks?.[key]),
+				]),
+			);
+			const checks = Object.fromEntries(entries);
+			const failed = Object.values(checks).includes('error');
+			const incomplete = ['database', 'redis', 'queues'].some(
+				(key) => checks[key] === 'not_configured',
+			);
+			return reply.code(failed ? 503 : 200).send({
+				status: failed ? 'error' : incomplete ? 'degraded' : 'ok',
+				...base(),
 				checks,
-			};
+			});
 		},
 	);
 }

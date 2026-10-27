@@ -4,7 +4,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
   Label,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 const meta = {
   title: "Components/Forms/OTP",

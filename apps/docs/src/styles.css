@@ -1,4 +1,4 @@
-@import "@thalya-modas/ui/styles.css";
+@import "@store-flow/ui/styles.css";
 
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";

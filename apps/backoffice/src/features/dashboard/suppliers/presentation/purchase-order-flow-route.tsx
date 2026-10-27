@@ -1,4 +1,6 @@
 "use client";
+import { parseBrlCents } from "@/src/shared/money/brl";
+import { useId } from "react";
 
 import type { ComponentType, FormEvent } from "react";
 import { useState } from "react";
@@ -22,6 +24,7 @@ import {
 import {
   Badge,
   Button,
+  PageHeader,
   Card,
   CardContent,
   Input,
@@ -33,7 +36,7 @@ import {
   SelectValue,
   Textarea,
   cn,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import { z } from "zod";
 
 import { ApiRequestError } from "@/src/shared/api/http-client";
@@ -208,7 +211,7 @@ export function PurchaseOrderCreateRoute() {
       operatorRole={content.sidebar.operatorRole}
       status={content.sidebar.status}
     >
-      <form className="grid gap-5" onSubmit={handleSubmit}>
+      <form className="grid gap-4" onSubmit={handleSubmit}>
         <PurchaseOrderHeader
           basePath={basePath}
           isPending={mutation.isPending}
@@ -216,8 +219,8 @@ export function PurchaseOrderCreateRoute() {
           setSection={setSection}
         />
 
-        <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="grid gap-5">
+        <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid gap-4">
             <PurchaseOrderDetailsCard
               errors={errors}
               onPaymentTermChange={(value) => void setPaymentTerm(value)}
@@ -328,56 +331,15 @@ function PurchaseOrderHeader({
 }) {
   const t = useTranslations("dashboard.suppliers.purchaseOrder");
 
-  return (
-    <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-      <div className="grid gap-1.5">
-        <SupplierBreadcrumb
-          basePath={basePath}
-          currentLabel={t("title")}
-          rootLabel={t("breadcrumbRoot")}
-        />
-        <h1 className="text-2xl font-bold leading-tight text-foreground md:text-[28px]">
-          {t("title")}
-        </h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {t("description")}
-        </p>
-        <div className="mt-2 flex w-fit gap-1 border border-border bg-card p-1">
-          {(["details", "items", "review"] as const).map((value) => (
-            <button
-              key={value}
-              className={cn(
-                "h-8 px-3 text-xs font-semibold text-muted-foreground transition-colors",
-                section === value && "bg-secondary text-secondary-foreground",
-              )}
-              onClick={() => {
-                void setSection(value);
-                document
-                  .getElementById(`purchase-order-section-${value}`)
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              type="button"
-            >
-              {t(`sections.${value}`)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button asChild className="h-10 px-4" variant="outline">
-          <Link href={basePath}>
-            <ArrowLeft className="size-4" />
-            {t("cancel")}
-          </Link>
-        </Button>
-        <Button className="h-10 px-4" disabled={isPending} type="submit">
-          <FloppyDisk className="size-4" />
-          {isPending ? t("saving") : t("save")}
-        </Button>
-      </div>
-    </header>
-  );
+  return <div className="grid gap-3">
+    <SupplierBreadcrumb basePath={basePath} currentLabel={t("title")} rootLabel={t("breadcrumbRoot")} />
+    <PageHeader title={t("title")} description={t("description")}
+      actions={<Button asChild variant="outline"><Link href={basePath}><ArrowLeft aria-hidden="true" className="size-4" />{t("cancel")}</Link></Button>}
+      primaryAction={<Button disabled={isPending} type="submit"><FloppyDisk aria-hidden="true" className="size-4" />{isPending ? t("saving") : t("save")}</Button>} />
+    <nav aria-label={t("title")} className="flex w-fit max-w-full gap-1 overflow-x-auto border-b border-border">
+      {(["details", "items", "review"] as const).map(value => <button key={value} type="button" aria-current={section === value ? 'step' : undefined} className={cn('min-h-10 shrink-0 border-b-2 border-transparent px-3 text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', section === value && 'border-primary text-primary')} onClick={() => { void setSection(value); document.getElementById(`purchase-order-section-${value}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>{t(`sections.${value}`)}</button>)}
+    </nav>
+  </div>;
 }
 
 function PurchaseOrderDetailsCard({
@@ -579,7 +541,7 @@ function PurchaseOrderSummaryRail({
     (total, item) =>
       total +
       Number(item.quantity || 0) *
-        Number(item.unitCost.replace(/\./g, "").replace(",", ".") || 0),
+        ((parseBrlCents(item.unitCost) ?? 0) / 100),
     0,
   );
 
@@ -676,15 +638,17 @@ function ControlledField({
   type?: string;
   value: string;
 }) {
+  const fieldId = useId();
   return (
     <div className="grid gap-1.5">
-      <Label>{label}</Label>
+      <Label htmlFor={fieldId}>{label}{Icon === CurrencyDollar ? " (R$)" : ""}</Label>
       <div className="relative">
-        {Icon ? (
-          <Icon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        ) : null}
         <Input
-          className={cn("h-10 bg-card", Icon && "pl-9")}
+          id={fieldId}
+          inputMode={Icon === CurrencyDollar ? "decimal" : undefined}
+          prefix={Icon === CurrencyDollar ? <span aria-hidden="true">R$</span> : Icon ? <Icon aria-hidden="true" className="size-4" /> : undefined}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${fieldId}-error` : undefined}
           min={type === "number" ? 1 : undefined}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
@@ -692,7 +656,7 @@ function ControlledField({
           value={value}
         />
       </div>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p role="alert" id={`${fieldId}-error`} className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -714,16 +678,17 @@ function SelectField({
   placeholder?: string;
   value?: string;
 }) {
+  const fieldId = useId();
   return (
     <div className="grid gap-1.5">
-      <Label>{label}</Label>
+      <Label htmlFor={fieldId}>{label}</Label>
       {name && value ? <input name={name} type="hidden" value={value} /> : null}
       <Select
         name={value ? undefined : name}
         onValueChange={onValueChange}
         value={value}
       >
-        <SelectTrigger className="h-10 bg-card">
+        <SelectTrigger id={fieldId} aria-invalid={Boolean(error)} aria-describedby={error ? `${fieldId}-error` : undefined} className="h-10 bg-card">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -734,7 +699,7 @@ function SelectField({
           ))}
         </SelectContent>
       </Select>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p role="alert" id={`${fieldId}-error`} className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -748,7 +713,7 @@ function SectionHeading({
 }) {
   return (
     <div className="grid gap-1">
-      <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+      <h2 className="text-base font-semibold text-foreground">{title}</h2>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
   );
@@ -765,7 +730,8 @@ function FormError({ children }: { children: string }) {
 function formatMoney(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     currency: "BRL",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
     style: "currency",
   }).format(value);
 }

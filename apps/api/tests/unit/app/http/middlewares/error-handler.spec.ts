@@ -57,7 +57,7 @@ describe('errorHandler', () => {
 		expect(mockReply.code).toHaveBeenCalledWith(404);
 		expect(mockReply.send).toHaveBeenCalledWith(
 			expect.objectContaining({
-				code: 'TM-RES-404',
+				code: 'SF-RES-404',
 				error: 'NotFoundError',
 				message: 'Recurso não encontrado',
 				traceId: 'trace-123',
@@ -78,7 +78,7 @@ describe('errorHandler', () => {
 		expect(mockReply.code).toHaveBeenCalledWith(400);
 		expect(mockReply.send).toHaveBeenCalledWith(
 			expect.objectContaining({
-				code: 'TM-VAL-400',
+				code: 'SF-VAL-400',
 				error: 'ValidationError',
 				message: 'Erro de validação',
 				details: [{ field: 'email', message: 'Email inválido' }],
@@ -170,7 +170,7 @@ describe('errorHandler', () => {
 		expect(mockReply.code).toHaveBeenCalledWith(400);
 		expect(mockReply.send).toHaveBeenCalledWith(
 			expect.objectContaining({
-				code: 'TM-VAL-400',
+				code: 'SF-VAL-400',
 				error: 'ValidationError',
 				message: 'Erro de validação nos dados fornecidos',
 				details: fastifyError.validation,
@@ -189,12 +189,12 @@ describe('errorHandler', () => {
 		expect(mockReply.send).toHaveBeenCalledWith(
 			expect.objectContaining({
 				error: 'InternalServerError',
-				message: 'Erro desconhecido',
+				message:
+					'Não foi possível concluir agora. Tente novamente em instantes.',
 				traceId: expect.any(String),
 			}),
 		);
-		// Em modo test/development, pode incluir stack trace nos details
-		expect(mockReply.send).toHaveBeenCalled();
+		expect(mockReply.send.mock.calls[0][0]).not.toHaveProperty('details');
 		expect(mockLogger.error).toHaveBeenCalled();
 	});
 
@@ -211,13 +211,34 @@ describe('errorHandler', () => {
 		expect(mockReply.send).toHaveBeenCalledWith(
 			expect.objectContaining({
 				error: 'InternalServerError',
-				message: 'Custom error',
+				message:
+					'Não foi possível concluir agora. Tente novamente em instantes.',
 				traceId: expect.any(String),
-				userMessage: 'Custom error',
+				userMessage:
+					'Não foi possível concluir agora. Tente novamente em instantes.',
 			}),
 		);
 	});
 
+	it('keeps database diagnostics only in logs, even outside production', async () => {
+		const error = new Error(
+			'Invalid prisma.user.findUnique invocation at C:\\private\\api.ts:23. Database localhost:5433 unavailable',
+			{ cause: new Error('Sensitive database diagnostics') },
+		);
+		await errorHandler(error, mockRequest, mockReply);
+		const body = mockReply.send.mock.calls[0][0];
+		expect(body.message).toBe(
+			'Não foi possível concluir agora. Tente novamente em instantes.',
+		);
+		expect(body.detail).toBe(body.message);
+		expect(body.userMessage).toBe(body.message);
+		expect(body).not.toHaveProperty('details');
+		expect(JSON.stringify(body)).not.toMatch(
+			/prisma|private|localhost|5433|Sensitive/,
+		);
+		expect(mockLogger.error.mock.calls[0][0].err).toBe(error);
+		expect(mockLogger.error.mock.calls[0][0].traceId).toBe(body.traceId);
+	});
 	it('deve usar logLevel error para statusCode >= 500', async () => {
 		const error = new Error('Server error');
 
@@ -274,7 +295,7 @@ describe('errorHandler', () => {
 		expect(mockReply.code).toHaveBeenCalledWith(403);
 		expect(mockReply.send).toHaveBeenCalledWith(
 			expect.objectContaining({
-				code: 'TM-AUTHZ-403',
+				code: 'SF-AUTHZ-403',
 				error: 'ForbiddenError',
 				message: 'Acesso negado',
 				traceId: 'trace-789',

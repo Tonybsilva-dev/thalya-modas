@@ -1,4 +1,5 @@
 "use client";
+import { OperationalReadPage } from "../../shared/presentation/operational-read-page";
 
 import {
   Badge,
@@ -13,7 +14,7 @@ import {
   TableHeader,
   TableRow,
   cn,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import { useLocale } from "next-intl";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
@@ -301,7 +302,7 @@ function ActionRail() {
   );
 }
 
-export function DashboardOverviewRoute() {
+export function LegacyDashboardOverviewRoute() {
   const { store } = useDashboardOverviewContent();
 
   return (
@@ -325,3 +326,5 @@ export function DashboardOverviewRoute() {
     </DashboardShell>
   );
 }
+
+export function DashboardOverviewRoute() { return <OperationalReadPage kind="overview" />; }

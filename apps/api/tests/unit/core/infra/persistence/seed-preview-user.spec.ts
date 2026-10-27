@@ -12,7 +12,7 @@ describe('seedPreviewUser', () => {
 
 		expect(prisma.storeCreate).toHaveBeenCalledWith({
 			data: expect.objectContaining({
-				bucketKey: 'stores/thalya-modas-preview-8e88116d',
+				bucketKey: 'stores/store-flow-preview-8e88116d',
 				memberships: {
 					create: {
 						role: 'OWNER',
@@ -21,7 +21,7 @@ describe('seedPreviewUser', () => {
 					},
 				},
 				ownerId: previewUserId,
-				slug: 'thalya-modas-preview-8e88116d',
+				slug: 'store-flow-preview-8e88116d',
 				status: 'ACTIVE',
 			}),
 		});
@@ -38,7 +38,12 @@ describe('seedPreviewUser', () => {
 
 function createPrismaMock(existingStore: { id: string } | null) {
 	const storeCreate = vi.fn().mockResolvedValue({ id: 'created-store-id' });
-	const client = {
+	const clientMock = {
+		tenant: {
+			upsert: vi
+				.fn()
+				.mockResolvedValue({ id: 'preview-tenant-id', ownerId: previewUserId }),
+		},
 		store: {
 			create: storeCreate,
 			findFirst: vi.fn().mockResolvedValue(existingStore),
@@ -46,6 +51,13 @@ function createPrismaMock(existingStore: { id: string } | null) {
 		user: {
 			upsert: vi.fn().mockResolvedValue({ id: previewUserId }),
 		},
+	};
+	const client = {
+		...clientMock,
+		$transaction: vi.fn(
+			async (callback: (transaction: typeof clientMock) => unknown) =>
+				callback(clientMock),
+		),
 	} as unknown as PrismaClient;
 
 	return { client, storeCreate };

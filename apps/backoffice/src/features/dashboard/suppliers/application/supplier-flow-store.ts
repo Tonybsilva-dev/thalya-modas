@@ -6,6 +6,8 @@ import type {
 } from "../domain/supplier-flow-schemas";
 
 type SupplierFlowState = {
+  storeId?: string;
+  initializeScope: (storeId: string) => void;
   assignedResponsibleId?: string;
   responsibleDraft: Partial<SupplierResponsibleInput>;
   responsibles: Array<SupplierResponsibleInput & { id: string }>;
@@ -21,6 +23,14 @@ type SupplierFlowState = {
 };
 
 export const useSupplierFlowStore = create<SupplierFlowState>((set) => ({
+  storeId: undefined,
+  initializeScope: (storeId) => set(state => state.storeId === storeId ? state : {
+    storeId,
+    assignedResponsibleId: undefined,
+    responsibleDraft: {},
+    responsibles: [],
+    supplierDraft: {},
+  }),
   assignedResponsibleId: undefined,
   responsibleDraft: {},
   responsibles: [],

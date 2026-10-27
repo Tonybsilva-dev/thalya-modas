@@ -4,7 +4,7 @@ services:
       context: ../..
       target: runtime
       dockerfile: apps/api/Dockerfile
-    container_name: thalya-api
+    container_name: storeflow-api
     ports:
       - "${PORT:-3000}:3000"
     env_file:

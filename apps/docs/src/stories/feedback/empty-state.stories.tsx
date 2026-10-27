@@ -7,7 +7,7 @@ import {
   EmptyStateDescription,
   EmptyStateIcon,
   EmptyStateTitle,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import { SearchX } from "lucide-react";
 
 const meta = {

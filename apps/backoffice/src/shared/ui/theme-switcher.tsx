@@ -1,7 +1,7 @@
 "use client";
 
 import { Desktop, Moon, Sun } from "@phosphor-icons/react";
-import { ToggleButton, ToggleButtonGroup } from "@thalya-modas/ui";
+import { ToggleButton, ToggleButtonGroup } from "@store-flow/ui";
 import { useTranslations } from "next-intl";
 
 import { useAppUiStore } from "../state/app-ui-store";

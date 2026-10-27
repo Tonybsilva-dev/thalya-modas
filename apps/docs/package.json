@@ -1,5 +1,5 @@
 {
-  "name": "@thalya-modas/docs",
+  "name": "@store-flow/docs",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,11 +9,11 @@
     "build": "storybook build",
     "build-storybook": "storybook build",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"No lint configured for @thalya-modas/docs yet\"",
-    "test": "echo \"No tests configured for @thalya-modas/docs yet\""
+    "lint": "echo \"No lint configured for @store-flow/docs yet\"",
+    "test": "echo \"No tests configured for @store-flow/docs yet\""
   },
   "dependencies": {
-    "@thalya-modas/ui": "workspace:*",
+    "@store-flow/ui": "workspace:*",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

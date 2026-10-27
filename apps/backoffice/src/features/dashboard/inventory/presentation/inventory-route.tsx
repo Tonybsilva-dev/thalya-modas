@@ -1,4 +1,7 @@
 "use client";
+import { ListPagination,useRemotePage } from "@/src/features/backoffice/presentation/list-pagination";
+import { SelectField,SelectFieldOption } from "@/src/features/backoffice/presentation/select-field";
+import { Label } from "@store-flow/ui";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -19,6 +22,7 @@ import {
   AlertDescription,
   Badge,
   Button,
+  PageHeader,
   Card,
   CardContent,
   EmptyState,
@@ -35,7 +39,7 @@ import {
   TableHeader,
   TableRow,
   cn,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 import { listAllSuppliers } from "../../suppliers/application/suppliers-api";
 import { useInventoryFilters } from "../../shared/application/dashboard-filters";
@@ -43,7 +47,7 @@ import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import {
   findProductByBarcode,
   type Product,
-  useProductsQuery,
+  useProductsPageQuery,
 } from "../application/products-api";
 import { BarcodeScannerDialog } from "./barcode-scanner-dialog";
 
@@ -76,7 +80,8 @@ export function InventoryRoute() {
   const [selectedId, setSelectedId] = useQueryState("selected");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanError, setScanError] = useState<string>();
-  const productsQuery = useProductsQuery({ q, perPage: 100 });
+  const pagination=useRemotePage(`${q}|${status}`);
+  const productsQuery = useProductsPageQuery({ q,status,page:pagination.page,perPage:20 });
   const suppliersQuery = useQuery({
     queryKey: ["suppliers", "product-options"],
     queryFn: () => listAllSuppliers(),
@@ -86,7 +91,7 @@ export function InventoryRoute() {
     () => new Map((suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier.name])),
     [suppliersQuery.data],
   );
-  const products = productsQuery.data ?? [];
+  const products = productsQuery.data?.items ?? [];
   const filteredProducts = products.filter((product) => {
     if (status === "tracked") return product.inventoryControl === "tracked" && product.status === "active";
     if (status === "untracked") return product.inventoryControl === "untracked" && product.status === "active";
@@ -98,9 +103,9 @@ export function InventoryRoute() {
   const activeProducts = products.filter((product) => product.status === "active");
   const trackedProducts = activeProducts.filter((product) => product.inventoryControl === "tracked");
   const metrics = [
-    { description: `${activeProducts.length} ativos`, icon: Package, label: "Produtos", value: products.length.toString() },
+    { description: `${activeProducts.length} ativos nesta página`, icon: Package, label: "Produtos encontrados", value: (productsQuery.data?.total ?? 0).toString() },
     { description: "Somente itens controlados", icon: Barcode, label: "Unidades em estoque", value: trackedProducts.reduce((sum, product) => sum + product.currentStock, 0).toString() },
-    { description: "Requerem acompanhamento", icon: WarningCircle, label: "Abaixo do mínimo", value: trackedProducts.filter((product) => product.currentStock <= product.minimumStock).length.toString() },
+    { description: "Nesta página", icon: WarningCircle, label: "Abaixo do mínimo", value: trackedProducts.filter((product) => product.currentStock <= product.minimumStock).length.toString() },
     { description: "Venda sem limite de saldo", icon: DotsThreeVertical, label: "Produtos avulsos", value: activeProducts.filter((product) => product.inventoryControl === "untracked").length.toString() },
   ];
 
@@ -120,47 +125,17 @@ export function InventoryRoute() {
 
   return (
     <DashboardShell activeItem="Inventory" operatorRole="Gestão de catálogo" status="Produtos e estoque">
-      <header className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-        <div className="grid min-w-0 gap-1.5">
-          <h1 className="text-2xl font-semibold leading-tight text-foreground md:text-[28px]">Produtos e estoque</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Cadastre produtos, leia etiquetas, associe fornecedores e acompanhe apenas os itens que precisam de controle de saldo.
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Button className="h-11" onClick={() => setScannerOpen(true)} variant="secondary">
-            <Camera aria-hidden="true" className="size-4" />
-            Escanear código
-          </Button>
-          <Button asChild className="h-11"><Link href={`${basePath}/products/create`}><Plus aria-hidden="true" className="size-4" />Novo produto</Link></Button>
-        </div>
-      </header>
+      <PageHeader title="Produtos e estoque" description="Consulte o catálogo, controle saldos e cadastre produtos avulsos." actions={<Button onClick={() => setScannerOpen(true)} variant="outline"><Camera aria-hidden="true" className="size-4" />Escanear código</Button>} primaryAction={<Button asChild><Link href={`${basePath}/products/create`}><Plus aria-hidden="true" className="size-4" />Novo produto</Link></Button>} />
 
       {scanError && <Alert variant="destructive"><WarningCircle aria-hidden="true" /><AlertDescription>{scanError}</AlertDescription></Alert>}
 
-      <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map(({ description, icon: Icon, label, value }) => (
-          <Card key={label}>
-            <CardContent className="grid gap-3 p-4">
-              <div className="flex items-center gap-3"><p className="min-w-0 flex-1 text-sm text-muted-foreground">{label}</p><div className="flex size-8 shrink-0 items-center justify-center bg-muted text-muted-foreground"><Icon aria-hidden="true" className="size-4" /></div></div>
-              <strong className="text-[26px] font-semibold leading-none text-foreground">{value}</strong>
-              <p className="text-xs text-muted-foreground">{description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      <dl className="flex flex-wrap gap-x-6 gap-y-2 border-y py-3">
+        {metrics.map(({ description, label, value }) => <div key={label} className="flex items-baseline gap-2" title={description}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="text-base font-semibold tabular-nums">{value}</dd></div>)}
+      </dl>
 
       <Card className="min-w-0">
         <CardContent className="grid min-w-0 gap-4 p-4 sm:p-5">
-          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="grid gap-1"><h2 className="text-lg font-semibold text-foreground">Catálogo da loja</h2><p className="text-sm text-muted-foreground">Produtos cadastrados e sua situação atual.</p></div>
-            <Input className="h-10 w-full lg:max-w-sm" onChange={(event) => void setQ(event.target.value || null)} placeholder="Buscar nome, SKU ou código de barras" value={q} />
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {filters.map(([value, label]) => (
-              <Button className={cn("h-9 shrink-0 px-3", status === value && "bg-secondary")} key={value} onClick={() => void setStatus(value === "all" ? null : value)} variant={status === value || (value === "all" && status === "all") ? "secondary" : "outline"}>{label}</Button>
-            ))}
-          </div>
+          <div className="flex flex-wrap items-end justify-between gap-4"><div className="w-full max-w-md space-y-2"><Label htmlFor="inventory-search">Buscar produto</Label><Input id="inventory-search" onChange={event=>void setQ(event.target.value||null)} placeholder="Nome, SKU ou código de barras" value={q} /></div><div className="w-full sm:w-52"><Label className="sr-only" htmlFor="inventory-status">Filtrar estoque</Label><SelectField id="inventory-status" value={status??"all"} onValueChange={value=>void setStatus(value==="all"?null:value)}>{filters.map(([value,label])=><SelectFieldOption key={value} value={value}>{label}</SelectFieldOption>)}</SelectField></div></div>
 
           {productsQuery.isLoading ? (
             <div className="min-h-56 p-6 text-sm text-muted-foreground">Carregando produtos…</div>
@@ -210,6 +185,7 @@ export function InventoryRoute() {
         </CardContent>
       </Card>
 
+      {productsQuery.data && <ListPagination {...productsQuery.data} onPageChange={pagination.onPageChange} />}
       <BarcodeScannerDialog onCode={(code) => void handleScannedCode(code)} onOpenChange={setScannerOpen} open={scannerOpen} />
     </DashboardShell>
   );

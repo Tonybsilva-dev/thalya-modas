@@ -13,6 +13,25 @@ export class InMemoryPasswordRecoveryRepository
 	implements PasswordRecoveryRepository
 {
 	private requests: Map<string, PasswordRecoveryRequest> = new Map();
+	async consumeResetToken(id: string, token: string): Promise<boolean> {
+		const row = this.requests.get(id);
+		if (
+			!row ||
+			row.resetToken !== token ||
+			row.status !== 'TOKEN_ISSUED' ||
+			!row.resetTokenExpiresAt ||
+			row.resetTokenExpiresAt <= new Date()
+		)
+			return false;
+		this.requests.set(id, {
+			...row,
+			status: 'RESET_USED',
+			resetToken: undefined,
+			resetTokenExpiresAt: undefined,
+			updatedAt: new Date(),
+		});
+		return true;
+	}
 
 	async create(
 		requestData: Omit<

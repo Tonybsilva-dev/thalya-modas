@@ -1,12 +1,12 @@
-@import "@thalya-modas/ui/styles.css";
+@import "@store-flow/ui/styles.css";
 
 @source "../app/**/*.{ts,tsx}";
 @source "../src/**/*.{ts,tsx}";
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
 
 :root {
-  --font-primary: var(--font-space-grotesk), sans-serif;
-  --font-secondary: var(--font-space-grotesk), sans-serif;
+  --font-primary: var(--font-inter), sans-serif;
+  --font-secondary: var(--font-inter), sans-serif;
 }
 
 html,
@@ -17,3 +17,6 @@ body {
 body {
   overflow-x: hidden;
 }
+/* Platform interaction and surface rules. */
+/* Motion preferences are handled globally by @store-flow/ui/tokens/motion.css. */
+.super-admin-ui { --ring: var(--primary); }

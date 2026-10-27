@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Card, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from "@thalya-modas/ui";
+import { Card, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Navigation/Tabs",

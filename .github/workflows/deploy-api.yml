@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 env:
-  REGISTRY_IMAGE: ghcr.io/tonybsilva-dev/thalya-modas-api
+  REGISTRY_IMAGE: ghcr.io/tonybsilva-dev/store-flow-api
 
 jobs:
   validate:

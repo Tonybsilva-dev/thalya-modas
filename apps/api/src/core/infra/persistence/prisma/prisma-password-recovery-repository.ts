@@ -11,6 +11,22 @@ export class PrismaPasswordRecoveryRepository
 	implements PasswordRecoveryRepository
 {
 	constructor(private readonly prisma: PrismaClient) {}
+	async consumeResetToken(id: string, resetToken: string): Promise<boolean> {
+		const result = await this.prisma.passwordRecoveryRequest.updateMany({
+			where: {
+				id,
+				resetToken,
+				status: 'TOKEN_ISSUED',
+				resetTokenExpiresAt: { gt: new Date() },
+			},
+			data: {
+				status: 'RESET_USED',
+				resetToken: null,
+				resetTokenExpiresAt: null,
+			},
+		});
+		return result.count === 1;
+	}
 
 	async create(
 		request: Omit<PasswordRecoveryRequest, 'id' | 'createdAt' | 'updatedAt'>,

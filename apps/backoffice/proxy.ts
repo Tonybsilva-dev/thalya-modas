@@ -1,149 +1,76 @@
-import type { NextRequest } from "next/server";
+﻿import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
 import { authSessionCookieName } from "@/src/shared/auth/session-cookie";
-import { localeCookieName } from "@/src/shared/i18n/locale-cookie";
-import { defaultLocale, normalizeLocale } from "@/src/shared/i18n/locales";
-import { lastStoreCookieName } from "@/src/shared/store/last-store-cookie";
-
-type ApiOnboardingStep =
-  | "STORE_PROFILE"
-  | "STORE_ADDRESS"
-  | "STORE_PREFERENCES"
-  | "COMPLETED";
-
-type OnboardingProgress = {
-  status: "PENDING" | "COMPLETED";
-  nextStep: ApiOnboardingStep;
-  store?: {
-    id: string;
-    name: string;
-    preferences?: {
-      language?: string;
-    };
-  };
-};
-
-const apiBaseUrl = process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
-
-const onboardingStepPath: Record<ApiOnboardingStep, string> = {
-  COMPLETED: "/onboarding/completed",
-  STORE_ADDRESS: "/onboarding/address",
-  STORE_PREFERENCES: "/onboarding/preferences",
-  STORE_PROFILE: "/onboarding",
-};
-
+import { getBackofficeDestination, roleSegments } from "@/src/shared/auth/role-destination";
+const apiBaseUrl =
+  process.env.API_INTERNAL_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:3333";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isLogin = pathname === "/auth/login" || pathname === "/login" || pathname === "/auth/register";
+  const isBackoffice =
+    pathname === "/backoffice" || pathname.startsWith("/backoffice/");
+  const isLegacy =
+    /^\/[^/]+\/dashboard(?:\/|$)/.test(pathname) ||
+    pathname.startsWith("/onboarding");
+  const protectedRoute = isBackoffice || isLegacy || ["/admin","/manager","/employee","/customer","/unauthorized"].includes(pathname);
   const session = request.cookies.get(authSessionCookieName)?.value;
-  const isDashboardRoute = pathname.startsWith("/manager/dashboard");
-  const isLoginRoute = pathname === "/auth/login" || pathname === "/login";
-  const isOnboardingRoute = pathname.startsWith("/onboarding");
-
-  if (!session) {
-    if (isDashboardRoute || isOnboardingRoute) {
-      return redirectTo(request, "/auth/login");
-    }
-
-    return NextResponse.next();
+  if (!session)
+    return protectedRoute
+      ? redirectTo(request, "/auth/login")
+      : NextResponse.next();
+  let user: { role: string; accountStatus: string; entryDestination?: string } | null = null;
+  try {
+    const response = await fetch(`${apiBaseUrl}/auth/me`, {
+      headers: { cookie: request.headers.get("cookie") ?? "" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) user = await response.json();
+  } catch {
+    /* An unavailable session never grants access. */
   }
-
-  if (!isDashboardRoute && !isLoginRoute && !isOnboardingRoute) {
-    return NextResponse.next();
+  if (!user || user.accountStatus !== "ACTIVE") {
+    const response = protectedRoute
+      ? redirectTo(request, "/auth/login")
+      : NextResponse.next();
+    response.cookies.delete(authSessionCookieName);
+    return response;
   }
-
-  const progress = await getOnboardingProgress(request);
-
-  if (!progress) {
-    if (isOnboardingRoute) return redirectTo(request, "/manager/dashboard");
-    if (isLoginRoute) return redirectTo(request, "/manager/dashboard");
-    return NextResponse.next();
+  const destination = getBackofficeDestination(user.role);
+  if (user.role === "ROLE_ADMIN" && user.entryDestination?.startsWith("/onboarding")) {
+    if (pathname === user.entryDestination) return NextResponse.next();
+    return redirectTo(request, user.entryDestination);
   }
-
-  const expectedPath = onboardingStepPath[progress.nextStep];
-
-  if (progress.status === "COMPLETED") {
-    if (isLoginRoute || isOnboardingRoute) {
-      return withLastStore(redirectTo(request, "/manager/dashboard"), progress);
-    }
-
-    return withLastStore(NextResponse.next(), progress);
+  if (pathname === "/unauthorized" && destination === "/unauthorized") return NextResponse.next();
+  const segment = pathname.split("/")[1];
+  if (isLegacy && !pathname.startsWith("/onboarding")) {
+    const ownSegment = roleSegments[user.role];
+    if (segment === ownSegment && ownSegment !== "backoffice" && (ownSegment !== "customer" || pathname === "/customer/dashboard")) return NextResponse.next();
+    return redirectTo(request,destination);
   }
-
-  if (isDashboardRoute) {
-    return withLastStore(redirectTo(request, expectedPath), progress);
-  }
-
-  if (isLoginRoute) {
-    return withLastStore(redirectTo(request, expectedPath), progress);
-  }
-
-  if (isOnboardingRoute && pathname !== expectedPath) {
-    return withLastStore(redirectTo(request, expectedPath), progress);
-  }
-
-  return withLastStore(NextResponse.next(), progress);
+  if (isLogin || pathname === "/" || isLegacy || pathname === "/unauthorized" || ["/admin","/manager","/employee","/customer"].includes(pathname))
+    return redirectTo(request, destination);
+  if (isBackoffice && destination !== "/backoffice")
+    return redirectTo(request, destination);
+  return NextResponse.next();
 }
-
 export const config = {
   matcher: [
     "/",
+    "/admin", "/manager", "/employee", "/customer", "/unauthorized",
     "/login",
     "/auth/login",
+    "/auth/register",
+    "/backoffice/:path*",
     "/onboarding/:path*",
-    "/manager/dashboard/:path*",
+    "/:role/dashboard/:path*",
   ],
 };
-
 function redirectTo(request: NextRequest, pathname: string) {
   const url = request.nextUrl.clone();
   url.pathname = pathname;
   url.search = "";
-
   return NextResponse.redirect(url);
-}
-
-function withLastStore(response: NextResponse, progress: OnboardingProgress) {
-  if (!progress.store) return response;
-
-  const language = normalizeLocale(progress.store.preferences?.language ?? defaultLocale);
-
-  response.cookies.set({
-    name: lastStoreCookieName,
-    value: JSON.stringify({
-      id: progress.store.id,
-      language,
-      name: progress.store.name,
-    }),
-    maxAge: 31536000,
-    path: "/",
-    sameSite: "lax",
-  });
-  response.cookies.set({
-    name: localeCookieName,
-    value: language,
-    maxAge: 31536000,
-    path: "/",
-    sameSite: "lax",
-  });
-
-  return response;
-}
-
-async function getOnboardingProgress(
-  request: NextRequest,
-): Promise<OnboardingProgress | null> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/onboarding/me`, {
-      headers: {
-        cookie: request.headers.get("cookie") ?? "",
-      },
-    });
-
-    if (!response.ok) return null;
-
-    return (await response.json()) as OnboardingProgress;
-  } catch {
-    return null;
-  }
 }

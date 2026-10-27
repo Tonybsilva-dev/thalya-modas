@@ -4,7 +4,7 @@ import type { ComponentType, FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import {
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
   cn,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import {
   BuildingsIcon,
   CalendarBlankIcon,
@@ -43,6 +43,7 @@ import { useAppUiStore } from "@/src/shared/state/app-ui-store";
 import { MaskedInput } from "@/src/shared/ui/masked-input";
 
 import {
+  getOnboardingProgress,
   completeOnboarding,
   saveStoreAddress,
   saveStorePreferences,
@@ -94,18 +95,18 @@ function OnboardingShell({
   const t = useTranslations(`onboarding.${step}`);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-muted/70 px-5 py-10 text-foreground sm:px-8 lg:px-16">
-      <section className="grid w-full max-w-[560px] gap-[18px]">
+    <main className="grid min-h-screen place-items-center bg-muted/70 px-5 py-10 text-foreground sm:px-6">
+      <section className="grid w-full max-w-[480px] gap-[18px]">
         <StepIndicator step={step} />
 
         <Card className="w-full animate-nitro-slide-up">
-          <CardContent className="grid gap-[22px] p-6 sm:p-8">
+          <CardContent className="grid gap-[22px] p-5 sm:p-6">
             <header className="flex items-center gap-3">
               <div className="grid size-10 shrink-0 place-items-center bg-primary text-primary-foreground">
                 <StorefrontIcon className="size-5" weight="bold" />
               </div>
               <div className="grid min-w-0 gap-1">
-                <h1 className="text-2xl font-bold leading-tight text-foreground">
+                <h1 className="text-2xl font-semibold leading-tight text-foreground">
                   {t("title")}
                 </h1>
                 <p className="text-sm leading-6 text-muted-foreground">
@@ -727,6 +728,19 @@ function CompletedStep() {
 }
 
 export function OnboardingRoute({ step }: OnboardingRouteProps) {
+  const progress = useQuery({ queryKey: ['onboarding-progress', step], retry: false, queryFn: async () => {
+    const data = await getOnboardingProgress();
+    const { setProfile, setAddress, setPreferences } = useOnboardingStore.getState();
+    const store = data.store;
+    if (store) {
+      setProfile({ storeName: store.name, phone: store.phone, document: store.document, segment: store.segment as StoreProfileInput['segment'] });
+      if (store.address) setAddress(store.address);
+      if (store.preferences) setPreferences(store.preferences);
+    }
+    return data;
+  } });
+  if (progress.isError) return <main className="grid min-h-screen place-items-center p-6"><div role="alert" className="grid gap-4"><p>{getApiErrorMessage(progress.error)}</p><Button onClick={() => void progress.refetch()}>Tentar novamente</Button></div></main>;
+  if (progress.isPending) return <main className="grid min-h-screen place-items-center"><p role="status">Carregando sua loja…</p></main>;
   if (step === "address") return <StoreAddressStep />;
   if (step === "preferences") return <StorePreferencesStep />;
   if (step === "completed") return <CompletedStep />;

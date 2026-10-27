@@ -1,6 +1,6 @@
 import { env } from '../../shared/env';
 
-export const authSessionCookieName = '@thalya-modas:session';
+export const authSessionCookieName = '@store-flow:session';
 
 export function createAuthSessionCookie(token: string, maxAge: number): string {
 	const attributes = [

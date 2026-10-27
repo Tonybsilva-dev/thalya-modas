@@ -55,10 +55,10 @@ const envSchema = z
 		}, z.number().int().positive().default(3333)),
 		HOST: z.string().default('0.0.0.0'),
 		API_VERSION: z.string().default('1.0.0'),
-		API_TITLE: z.string().default('Thalya Modas API'),
+		API_TITLE: z.string().default('Store Flow API'),
 		API_DESCRIPTION: z
 			.string()
-			.default('API operacional da plataforma Thalya Modas'),
+			.default('API operacional da plataforma Store Flow'),
 		CORS_ORIGINS: z
 			.string()
 			.optional()
@@ -93,6 +93,8 @@ const envSchema = z
 			.string()
 			.optional()
 			.transform((val) => (val === '' ? undefined : val)),
+		REDIS_URL: optionalUrl(),
+		TRUST_PROXY: booleanFlag(false),
 		// Object storage / Cloudflare R2
 		R2_ENDPOINT: optionalUrl(),
 		R2_ACCESS_KEY: z
@@ -116,7 +118,10 @@ const envSchema = z
 				.min(32, 'JWT secret must be at least 32 characters')
 				.default(developmentJwtSecret),
 		),
-		JWT_EXPIRES_IN: z.string().default('7d'),
+		JWT_EXPIRES_IN: z.preprocess(
+			(value) => (value === '' ? undefined : value),
+			z.string().default('7d'),
+		),
 		// Feature flags / Kill switches
 		FEATURE_AUTH_LOGIN_ENABLED: booleanFlag(true),
 		FEATURE_AUTH_REGISTER_ENABLED: booleanFlag(true),
@@ -149,6 +154,13 @@ const envSchema = z
 				path: ['JWT_SECRET'],
 			});
 		}
+
+		if (values.NODE_ENV === 'production' && !values.REDIS_URL)
+			context.addIssue({
+				code: 'custom',
+				message: 'REDIS_URL is required in production',
+				path: ['REDIS_URL'],
+			});
 
 		if (values.PERSISTENCE_DRIVER === 'postgres' && !values.DATABASE_URL) {
 			context.addIssue({

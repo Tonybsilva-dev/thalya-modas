@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { DomainError } from '../../../../app/http/errors/domain-error';
+import { ForbiddenError } from '../../../../app/http/errors/forbidden-error';
 import { NotFoundError } from '../../../../app/http/errors/not-found-error';
 import type {
 	CatalogListQuery,
@@ -62,6 +63,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	) {}
 
 	async createSupplier(input: CreateSupplierInput): Promise<Supplier> {
+		await this.assertScope(input);
 		if (input.document) {
 			const existing = await this.findSupplierByDocument(input, input.document);
 			if (existing) {
@@ -103,11 +105,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		supplierId: string,
 	): Promise<Supplier | null> {
+		await this.assertScope(scope);
 		const supplier = await this.prisma.supplier.findFirst({
 			where: {
 				id: supplierId,
 				storeId: scope.storeId,
-				userId: scope.userId,
 			},
 			include: { responsibles: true },
 		});
@@ -119,6 +121,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		document: string,
 	): Promise<Supplier | null> {
+		await this.assertScope(scope);
 		const supplier = await this.prisma.supplier.findFirst({
 			where: {
 				document,
@@ -134,9 +137,9 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Supplier[]> {
+		await this.assertScope(scope);
 		const where: Prisma.SupplierWhereInput = {
 			storeId: scope.storeId,
-			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getSupplierSearchWhere(query.q),
 		};
@@ -154,17 +157,15 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async getSupplierOperationalSummary(
 		scope: CatalogScope,
 	): Promise<SupplierOperationalSummary> {
+		await this.assertScope(scope);
 		const supplierWhere: Prisma.SupplierWhereInput = {
 			storeId: scope.storeId,
-			userId: scope.userId,
 		};
 		const orderWhere: Prisma.PurchaseOrderWhereInput = {
 			storeId: scope.storeId,
-			userId: scope.userId,
 		};
 		const receivingWhere: Prisma.ReceivingWhereInput = {
 			storeId: scope.storeId,
-			userId: scope.userId,
 		};
 		const [
 			totalSuppliers,
@@ -217,11 +218,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async updateSupplier(input: UpdateSupplierInput): Promise<Supplier> {
+		await this.assertScope(input);
 		const supplier = await this.prisma.supplier.findFirst({
 			where: {
 				id: input.id,
 				storeId: input.storeId,
-				userId: input.userId,
 			},
 		});
 		if (!supplier) {
@@ -236,7 +237,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		}
 
 		const updated = await this.prisma.supplier.update({
-			where: { id: input.id },
+			where: {
+				id: input.id,
+				storeId: input.storeId,
+				store: { tenantId: input.tenantId },
+			},
 			data: getSupplierUpdateData(input),
 			include: { responsibles: true },
 		});
@@ -245,11 +250,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async deleteSupplier(scope: CatalogScope, supplierId: string): Promise<void> {
+		await this.assertScope(scope);
 		const supplier = await this.prisma.supplier.findFirst({
 			where: {
 				id: supplierId,
 				storeId: scope.storeId,
-				userId: scope.userId,
 			},
 			select: {
 				_count: {
@@ -270,12 +275,19 @@ export class PrismaCatalogRepository implements CatalogRepository {
 			);
 		}
 
-		await this.prisma.supplier.delete({ where: { id: supplierId } });
+		await this.prisma.supplier.delete({
+			where: {
+				id: supplierId,
+				storeId: scope.storeId,
+				store: { tenantId: scope.tenantId },
+			},
+		});
 	}
 
 	async createSupplierResponsible(
 		input: CreateSupplierResponsibleInput,
 	): Promise<SupplierResponsible> {
+		await this.assertScope(input);
 		await this.ensureSupplier(input, input.supplierId);
 
 		const responsible = await this.prisma.$transaction(async (tx) => {
@@ -284,7 +296,6 @@ export class PrismaCatalogRepository implements CatalogRepository {
 					where: {
 						storeId: input.storeId,
 						supplierId: input.supplierId,
-						userId: input.userId,
 					},
 					data: { isPrimary: false },
 				});
@@ -314,13 +325,13 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		supplierId: string,
 		responsibleId: string,
 	): Promise<void> {
+		await this.assertScope(scope);
 		await this.ensureSupplier(scope, supplierId);
 		const responsible = await this.prisma.supplierResponsible.findFirst({
 			where: {
 				id: responsibleId,
 				storeId: scope.storeId,
 				supplierId,
-				userId: scope.userId,
 			},
 		});
 		if (!responsible) {
@@ -328,7 +339,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		}
 
 		await this.prisma.supplierResponsible.delete({
-			where: { id: responsibleId },
+			where: {
+				id: responsibleId,
+				supplierId,
+				storeId: scope.storeId,
+				store: { tenantId: scope.tenantId },
+			},
 		});
 	}
 
@@ -336,12 +352,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		supplierId: string,
 	): Promise<SupplierResponsible[]> {
+		await this.assertScope(scope);
 		await this.ensureSupplier(scope, supplierId);
 		const responsibles = await this.prisma.supplierResponsible.findMany({
 			where: {
 				storeId: scope.storeId,
 				supplierId,
-				userId: scope.userId,
 			},
 			orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
 		});
@@ -352,13 +368,13 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async updateSupplierResponsible(
 		input: UpdateSupplierResponsibleInput,
 	): Promise<SupplierResponsible> {
+		await this.assertScope(input);
 		await this.ensureSupplier(input, input.supplierId);
 		const responsible = await this.prisma.supplierResponsible.findFirst({
 			where: {
 				id: input.id,
 				storeId: input.storeId,
 				supplierId: input.supplierId,
-				userId: input.userId,
 			},
 		});
 		if (!responsible) {
@@ -371,14 +387,18 @@ export class PrismaCatalogRepository implements CatalogRepository {
 					where: {
 						storeId: input.storeId,
 						supplierId: input.supplierId,
-						userId: input.userId,
 					},
 					data: { isPrimary: false },
 				});
 			}
 
 			return tx.supplierResponsible.update({
-				where: { id: input.id },
+				where: {
+					id: input.id,
+					supplierId: input.supplierId,
+					storeId: input.storeId,
+					store: { tenantId: input.tenantId },
+				},
 				data: getResponsibleUpdateData(input),
 			});
 		});
@@ -387,6 +407,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async createProduct(input: CreateProductInput): Promise<Product> {
+		await this.assertScope(input);
 		const id = randomUUID();
 		if (input.barcode) {
 			const productWithBarcode = await this.findProductByBarcode(
@@ -435,11 +456,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		productId: string,
 	): Promise<Product | null> {
+		await this.assertScope(scope);
 		const product = await this.prisma.product.findFirst({
 			where: {
 				id: productId,
 				storeId: scope.storeId,
-				userId: scope.userId,
 			},
 			include: { images: true },
 		});
@@ -451,6 +472,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		sku: string,
 	): Promise<Product | null> {
+		await this.assertScope(scope);
 		const product = await this.prisma.product.findFirst({
 			where: {
 				sku,
@@ -466,6 +488,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		barcode: string,
 	): Promise<Product | null> {
+		await this.assertScope(scope);
 		const product = await this.prisma.product.findFirst({
 			where: { barcode, storeId: scope.storeId },
 			include: { images: true },
@@ -474,13 +497,48 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		return product ? toDomainProduct(product) : null;
 	}
 
+	async listProductsPage(scope: CatalogScope, query: CatalogListQuery = {}) {
+		await this.assertScope(scope);
+		const where: Prisma.ProductWhereInput = {
+			storeId: scope.storeId,
+			...getProductSearchWhere(query.q),
+		};
+		if (query.status === 'inactive') where.status = 'inactive';
+		if (['tracked', 'untracked', 'low'].includes(query.status ?? '')) {
+			where.status = 'active';
+			where.inventoryControl =
+				query.status === 'untracked' ? 'untracked' : 'tracked';
+		}
+		if (query.status === 'low')
+			where.currentStock = { lte: this.prisma.product.fields.minimumStock };
+		const page = query.page ?? 1,
+			perPage = query.perPage ?? 20;
+		const [rows, total] = await this.prisma.$transaction([
+			this.prisma.product.findMany({
+				where,
+				include: { images: true },
+				skip: (page - 1) * perPage,
+				take: perPage,
+				orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+			}),
+			this.prisma.product.count({ where }),
+		]);
+		return {
+			items: rows.map(toDomainProduct),
+			total,
+			page,
+			perPage,
+			totalPages: Math.ceil(total / perPage),
+		};
+	}
+
 	async listProducts(
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Product[]> {
+		await this.assertScope(scope);
 		const where: Prisma.ProductWhereInput = {
 			storeId: scope.storeId,
-			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getProductSearchWhere(query.q),
 		};
@@ -496,11 +554,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async updateProduct(input: UpdateProductInput): Promise<Product> {
+		await this.assertScope(input);
 		const product = await this.prisma.product.findFirst({
 			where: {
 				id: input.id,
 				storeId: input.storeId,
-				userId: input.userId,
 			},
 		});
 		if (!product) {
@@ -531,7 +589,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		}
 
 		const updated = await this.prisma.product.update({
-			where: { id: input.id },
+			where: {
+				id: input.id,
+				storeId: input.storeId,
+				store: { tenantId: input.tenantId },
+			},
 			data: getProductUpdateData(input),
 			include: { images: true },
 		});
@@ -542,12 +604,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async createInventoryAdjustment(
 		input: CreateInventoryAdjustmentInput,
 	): Promise<InventoryMovement> {
+		await this.assertScope(input);
 		const movement = await this.prisma.$transaction(async (tx) => {
 			const product = await tx.product.findFirst({
 				where: {
 					id: input.productId,
 					storeId: input.storeId,
-					userId: input.userId,
 				},
 			});
 			if (!product) {
@@ -572,7 +634,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 			}
 
 			await tx.product.update({
-				where: { id: product.id },
+				where: {
+					id: product.id,
+					storeId: input.storeId,
+					store: { tenantId: input.tenantId },
+				},
 				data: { currentStock },
 			});
 
@@ -597,10 +663,10 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		productId?: string,
 	): Promise<InventoryMovement[]> {
+		await this.assertScope(scope);
 		const movements = await this.prisma.inventoryMovement.findMany({
 			where: {
 				storeId: scope.storeId,
-				userId: scope.userId,
 				...(productId ? { productId } : {}),
 			},
 			orderBy: { createdAt: 'desc' },
@@ -612,6 +678,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async createPurchaseOrder(
 		input: CreatePurchaseOrderInput,
 	): Promise<PurchaseOrder> {
+		await this.assertScope(input);
 		await this.ensureSupplier(input, input.supplierId);
 
 		for (const item of input.items) {
@@ -671,10 +738,10 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<PurchaseOrder[]> {
+		await this.assertScope(scope);
 		const where: Prisma.PurchaseOrderWhereInput = {
 			storeId: scope.storeId,
 			supplierId: query.supplierId,
-			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getPurchaseOrderSearchWhere(query.q),
 		};
@@ -691,11 +758,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async updatePurchaseOrder(
 		input: UpdatePurchaseOrderInput,
 	): Promise<PurchaseOrder> {
+		await this.assertScope(input);
 		const order = await this.prisma.purchaseOrder.findFirst({
 			where: {
 				id: input.id,
 				storeId: input.storeId,
-				userId: input.userId,
 			},
 		});
 		if (!order) {
@@ -703,7 +770,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		}
 
 		const updated = await this.prisma.purchaseOrder.update({
-			where: { id: input.id },
+			where: {
+				id: input.id,
+				storeId: input.storeId,
+				store: { tenantId: input.tenantId },
+			},
 			data: getPurchaseOrderUpdateData(input),
 			include: { items: true },
 		});
@@ -712,6 +783,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async createReceiving(input: CreateReceivingInput): Promise<Receiving> {
+		await this.assertScope(input);
 		await this.ensureSupplier(input, input.supplierId);
 
 		let itemsCount = 0;
@@ -719,8 +791,8 @@ export class PrismaCatalogRepository implements CatalogRepository {
 			const order = await this.prisma.purchaseOrder.findFirst({
 				where: {
 					id: input.purchaseOrderId,
+					supplierId: input.supplierId,
 					storeId: input.storeId,
-					userId: input.userId,
 				},
 			});
 			if (!order) {
@@ -754,10 +826,10 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Receiving[]> {
+		await this.assertScope(scope);
 		const where: Prisma.ReceivingWhereInput = {
 			storeId: scope.storeId,
 			supplierId: query.supplierId,
-			userId: scope.userId,
 			...getStatusWhere(query.status),
 			...getReceivingSearchWhere(query.q),
 		};
@@ -771,11 +843,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	}
 
 	async updateReceiving(input: UpdateReceivingInput): Promise<Receiving> {
+		await this.assertScope(input);
 		const receiving = await this.prisma.receiving.findFirst({
 			where: {
 				id: input.id,
 				storeId: input.storeId,
-				userId: input.userId,
 			},
 		});
 		if (!receiving) {
@@ -783,7 +855,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		}
 
 		const updated = await this.prisma.receiving.update({
-			where: { id: input.id },
+			where: {
+				id: input.id,
+				storeId: input.storeId,
+				store: { tenantId: input.tenantId },
+			},
 			data: getReceivingUpdateData(input),
 		});
 
@@ -793,11 +869,11 @@ export class PrismaCatalogRepository implements CatalogRepository {
 	async prepareProductImageUpload(
 		input: PrepareProductImageUploadInput,
 	): Promise<PreparedProductImageUpload> {
+		await this.assertScope(input);
 		const product = await this.prisma.product.findFirst({
 			where: {
 				id: input.productId,
 				storeId: input.storeId,
-				userId: input.userId,
 			},
 		});
 		if (!product) {
@@ -842,16 +918,37 @@ export class PrismaCatalogRepository implements CatalogRepository {
 		productId: string,
 		assetId: string,
 	): Promise<void> {
+		await this.assertScope(scope);
 		const asset = await this.prisma.productImageAsset.findFirst({
 			where: {
 				id: assetId,
 				productId,
 				storeId: scope.storeId,
-				userId: scope.userId,
 			},
 		});
 		if (!asset) throw new NotFoundError('Imagem do produto não encontrada.');
-		await this.prisma.productImageAsset.delete({ where: { id: asset.id } });
+		await this.prisma.productImageAsset.delete({
+			where: {
+				id: asset.id,
+				productId,
+				storeId: scope.storeId,
+				store: { tenantId: scope.tenantId },
+			},
+		});
+	}
+
+	private async assertScope(scope: CatalogScope) {
+		if (!scope.tenantId || !scope.storeId || !scope.userId)
+			throw new ForbiddenError('Contexto de empresa e filial obrigatório.');
+		const store = await this.prisma.store.findFirst({
+			where: { id: scope.storeId, tenantId: scope.tenantId },
+			select: { id: true, bucketKey: true },
+		});
+		if (!store) throw new ForbiddenError('Filial fora da empresa autorizada.');
+		if ('storeBucketKey' in scope && scope.storeBucketKey !== store.bucketKey)
+			throw new ForbiddenError(
+				'Destino de arquivos fora da filial autorizada.',
+			);
 	}
 
 	private async ensureSupplier(scope: CatalogScope, supplierId: string) {
@@ -859,7 +956,6 @@ export class PrismaCatalogRepository implements CatalogRepository {
 			where: {
 				id: supplierId,
 				storeId: scope.storeId,
-				userId: scope.userId,
 			},
 		});
 		if (!supplier) {

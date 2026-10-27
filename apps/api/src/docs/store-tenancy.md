@@ -1,5 +1,21 @@
 # Isolamento operacional por loja
 
+## Empresa acima da filial
+
+Desde `20261004220000_add_tenants`, `Tenant` representa a empresa e `Store`
+representa uma filial. Cada filial possui `tenantId` obrigatório e imutável.
+`TenantMembership` controla o acesso empresarial; `StoreMembership` limita as
+filiais de funcionários e clientes. O ADMIN empresarial acessa todas as filiais
+da sua empresa. Empresas suspensas bloqueiam o acesso operacional dos membros.
+
+O contexto HTTP agora inclui `tenantId`, derivado da filial autorizada.
+Catálogo, estoque e prefixos R2 continuam separados por `storeId`/`bucketKey`.
+O onboarding cria empresa e primeira filial; as rotas `/tenants` permitem
+administrar empresas e criar outras filiais. Consulte
+[papéis e empresas](../../../../docs/roles-and-tenancy.md) para o contrato atual.
+
+As fases abaixo registram o histórico da implementação do isolamento por loja.
+
 Status: Fases 1, 2 e 3 concluídas; Fase 4 pendente.
 
 ## Problema atual
@@ -17,7 +33,9 @@ o tenant dos dados.
 ## Invariantes
 
 1. Todo dado operacional pertence a exatamente uma `Store`.
-2. Todo acesso exige que o usuário seja proprietário ou membro ativo da loja.
+2. Todo acesso operacional exige empresa e associação empresarial ativas;
+   funcionários exigem também associação ativa à filial. SUPER_ADMIN pode
+   selecionar explicitamente uma filial para administração global.
 3. `userId` registra quem criou ou alterou o dado; `storeId` determina
    isolamento e unicidade.
 4. O cliente nunca ganha acesso apenas por enviar um `storeId`; a associação
@@ -63,7 +81,7 @@ O middleware da API:
 1. autenticar o usuário;
 2. ler `X-Store-Id`;
 3. validar propriedade ou associação ativa;
-4. anexar `{ userId, storeId, storeSlug, storeBucketKey, role }` ao contexto da
+4. anexar `{ userId, tenantId, storeId, storeSlug, storeBucketKey, role }` ao contexto da
    requisição.
 
 Durante a transição, contas com exatamente uma loja usam essa loja como
@@ -96,7 +114,7 @@ prefixo oficial é persistido em `stores.bucket_key` no formato
 
 ```text
 store-flow/
-└── stores/thalya-modas/
+└── stores/store-flow/
     └── products/{productId}/{assetId}.webp
 ```
 

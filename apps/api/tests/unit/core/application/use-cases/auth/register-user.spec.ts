@@ -32,13 +32,13 @@ describe('RegisterUserUseCase', () => {
 		expect(result.user.id).toBeDefined();
 		expect(result.user.name).toBe(input.name);
 		expect(result.user.email).toBe(input.email);
-		expect(result.user.role).toBe(UserRole.COMPANY); // Padrão público
+		expect(result.user.role).toBe(UserRole.ADMIN); // Padrão público
 		expect(result.user.accountStatus).toBe(AccountStatus.ACTIVE); // Padrão
 		expect(result.token).toBeDefined();
 		expect(typeof result.token).toBe('string');
 	});
 
-	it('deve usar role COMPANY como padrão do cadastro público quando não fornecido', async () => {
+	it('deve usar role ADMIN como padrão do cadastro público quando não fornecido', async () => {
 		const repository = new MockUserRepository();
 		const useCase = new RegisterUserUseCase(
 			repository,
@@ -52,7 +52,7 @@ describe('RegisterUserUseCase', () => {
 			password: 'securePassword123',
 		});
 
-		expect(result.user.role).toBe(UserRole.COMPANY);
+		expect(result.user.role).toBe(UserRole.ADMIN);
 	});
 
 	it('deve normalizar email no cadastro', async () => {
@@ -91,7 +91,7 @@ describe('RegisterUserUseCase', () => {
 		).rejects.toThrow(ForbiddenError);
 	});
 
-	it('deve permitir SUPER_ADMIN cadastrar COMPANY', async () => {
+	it('deve permitir SUPER_ADMIN cadastrar ADMIN', async () => {
 		const repository = new MockUserRepository();
 		const useCase = new RegisterUserUseCase(
 			repository,
@@ -103,14 +103,14 @@ describe('RegisterUserUseCase', () => {
 			name: 'Company Name',
 			email: 'company@example.com',
 			password: 'securePassword123',
-			role: UserRole.COMPANY,
+			role: UserRole.ADMIN,
 			actor: { id: 'super-admin-id', role: UserRole.SUPER_ADMIN },
 		});
 
-		expect(result.user.role).toBe(UserRole.COMPANY);
+		expect(result.user.role).toBe(UserRole.ADMIN);
 	});
 
-	it('deve lançar ForbiddenError quando COMPANY é solicitado sem actor SUPER_ADMIN', async () => {
+	it('deve lançar ForbiddenError quando ADMIN é solicitado sem actor SUPER_ADMIN', async () => {
 		const repository = new MockUserRepository();
 		const useCase = new RegisterUserUseCase(
 			repository,
@@ -123,12 +123,12 @@ describe('RegisterUserUseCase', () => {
 				name: 'Company Name',
 				email: 'company@example.com',
 				password: 'securePassword123',
-				role: UserRole.COMPANY,
+				role: UserRole.ADMIN,
 			}),
 		).rejects.toThrow(ForbiddenError);
 	});
 
-	it('deve permitir COMPANY cadastrar EMPLOYEE', async () => {
+	it('deve permitir ADMIN cadastrar EMPLOYEE', async () => {
 		const repository = new MockUserRepository();
 		const useCase = new RegisterUserUseCase(
 			repository,
@@ -141,13 +141,13 @@ describe('RegisterUserUseCase', () => {
 			email: 'employee@example.com',
 			password: 'securePassword123',
 			role: UserRole.EMPLOYEE,
-			actor: { id: 'company-id', role: UserRole.COMPANY },
+			actor: { id: 'company-id', role: UserRole.ADMIN },
 		});
 
 		expect(result.user.role).toBe(UserRole.EMPLOYEE);
 	});
 
-	it('deve permitir COMPANY cadastrar DELIVERY_MAN', async () => {
+	it('deve permitir ADMIN cadastrar CUSTOMER', async () => {
 		const repository = new MockUserRepository();
 		const useCase = new RegisterUserUseCase(
 			repository,
@@ -159,14 +159,14 @@ describe('RegisterUserUseCase', () => {
 			name: 'Delivery Name',
 			email: 'delivery@example.com',
 			password: 'securePassword123',
-			role: UserRole.DELIVERY_MAN,
-			actor: { id: 'company-id', role: UserRole.COMPANY },
+			role: UserRole.CUSTOMER,
+			actor: { id: 'company-id', role: UserRole.ADMIN },
 		});
 
-		expect(result.user.role).toBe(UserRole.DELIVERY_MAN);
+		expect(result.user.role).toBe(UserRole.CUSTOMER);
 	});
 
-	it('deve lançar ForbiddenError quando EMPLOYEE é solicitado sem actor COMPANY', async () => {
+	it('deve lançar ForbiddenError quando EMPLOYEE é solicitado sem actor ADMIN', async () => {
 		const repository = new MockUserRepository();
 		const useCase = new RegisterUserUseCase(
 			repository,
@@ -233,7 +233,7 @@ describe('RegisterUserUseCase', () => {
 			password: 'securePassword123',
 			role: UserRole.EMPLOYEE,
 			accountStatus: AccountStatus.PENDING_VERIFICATION,
-			actor: { id: 'company-id', role: UserRole.COMPANY },
+			actor: { id: 'company-id', role: UserRole.ADMIN },
 		});
 
 		expect(result.user.accountStatus).toBe(AccountStatus.PENDING_VERIFICATION);

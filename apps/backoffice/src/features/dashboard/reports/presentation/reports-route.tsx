@@ -1,4 +1,5 @@
 "use client";
+import { OperationalReadPage } from "../../shared/presentation/operational-read-page";
 
 import {
   Badge,
@@ -7,7 +8,7 @@ import {
   CardContent,
   Input,
   cn,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import { useLocale } from "next-intl";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
@@ -284,7 +285,7 @@ function ReportsActivityRail() {
   );
 }
 
-export function ReportsRoute() {
+export function LegacyReportsRoute() {
   const { sidebar } = useReportsContent();
 
   return (
@@ -302,3 +303,5 @@ export function ReportsRoute() {
     </DashboardShell>
   );
 }
+
+export function ReportsRoute() { return <OperationalReadPage kind="reports" />; }

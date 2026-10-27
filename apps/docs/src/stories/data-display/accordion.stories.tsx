@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@thalya-modas/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Data Display/Accordion",

@@ -1,3 +1,4 @@
+import { parseBrlCents } from "@/src/shared/money/brl";
 import { z } from "zod";
 
 import {
@@ -27,7 +28,7 @@ export const supplierFormSchema = z.object({
     .string()
     .trim()
     .refine(
-      (value) => Number(value.replace(/\D/g, "")) > 0,
+      (value) => (parseBrlCents(value) ?? 0) > 0,
       "Informe o pedido minimo.",
     ),
   name: z.string().trim().min(2, "Informe o nome fantasia."),
@@ -51,7 +52,7 @@ const numberFromInput = z
   .string()
   .trim()
   .min(1, "Informe um valor.")
-  .transform((value) => Number(value.replace(/\./g, "").replace(",", ".")))
+  .transform((value) => { const cents = parseBrlCents(value); return cents === undefined ? Number.NaN : cents / 100; })
   .pipe(z.number().finite().nonnegative("Informe um valor valido."));
 
 const positiveIntegerFromInput = z

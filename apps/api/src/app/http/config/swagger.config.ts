@@ -95,7 +95,8 @@ export function getSwaggerConfig() {
 			openapiObject: unknown;
 		}) => ({
 			...rest,
-			schema: stripSchemaIds(JSON.parse(JSON.stringify(schema))),
+			// Fastify also registers routes without a documentation schema.
+			schema: stripSchemaIds(JSON.parse(JSON.stringify(schema ?? {}))),
 		}),
 		openapi: {
 			openapi: '3.1.0',
@@ -153,7 +154,7 @@ export function getSwaggerConfig() {
 					},
 					sessionCookie: {
 						type: 'apiKey' as const,
-						name: '@thalya-modas:session',
+						name: '@store-flow:session',
 						in: 'cookie' as const,
 						description: 'Sessão httpOnly emitida pelo login do backoffice.',
 					},

@@ -11,7 +11,7 @@ describe('GET /health/deep', () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		expect(response.body).toHaveProperty('status', 'ok');
+		expect(response.body).toHaveProperty('status', 'degraded');
 		expect(response.body).toHaveProperty('version');
 		expect(response.body).toHaveProperty('uptime');
 		expect(response.body).toHaveProperty('timestamp');

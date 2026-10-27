@@ -106,6 +106,10 @@ const inventorySchema = summaryResponseSchema.extend({
 });
 
 const customersSchema = summaryResponseSchema.extend({
+	total: z.number().optional(),
+	page: z.number().optional(),
+	perPage: z.number().optional(),
+	totalPages: z.number().optional(),
 	customers: z.array(tableRowSchema),
 	segments: z.array(
 		z.object({
@@ -317,7 +321,12 @@ function registerReadRoute<TResponse>(
 	const preHandler = async (request: FastifyRequest, reply: unknown) => {
 		options.container.featureFlags.assertEnabled('dashboard');
 		options.container.featureFlags.assertEnabled(options.feature);
-		await authMiddleware(request, reply, options.container.jwtService);
+		await authMiddleware(
+			request,
+			reply,
+			options.container.jwtService,
+			options.container.userRepository,
+		);
 		await storeContextMiddleware(
 			request,
 			reply,
@@ -370,6 +379,27 @@ function registerReadRoute<TResponse>(
 			const query = options.withQuery
 				? listQuerySchema.parse(request.query ?? {})
 				: undefined;
+			const scoped = options.container.dashboardRepository?.withStore?.(
+				request.storeContext.storeId,
+			);
+			if (scoped) {
+				switch (options.path) {
+					case '/dashboard/overview':
+						return scoped.getOverview(user.userId);
+					case '/dashboard/orders':
+						return scoped.getOrders(user.userId, query);
+					case '/dashboard/inventory':
+						return scoped.getInventory(user.userId, query);
+					case '/dashboard/customers':
+						return scoped.getCustomers(user.userId, query);
+					case '/dashboard/suppliers':
+						return scoped.getSuppliers(user.userId, query);
+					case '/dashboard/reports':
+						return scoped.getReports(user.userId, query);
+					case '/dashboard/cash-register':
+						return scoped.getCashRegister(user.userId);
+				}
+			}
 			return options.execute(user.userId, query);
 		},
 	);
@@ -389,7 +419,12 @@ function registerCustomerReadRoute<TResponse>(
 	const preHandler = async (request: FastifyRequest, reply: unknown) => {
 		options.container.featureFlags.assertEnabled('dashboard');
 		options.container.featureFlags.assertEnabled('dashboard.customers');
-		await authMiddleware(request, reply, options.container.jwtService);
+		await authMiddleware(
+			request,
+			reply,
+			options.container.jwtService,
+			options.container.userRepository,
+		);
 		await storeContextMiddleware(
 			request,
 			reply,
@@ -427,6 +462,13 @@ function registerCustomerReadRoute<TResponse>(
 		async (request: any) => {
 			const user = getAuthenticatedUser(request);
 			const params = customerParamsSchema.parse(request.params);
+			const scoped = options.container.dashboardRepository?.withStore?.(
+				request.storeContext.storeId,
+			);
+			if (scoped)
+				return options.path.endsWith('/promissory')
+					? scoped.getCustomerPromissory(user.userId, params.customerId)
+					: scoped.getCustomerDetail(user.userId, params.customerId);
 			return options.execute(user.userId, params.customerId);
 		},
 	);

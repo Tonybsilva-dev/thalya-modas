@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('dotenv', () => ({ config: vi.fn() }));
+
 describe('env validation', () => {
 	const originalEnv = process.env;
 
@@ -25,7 +27,7 @@ describe('env validation', () => {
 		expect(env.PORT).toBe(3333);
 		expect(env.HOST).toBe('0.0.0.0');
 		expect(env.API_VERSION).toBe('1.0.0');
-		expect(env.API_TITLE).toBe('Thalya Modas API');
+		expect(env.API_TITLE).toBe('Store Flow API');
 		expect(env.JWT_EXPIRES_IN).toBe('7d');
 		expect(env.API_LICENSE_NAME).toBe('ISC');
 		expect(env.FEATURE_CATALOG_ENABLED).toBe(true);
@@ -33,6 +35,7 @@ describe('env validation', () => {
 
 	it('deve validar NODE_ENV como enum', async () => {
 		process.env.NODE_ENV = 'production';
+		process.env.REDIS_URL = 'redis://localhost:6379';
 		process.env.JWT_SECRET =
 			'production-secret-key-with-more-than-32-characters';
 
@@ -43,6 +46,7 @@ describe('env validation', () => {
 
 	it('deve exigir JWT_SECRET explícito em produção', async () => {
 		process.env.NODE_ENV = 'production';
+		process.env.REDIS_URL = 'redis://localhost:6379';
 		delete process.env.JWT_SECRET;
 
 		await expect(import('../../../../src/shared/env/env')).rejects.toThrow(

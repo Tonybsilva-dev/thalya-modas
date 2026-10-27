@@ -25,14 +25,18 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    size?: "default" | "wide";
+    closeLabel?: string;
+  }
+>(({ className, children, size = "default", closeLabel = "Close", ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 gap-5 rounded-none border border-border bg-card p-6 text-card-foreground shadow-lg outline-none data-[state=closed]:animate-nitro-scale-out data-[state=open]:animate-nitro-scale-in",
+        "fixed top-1/2 left-1/2 z-50 grid max-h-[90dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-none border border-border bg-card p-6 text-card-foreground shadow-lg outline-none data-[state=closed]:animate-nitro-scale-out data-[state=open]:animate-nitro-scale-in",
+        size === "wide" ? "max-w-3xl" : "max-w-md",
         className,
       )}
       {...props}
@@ -52,7 +56,7 @@ const DialogContent = React.forwardRef<
           <path d="M18 6 6 18" />
           <path d="m6 6 12 12" />
         </svg>
-        <span className="sr-only">Close</span>
+        <span className="sr-only">{closeLabel}</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>

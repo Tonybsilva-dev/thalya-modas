@@ -24,6 +24,8 @@ export class InMemoryUserRepository implements UserRepository {
 
 	async findMany(params: FindManyUsersParams): Promise<FindManyUsersResult> {
 		let data = Array.from(this.users.values());
+		if (params.userIds)
+			data = data.filter((u) => params.userIds?.includes(u.id));
 		if (params.filter?.trim()) {
 			const f = params.filter.trim().toLowerCase();
 			data = data.filter(
@@ -42,8 +44,9 @@ export class InMemoryUserRepository implements UserRepository {
 		return createPage(data, total, params);
 	}
 
-	async count(filter?: string): Promise<number> {
+	async count(filter?: string, userIds?: string[]): Promise<number> {
 		let data = Array.from(this.users.values());
+		if (userIds) data = data.filter((u) => userIds.includes(u.id));
 		if (filter?.trim()) {
 			const f = filter.trim().toLowerCase();
 			data = data.filter(

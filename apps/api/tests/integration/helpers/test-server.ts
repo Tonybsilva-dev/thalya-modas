@@ -7,15 +7,25 @@ import { getSwaggerConfig } from '../../../src/app/http/config/swagger.config';
 import { AppContainer } from '../../../src/app/http/container';
 import { healthcheckRoutes } from '../../../src/app/http/healthcheck/healthcheck.routes';
 import { errorHandler } from '../../../src/app/http/middlewares/error-handler';
+import { registerPlanGate } from '../../../src/app/http/middlewares/plan-gate';
 import traceIdPlugin from '../../../src/app/http/middlewares/trace-id';
 import { authRoutes } from '../../../src/app/http/routes/auth.routes';
 import { catalogRoutes } from '../../../src/app/http/routes/catalog.routes';
+import { customerRoutes } from '../../../src/app/http/routes/customer.routes';
 import { dashboardRoutes } from '../../../src/app/http/routes/dashboard.routes';
 import { onboardingRoutes } from '../../../src/app/http/routes/onboarding.routes';
+import { planRoutes } from '../../../src/app/http/routes/plan.routes';
+import { salesRoutes } from '../../../src/app/http/routes/sales.routes';
+import { tenantRoutes } from '../../../src/app/http/routes/tenant.routes';
 import { userRoutes } from '../../../src/app/http/routes/user.routes';
+import { PlanAccessService } from '../../../src/core/application/plan-access';
+import type { SalesService } from '../../../src/core/application/sales';
 import type { CatalogRepository } from '../../../src/core/domain/repositories/catalog-repository';
+import type { CustomerRepository } from '../../../src/core/domain/repositories/customer-repository';
+import type { DashboardRepository } from '../../../src/core/domain/repositories/dashboard-repository';
 import type { OnboardingRepository } from '../../../src/core/domain/repositories/onboarding-repository';
 import type { PasswordRecoveryRepository } from '../../../src/core/domain/repositories/password-recovery-repository';
+import type { PlanRepository } from '../../../src/core/domain/repositories/plan-repository';
 import type { StoreRepository } from '../../../src/core/domain/repositories/store-repository';
 import type { UserRepository } from '../../../src/core/domain/repositories/user-repository';
 import {
@@ -25,11 +35,14 @@ import {
 	InMemoryPasswordRecoveryRepository,
 	InMemoryStoreRepository,
 } from '../../../src/core/infra/persistence';
+import { InMemoryCustomerRepository } from '../../../src/core/infra/persistence/in-memory/in-memory-customer-repository';
+import { InMemoryPlanRepository } from '../../../src/core/infra/persistence/in-memory/in-memory-plan-repository';
 import {
 	type FeatureFlagMap,
 	FeatureFlagService,
 } from '../../../src/shared/features';
 import { MockUserRepository } from '../../unit/core/domain/repositories/mock-user-repository';
+import { bindTestOnboarding } from './active-store';
 
 /**
  * Helper para criar uma instância do servidor Fastify configurada para testes
@@ -41,11 +54,15 @@ import { MockUserRepository } from '../../unit/core/domain/repositories/mock-use
 export async function createTestServer(
 	userRepository?: UserRepository,
 	options: {
+		sales?: SalesService;
+		customerRepository?: CustomerRepository;
 		featureFlags?: Partial<FeatureFlagMap>;
+		dashboardRepository?: DashboardRepository;
 		catalogRepository?: CatalogRepository;
 		onboardingRepository?: OnboardingRepository;
 		passwordRecoveryRepository?: PasswordRecoveryRepository;
 		storeRepository?: StoreRepository;
+		planRepository?: PlanRepository;
 	} = {},
 ): Promise<FastifyInstance> {
 	// Cria servidor Fastify para testes
@@ -90,27 +107,45 @@ export async function createTestServer(
 	// Usa o repositório fornecido ou cria um mock
 	const repository = userRepository ?? new MockUserRepository();
 	container.setUserRepository(repository);
-	container.setCatalogRepository(
-		options.catalogRepository ?? new InMemoryCatalogRepository(),
+	container.customerRepository =
+		options.customerRepository ?? new InMemoryCustomerRepository();
+	container.sales = options.sales;
+	container.planAccess = new PlanAccessService(
+		options.planRepository ?? new InMemoryPlanRepository(),
 	);
-	container.setDashboardRepository(new InMemoryDashboardRepository());
+	registerPlanGate(server, container);
+	container.setStoreRepository(
+		options.storeRepository ?? new InMemoryStoreRepository(),
+	);
+	container.setCatalogRepository(
+		options.catalogRepository ??
+			new InMemoryCatalogRepository(container.storeRepository!),
+	);
+	container.setDashboardRepository(
+		options.dashboardRepository ?? new InMemoryDashboardRepository(),
+	);
 	container.setPasswordRecoveryRepository(
 		options.passwordRecoveryRepository ??
 			new InMemoryPasswordRecoveryRepository(),
-	);
-	container.setStoreRepository(
-		options.storeRepository ?? new InMemoryStoreRepository(),
 	);
 	container.setOnboardingRepository(
 		options.onboardingRepository ?? new InMemoryOnboardingRepository(),
 	);
 
 	// Registra rotas de autenticação (depois do Swagger estar registrado)
+	bindTestOnboarding(
+		container.storeRepository!,
+		container.onboardingRepository!,
+	);
 	await server.register(authRoutes, { container });
 	await server.register(catalogRoutes, { container });
+	await server.register(customerRoutes, { container });
+	await server.register(salesRoutes, { container });
 	await server.register(dashboardRoutes, { container });
 	await server.register(onboardingRoutes, { container });
 	await server.register(userRoutes, { container });
+	await server.register(planRoutes, { container });
+	await server.register(tenantRoutes, { container });
 
 	// Registra rota raiz para testes
 	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
@@ -130,7 +165,7 @@ export async function createTestServer(
 				reply.header('X-Trace-Id', traceId);
 			}
 			return {
-				message: 'Thalya Modas API',
+				message: 'Store Flow API',
 				version: '1.0.0',
 				docs: '/docs',
 			};

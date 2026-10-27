@@ -12,6 +12,10 @@ type CalendarProps = Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect"> & {
   selected?: Date;
   subtitle?: string;
   today?: Date;
+  locale?: string;
+  disabledDate?: (date: Date) => boolean;
+  previousMonthLabel?: string;
+  nextMonthLabel?: string;
 };
 
 type CalendarDay = {
@@ -19,7 +23,6 @@ type CalendarDay = {
   outside: boolean;
 };
 
-const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"];
 
 function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -35,8 +38,8 @@ function isSameDay(a?: Date, b?: Date) {
   );
 }
 
-function formatMonthLabel(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
+function formatMonthLabel(date: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     month: "long",
     year: "numeric",
   }).format(date);
@@ -99,6 +102,10 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
       selected,
       subtitle = "Select date",
       today = new Date(),
+      locale = "en-US",
+      disabledDate,
+      previousMonthLabel = "Previous month",
+      nextMonthLabel = "Next month",
       ...props
     },
     ref,
@@ -108,6 +115,7 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
     );
     const visibleMonth = month ?? internalMonth;
     const days = getCalendarDays(visibleMonth);
+    const weekdayLabels = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(new Date(2026, 0, 4 + index)));
 
     function updateMonth(nextMonth: Date) {
       setInternalMonth(nextMonth);
@@ -125,7 +133,7 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
       >
         <div className="flex items-center justify-between gap-4">
           <button
-            aria-label="Previous month"
+            aria-label={previousMonthLabel}
             className="inline-flex size-8 items-center justify-center border border-border bg-background text-foreground outline-none transition-[background-color,border-color,color,transform] duration-fast ease-nitro hover:bg-muted active:scale-95 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
             onClick={() => updateMonth(addMonths(visibleMonth, -1))}
             type="button"
@@ -135,13 +143,13 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
 
           <div className="grid justify-items-center gap-0.5">
             <h2 className="text-sm font-semibold text-foreground">
-              {formatMonthLabel(visibleMonth)}
+              {formatMonthLabel(visibleMonth, locale)}
             </h2>
             <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
 
           <button
-            aria-label="Next month"
+            aria-label={nextMonthLabel}
             className="inline-flex size-8 items-center justify-center border border-border bg-background text-foreground outline-none transition-[background-color,border-color,color,transform] duration-fast ease-nitro hover:bg-muted active:scale-95 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
             onClick={() => updateMonth(addMonths(visibleMonth, 1))}
             type="button"
@@ -170,8 +178,10 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
               <button
                 key={date.toISOString()}
                 aria-pressed={isSelected}
+                aria-label={new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(date)}
+                disabled={disabledDate?.(date)}
                 className={cn(
-                  "grid h-9 place-items-center text-sm font-medium text-foreground outline-none transition-[background-color,border-color,color,transform] duration-fast ease-nitro hover:bg-muted active:scale-95 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
+                  "grid h-9 place-items-center text-sm font-medium text-foreground outline-none transition-[background-color,border-color,color,transform] duration-fast ease-nitro hover:bg-muted active:scale-95 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-40",
                   outside && "text-muted-foreground",
                   isToday && "border border-border bg-muted text-foreground",
                   isSelected &&

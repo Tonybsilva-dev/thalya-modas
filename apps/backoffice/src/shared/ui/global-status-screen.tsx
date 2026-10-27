@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Button } from "@thalya-modas/ui";
+import { Button } from "@store-flow/ui";
 import { appConfig } from "../config/app";
 
 function StatusBackdrop({ children }: { children: ReactNode }) {

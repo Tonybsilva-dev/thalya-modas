@@ -7,18 +7,19 @@ import {
 } from '../../../domain/entities';
 import { createStoreBucketKey } from '../../../domain/value-objects/store-slug';
 import { Argon2PasswordHasher } from '../../auth/password-hasher';
+import { PrismaStoreRepository } from './prisma-store-repository';
 
 const previewUser = {
 	name: 'Ana Ribeiro',
-	email: 'ana@thalyamodas.com',
+	email: 'ana@storeflow.example',
 	password: 'Password123',
-	role: UserRole.COMPANY,
+	role: UserRole.ADMIN,
 	accountStatus: AccountStatus.ACTIVE,
 } as const;
 
 const previewStore = {
 	document: '00000000000191',
-	name: 'Thalya Modas Preview',
+	name: 'Store Flow Preview',
 	phone: '85999990000',
 	segment: StoreSegment.FASHION,
 	status: StoreStatus.ACTIVE,
@@ -50,24 +51,15 @@ export async function seedPreviewUser(prisma: PrismaClient): Promise<void> {
 	});
 	if (existingStore) return;
 
-	const slug = `thalya-modas-preview-${user.id.replaceAll('-', '').slice(0, 8)}`;
-	await prisma.store.create({
-		data: {
-			bucketKey: createStoreBucketKey(slug),
-			document: previewStore.document,
-			memberships: {
-				create: {
-					role: 'OWNER',
-					status: 'ACTIVE',
-					userId: user.id,
-				},
-			},
-			name: previewStore.name,
-			ownerId: user.id,
-			phone: previewStore.phone,
-			segment: previewStore.segment,
-			slug,
-			status: previewStore.status,
-		},
+	const slug = `store-flow-preview-${user.id.replaceAll('-', '').slice(0, 8)}`;
+	await new PrismaStoreRepository(prisma).create({
+		bucketKey: createStoreBucketKey(slug),
+		document: previewStore.document,
+		name: previewStore.name,
+		ownerId: user.id,
+		phone: previewStore.phone,
+		segment: previewStore.segment,
+		slug,
+		status: previewStore.status,
 	});
 }

@@ -386,7 +386,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		});
 
 		expect(removeSupplier.statusCode).toBe(400);
-		expect(removeSupplier.body).toMatchObject({ code: 'TM-DOM-400' });
+		expect(removeSupplier.body).toMatchObject({ code: 'SF-DOM-400' });
 		await expect(
 			prisma.supplier.findUnique({ where: { id: supplierId } }),
 		).resolves.not.toBeNull();
@@ -495,7 +495,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 	async function registerUserOnly() {
 		const response = await makeRequest(server, {
 			body: {
-				email: `${testEmailPrefix}-${randomUUID()}@thalya.test`,
+				email: `${testEmailPrefix}-${randomUUID()}@storeflow.test`,
 				name: 'Prisma Catalog Owner',
 				password: 'Secure123',
 			},
@@ -553,7 +553,7 @@ describe.skipIf(!runPrismaTests)('Catalog - Prisma/Postgres', () => {
 		return makeRequest(server, {
 			body: {
 				contactType: 'orders',
-				email: overrides.email ?? `responsible-${randomUUID()}@thalya.test`,
+				email: overrides.email ?? `responsible-${randomUUID()}@storeflow.test`,
 				isPrimary: overrides.isPrimary ?? false,
 				name: overrides.name ?? 'Responsável Prisma',
 				phone: '85999997777',

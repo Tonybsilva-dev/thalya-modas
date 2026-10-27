@@ -1,0 +1,5 @@
+UPDATE "users" SET "role" = 'ROLE_ADMIN' WHERE "role" = 'ROLE_COMPANY';
+UPDATE "users" SET "role" = 'ROLE_EMPLOYEE' WHERE "role" = 'ROLE_DELIVERY_MAN';
+
+ALTER TABLE "users" ADD CONSTRAINT "users_role_check"
+CHECK ("role" IN ('ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_EMPLOYEE', 'ROLE_CUSTOMER'));

@@ -1,5 +1,5 @@
-import { SupplierResponsibleModalRoute } from "@/src/features/dashboard/suppliers/presentation/supplier-flow-routes";
-
-export default function SupplierResponsiblePage() {
-  return <SupplierResponsibleModalRoute />;
+import { redirect } from "next/navigation";
+export default async function SupplierActionPage({ params }: { params: Promise<{ role: string; supplierId: string }> }) {
+  const { role, supplierId } = await params;
+  redirect(`/${role}/dashboard/suppliers?supplierAction=contacts&supplier=${encodeURIComponent(supplierId)}`);
 }

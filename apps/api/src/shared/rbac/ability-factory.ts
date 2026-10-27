@@ -27,9 +27,9 @@ function defineRulesForSelfOnly(
 
 const roleRulesMap: Record<UserRole, DefineRulesFor> = {
 	[UserRole.SUPER_ADMIN]: defineRulesForFullAccess,
-	[UserRole.COMPANY]: defineRulesForFullAccess,
+	[UserRole.ADMIN]: defineRulesForSelfOnly,
+	[UserRole.MANAGER]: defineRulesForSelfOnly,
 	[UserRole.EMPLOYEE]: defineRulesForSelfOnly,
-	[UserRole.DELIVERY_MAN]: defineRulesForSelfOnly,
 	[UserRole.CUSTOMER]: defineRulesForSelfOnly,
 };
 

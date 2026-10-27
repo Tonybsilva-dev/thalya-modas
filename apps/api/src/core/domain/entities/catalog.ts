@@ -30,6 +30,7 @@ export type ReceivingStatus =
 	| 'delayed';
 
 export type CatalogScope = {
+	tenantId: string;
 	storeId: string;
 	userId: string;
 };
@@ -198,13 +199,14 @@ export type CreateSupplierInput = CatalogScope & {
 };
 
 export type UpdateSupplierInput = Partial<
-	Omit<CreateSupplierInput, 'storeId' | 'userId'>
-> & {
-	id: string;
-	storeId: string;
-	userId: string;
-	status?: SupplierStatus;
-};
+	Omit<CreateSupplierInput, 'tenantId' | 'storeId' | 'userId'>
+> &
+	CatalogScope & {
+		id: string;
+		storeId: string;
+		userId: string;
+		status?: SupplierStatus;
+	};
 
 export type CreateSupplierResponsibleInput = CatalogScope & {
 	supplierId: string;
@@ -218,13 +220,17 @@ export type CreateSupplierResponsibleInput = CatalogScope & {
 };
 
 export type UpdateSupplierResponsibleInput = Partial<
-	Omit<CreateSupplierResponsibleInput, 'storeId' | 'userId' | 'supplierId'>
-> & {
-	id: string;
-	storeId: string;
-	userId: string;
-	supplierId: string;
-};
+	Omit<
+		CreateSupplierResponsibleInput,
+		'tenantId' | 'storeId' | 'userId' | 'supplierId'
+	>
+> &
+	CatalogScope & {
+		id: string;
+		storeId: string;
+		userId: string;
+		supplierId: string;
+	};
 
 export type CreateProductInput = CatalogScope & {
 	name: string;
@@ -239,13 +245,14 @@ export type CreateProductInput = CatalogScope & {
 };
 
 export type UpdateProductInput = Partial<
-	Omit<CreateProductInput, 'storeId' | 'userId'>
-> & {
-	id: string;
-	storeId: string;
-	userId: string;
-	status?: ProductStatus;
-};
+	Omit<CreateProductInput, 'tenantId' | 'storeId' | 'userId'>
+> &
+	CatalogScope & {
+		id: string;
+		storeId: string;
+		userId: string;
+		status?: ProductStatus;
+	};
 
 export type CreateInventoryAdjustmentInput = CatalogScope & {
 	productId: string;
@@ -271,13 +278,17 @@ export type CreatePurchaseOrderInput = CatalogScope & {
 };
 
 export type UpdatePurchaseOrderInput = Partial<
-	Omit<CreatePurchaseOrderInput, 'storeId' | 'userId' | 'supplierId' | 'items'>
-> & {
-	id: string;
-	storeId: string;
-	userId: string;
-	status?: PurchaseOrderStatus;
-};
+	Omit<
+		CreatePurchaseOrderInput,
+		'tenantId' | 'storeId' | 'userId' | 'supplierId' | 'items'
+	>
+> &
+	CatalogScope & {
+		id: string;
+		storeId: string;
+		userId: string;
+		status?: PurchaseOrderStatus;
+	};
 
 export type CreateReceivingInput = CatalogScope & {
 	supplierId: string;
@@ -295,14 +306,15 @@ export type CreateReceivingInput = CatalogScope & {
 export type UpdateReceivingInput = Partial<
 	Omit<
 		CreateReceivingInput,
-		'storeId' | 'userId' | 'supplierId' | 'purchaseOrderId'
+		'tenantId' | 'storeId' | 'userId' | 'supplierId' | 'purchaseOrderId'
 	>
-> & {
-	id: string;
-	storeId: string;
-	userId: string;
-	status?: ReceivingStatus;
-};
+> &
+	CatalogScope & {
+		id: string;
+		storeId: string;
+		userId: string;
+		status?: ReceivingStatus;
+	};
 
 export type PrepareProductImageUploadInput = CatalogScope & {
 	productId: string;

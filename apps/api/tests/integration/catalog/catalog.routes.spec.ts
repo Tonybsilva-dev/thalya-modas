@@ -27,7 +27,7 @@ describe('Catalog - Integração', () => {
 			headers: {
 				'access-control-request-headers': 'content-type,x-store-id',
 				'access-control-request-method': 'PATCH',
-				origin: 'http://localhost:3000',
+				origin: 'http://localhost:3001',
 			},
 			method: 'OPTIONS',
 			url: `/suppliers/${randomUUID()}`,
@@ -39,7 +39,7 @@ describe('Catalog - Integração', () => {
 			'DELETE',
 		);
 		expect(response.headers['access-control-allow-origin']).toBe(
-			'http://localhost:3000',
+			'http://localhost:3001',
 		);
 	});
 
@@ -51,7 +51,7 @@ describe('Catalog - Integração', () => {
 
 		expect(response.statusCode).toBe(401);
 		expect(response.body).toMatchObject({
-			code: 'TM-AUTH-401',
+			code: 'SF-AUTH-401',
 			error: 'UnauthorizedError',
 		});
 	});
@@ -195,7 +195,7 @@ describe('Catalog - Integração', () => {
 		const response = await makeRequest(server, {
 			body: {
 				document: randomUUID().replaceAll('-', '').slice(0, 14),
-				email: `atomic-${randomUUID()}@thalya.test`,
+				email: `atomic-${randomUUID()}@storeflow.test`,
 				name: 'Fornecedor com contatos',
 				phone: '85999998888',
 				responsibles: [
@@ -248,7 +248,7 @@ describe('Catalog - Integração', () => {
 			body: {
 				deliveryTerm: '+15',
 				document: randomUUID().replaceAll('-', '').slice(0, 14),
-				email: `inactive-${randomUUID()}@thalya.test`,
+				email: `inactive-${randomUUID()}@storeflow.test`,
 				minimumOrder: '450',
 				name: 'Fornecedor Inativo',
 				paymentTerm: '+45',
@@ -428,7 +428,7 @@ describe('Catalog - Integração', () => {
 		});
 
 		expect(response.statusCode).toBe(400);
-		expect(response.body).toMatchObject({ code: 'TM-DOM-400' });
+		expect(response.body).toMatchObject({ code: 'SF-DOM-400' });
 	});
 
 	it('deve remover responsáveis vinculados ao excluir fornecedor', async () => {
@@ -436,7 +436,7 @@ describe('Catalog - Integração', () => {
 		const supplier = await createSupplier(token);
 		const supplierId = (supplier.body as { id: string }).id;
 		await createResponsible(token, supplierId, {
-			email: 'remove-responsible@thalya.test',
+			email: 'remove-responsible@storeflow.test',
 			isPrimary: true,
 			name: 'Responsável Removido',
 		});
@@ -470,7 +470,7 @@ describe('Catalog - Integração', () => {
 		});
 		expect(removeSupplier.statusCode).toBe(400);
 		expect(removeSupplier.body).toMatchObject({
-			code: 'TM-DOM-400',
+			code: 'SF-DOM-400',
 			message:
 				'Fornecedor possui pedidos ou recebimentos e não pode ser excluído. Inative o cadastro para preservar o histórico.',
 		});
@@ -861,7 +861,7 @@ describe('Catalog - Integração', () => {
 
 		expect(response.statusCode).toBe(403);
 		expect(response.body).toMatchObject({
-			code: 'TM-FEAT-403',
+			code: 'SF-FEAT-403',
 			error: 'FeatureDisabledError',
 		});
 	});
@@ -880,7 +880,7 @@ describe('Catalog - Integração', () => {
 			body: {
 				document:
 					overrides.document ?? randomUUID().replaceAll('-', '').slice(0, 14),
-				email: overrides.email ?? `supplier-${randomUUID()}@thalya.test`,
+				email: overrides.email ?? `supplier-${randomUUID()}@storeflow.test`,
 				name: overrides.name ?? 'Moda Bella Distribuidora',
 				phone: overrides.phone ?? '85999998888',
 			},
@@ -946,7 +946,7 @@ describe('Catalog - Integração', () => {
 		return makeRequest(server, {
 			body: {
 				contactType: 'orders',
-				email: overrides.email ?? `responsible-${randomUUID()}@thalya.test`,
+				email: overrides.email ?? `responsible-${randomUUID()}@storeflow.test`,
 				isPrimary: overrides.isPrimary ?? false,
 				name: overrides.name ?? 'Camila Santos',
 				phone: '85999997777',
@@ -962,7 +962,7 @@ describe('Catalog - Integração', () => {
 	async function registerAndGetToken() {
 		const response = await makeRequest(server, {
 			body: {
-				email: `catalog-${randomUUID()}@thalya.test`,
+				email: `catalog-${randomUUID()}@storeflow.test`,
 				name: 'Ana Ribeiro',
 				password: 'Secure123',
 			},

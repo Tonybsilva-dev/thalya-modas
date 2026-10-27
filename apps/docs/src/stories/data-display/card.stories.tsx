@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@thalya-modas/ui";
+import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Data Display/Card",

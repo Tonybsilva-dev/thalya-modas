@@ -1,1 +1,1 @@
-export const authSessionCookieName = "@thalya-modas:session";
+export const authSessionCookieName = "@store-flow:session";

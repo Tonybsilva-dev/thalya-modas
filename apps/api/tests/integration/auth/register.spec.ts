@@ -2,19 +2,26 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AccountStatus, UserRole } from '../../../src/core/domain/index.ts';
 import { Argon2PasswordHasher } from '../../../src/core/infra/auth/password-hasher';
+import { InMemoryStoreRepository } from '../../../src/core/infra/persistence';
 import { UserFactory } from '../../factories';
 import { MockUserRepository } from '../../unit/core/domain/repositories/mock-user-repository';
-import { createTestServer, makeRequest } from '../helpers';
+import {
+	createActiveTestStore,
+	createTestServer,
+	makeRequest,
+} from '../helpers';
 
 describe('POST /auth/register - Integração', () => {
 	let server: FastifyInstance;
+	let storeRepository: InMemoryStoreRepository;
 	let userRepository: MockUserRepository;
 	let passwordHasher: Argon2PasswordHasher;
 
 	beforeEach(async () => {
 		userRepository = new MockUserRepository();
 		passwordHasher = new Argon2PasswordHasher();
-		server = await createTestServer(userRepository);
+		storeRepository = new InMemoryStoreRepository();
+		server = await createTestServer(userRepository, { storeRepository });
 	});
 
 	afterEach(async () => {
@@ -42,7 +49,7 @@ describe('POST /auth/register - Integração', () => {
 			expect((response.body as { user: unknown }).user).toMatchObject({
 				name: 'Jane Doe',
 				email: 'jane.doe@example.com',
-				role: UserRole.COMPANY,
+				role: UserRole.ADMIN,
 				accountStatus: AccountStatus.ACTIVE,
 			});
 			expect(response.body).toHaveProperty('onboarding');
@@ -53,7 +60,7 @@ describe('POST /auth/register - Integração', () => {
 			);
 		});
 
-		it('deve definir role COMPANY e status ACTIVE por padrão no cadastro público', async () => {
+		it('deve definir role ADMIN e status ACTIVE por padrão no cadastro público', async () => {
 			const registerData = UserFactory.createRegisterData({
 				name: 'Default User',
 				email: 'default@example.com',
@@ -71,7 +78,7 @@ describe('POST /auth/register - Integração', () => {
 				role: string;
 				accountStatus: string;
 			};
-			expect(user.role).toBe(UserRole.COMPANY);
+			expect(user.role).toBe(UserRole.ADMIN);
 			expect(user.accountStatus).toBe(AccountStatus.ACTIVE);
 		});
 
@@ -94,7 +101,7 @@ describe('POST /auth/register - Integração', () => {
 	});
 
 	describe('Autorização por role', () => {
-		it('deve retornar 403 ao solicitar role COMPANY sem token', async () => {
+		it('deve retornar 403 ao solicitar role ADMIN sem token', async () => {
 			const response = await makeRequest(server, {
 				method: 'POST',
 				url: '/auth/register',
@@ -102,7 +109,7 @@ describe('POST /auth/register - Integração', () => {
 					name: 'Company Name',
 					email: 'company@example.com',
 					password: 'securePassword123',
-					role: UserRole.COMPANY,
+					role: UserRole.ADMIN,
 				},
 			});
 
@@ -125,7 +132,7 @@ describe('POST /auth/register - Integração', () => {
 			expect(response.statusCode).toBe(403);
 		});
 
-		it('deve permitir SUPER_ADMIN cadastrar COMPANY com token', async () => {
+		it('deve permitir SUPER_ADMIN cadastrar ADMIN com token', async () => {
 			const plainPassword = 'superAdminPass123';
 			const passwordHash = await passwordHasher.hash(plainPassword);
 			const superAdmin = UserFactory.createAdmin({
@@ -154,25 +161,26 @@ describe('POST /auth/register - Integração', () => {
 					name: 'Company Name',
 					email: 'company@example.com',
 					password: 'securePassword123',
-					role: UserRole.COMPANY,
+					role: UserRole.ADMIN,
 				},
 			});
 
 			expect(response.statusCode).toBe(201);
 			const user = (response.body as { user: { role: string } }).user;
-			expect(user.role).toBe(UserRole.COMPANY);
+			expect(user.role).toBe(UserRole.ADMIN);
 		});
 
-		it('deve permitir COMPANY cadastrar EMPLOYEE com token', async () => {
+		it('deve permitir ADMIN cadastrar EMPLOYEE com token', async () => {
 			const plainPassword = 'companyPass123';
 			const passwordHash = await passwordHasher.hash(plainPassword);
 			const company = UserFactory.create({
 				email: 'company@example.com',
-				role: UserRole.COMPANY,
+				role: UserRole.ADMIN,
 				passwordHash,
 				accountStatus: AccountStatus.ACTIVE,
 			});
-			await userRepository.create(company);
+			const persisted = await userRepository.create(company);
+			await createActiveTestStore(storeRepository, persisted.id);
 
 			const loginResponse = await makeRequest(server, {
 				method: 'POST',

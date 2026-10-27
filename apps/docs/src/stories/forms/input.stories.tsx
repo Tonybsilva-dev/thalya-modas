@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Input, Label } from "@thalya-modas/ui";
+import { Input, Label } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Forms/Input",

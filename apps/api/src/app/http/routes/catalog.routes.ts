@@ -35,6 +35,7 @@ import type { AppContainer } from '../container';
 import { NotFoundError } from '../errors/not-found-error';
 import { authMiddleware } from '../middlewares/auth';
 import { storeContextMiddleware } from '../middlewares/store-context';
+import { pageSchema } from '../pagination';
 
 const listQuerySchema = z.object({
 	page: z.coerce.number().int().positive().default(1),
@@ -421,7 +422,12 @@ export async function catalogRoutes(
 
 	const preHandler = async (request: FastifyRequest, reply: unknown) => {
 		container.featureFlags.assertEnabled('catalog');
-		await authMiddleware(request, reply, container.jwtService);
+		await authMiddleware(
+			request,
+			reply,
+			container.jwtService,
+			container.userRepository,
+		);
 		await storeContextMiddleware(request, reply, storeRepository);
 	};
 
@@ -456,6 +462,7 @@ export async function catalogRoutes(
 			const query = listQuerySchema.parse(getRequestQuery(request));
 			return useCases.listSuppliers.execute({
 				query,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -493,6 +500,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createSupplier.execute({
 				...body,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -526,6 +534,7 @@ export async function catalogRoutes(
 		async (request: FastifyRequest) => {
 			const user = getAuthenticatedUser(request);
 			return useCases.getSupplierOperationalSummary.execute({
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -558,6 +567,7 @@ export async function catalogRoutes(
 			const user = getAuthenticatedUser(request);
 			const params = idParamsSchema.parse(getRequestParams(request));
 			const supplier = await useCases.getSupplier.execute({
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
@@ -597,6 +607,7 @@ export async function catalogRoutes(
 			return useCases.updateSupplier.execute({
 				...body,
 				id: params.id,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -632,6 +643,7 @@ export async function catalogRoutes(
 			const user = getAuthenticatedUser(request);
 			const params = idParamsSchema.parse(getRequestParams(request));
 			await useCases.deleteSupplier.execute({
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
@@ -669,6 +681,7 @@ export async function catalogRoutes(
 			const user = getAuthenticatedUser(request);
 			const params = idParamsSchema.parse(getRequestParams(request));
 			return useCases.listSupplierResponsibles.execute({
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
@@ -715,6 +728,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createSupplierResponsible.execute({
 				...body,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
@@ -762,6 +776,7 @@ export async function catalogRoutes(
 			return useCases.updateSupplierResponsible.execute({
 				...body,
 				id: params.responsibleId,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
@@ -803,6 +818,7 @@ export async function catalogRoutes(
 			);
 			await useCases.deleteSupplierResponsible.execute({
 				responsibleId: params.responsibleId,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				supplierId: params.id,
 				userId: user.userId,
@@ -811,6 +827,18 @@ export async function catalogRoutes(
 		},
 	);
 
+	fastify.get(
+		'/products/page',
+		{ preHandler, schema: { ...pageSchema, tags: ['products'] } },
+		async (request: FastifyRequest) => {
+			const user = getAuthenticatedUser(request);
+			const query = listQuerySchema.parse(getRequestQuery(request));
+			return container.catalogRepository!.listProductsPage(
+				{ tenantId: user.tenantId, storeId: user.storeId, userId: user.userId },
+				query,
+			);
+		},
+	);
 	fastify.get(
 		'/products',
 		{
@@ -842,6 +870,7 @@ export async function catalogRoutes(
 			const query = listQuerySchema.parse(getRequestQuery(request));
 			return useCases.listProducts.execute({
 				query,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -879,6 +908,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createProduct.execute({
 				...body,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -915,6 +945,7 @@ export async function catalogRoutes(
 			);
 			const product = await useCases.getProductByBarcode.execute({
 				barcode: params.barcode.toUpperCase(),
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -950,6 +981,7 @@ export async function catalogRoutes(
 			const params = idParamsSchema.parse(getRequestParams(request));
 			const product = await useCases.getProduct.execute({
 				productId: params.id,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -988,6 +1020,7 @@ export async function catalogRoutes(
 			return useCases.updateProduct.execute({
 				...body,
 				id: params.id,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1036,6 +1069,7 @@ export async function catalogRoutes(
 				...body,
 				productId: params.productId,
 				storeBucketKey: user.storeBucketKey,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1076,6 +1110,7 @@ export async function catalogRoutes(
 			await useCases.deleteProductImageAsset.execute({
 				assetId: params.assetId,
 				productId: params.productId,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1114,6 +1149,7 @@ export async function catalogRoutes(
 			const query = listQuerySchema.parse(getRequestQuery(request));
 			return useCases.listPurchaseOrders.execute({
 				query,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1154,6 +1190,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createPurchaseOrder.execute({
 				...body,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1193,6 +1230,7 @@ export async function catalogRoutes(
 			return useCases.updatePurchaseOrder.execute({
 				...body,
 				id: params.id,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1230,6 +1268,7 @@ export async function catalogRoutes(
 			const query = listQuerySchema.parse(getRequestQuery(request));
 			return useCases.listReceivings.execute({
 				query,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1267,6 +1306,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createReceiving.execute({
 				...body,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1303,6 +1343,7 @@ export async function catalogRoutes(
 			return useCases.updateReceiving.execute({
 				...body,
 				id: params.id,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1343,6 +1384,7 @@ export async function catalogRoutes(
 			reply.code(201);
 			return useCases.createInventoryAdjustment.execute({
 				...body,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1383,6 +1425,7 @@ export async function catalogRoutes(
 				.parse(getRequestQuery(request));
 			return useCases.listInventoryMovements.execute({
 				productId: query.productId,
+				tenantId: user.tenantId,
 				storeId: user.storeId,
 				userId: user.userId,
 			});
@@ -1401,6 +1444,7 @@ function getAuthenticatedUser(request: FastifyRequest) {
 	return {
 		...request.user,
 		storeBucketKey: request.storeContext.storeBucketKey,
+		tenantId: request.storeContext.tenantId,
 		storeId: request.storeContext.storeId,
 		storeSlug: request.storeContext.storeSlug,
 	};

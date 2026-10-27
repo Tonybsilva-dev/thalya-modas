@@ -157,7 +157,7 @@ describe('GET /auth/me - Integração', () => {
 			expect(response.body).toHaveProperty('error');
 		});
 
-		it('deve retornar 404 quando usuário não existe no banco', async () => {
+		it('deve retornar 401 quando usuário não existe no banco', async () => {
 			// Gera token para um usuário que não existe
 			const token = jwtService.generate({
 				userId: 'non-existent-user-id',
@@ -173,16 +173,16 @@ describe('GET /auth/me - Integração', () => {
 				},
 			});
 
-			expect(response.statusCode).toBe(404);
+			expect(response.statusCode).toBe(401);
 			expect(response.body).toHaveProperty('error');
 			expect((response.body as { message: string }).message).toContain(
-				'não encontrado',
+				'Conta inativa ou inexistente.',
 			);
 		});
 	});
 
 	describe('Edge Cases', () => {
-		it('deve funcionar mesmo quando usuário tem accountStatus diferente de ACTIVE', async () => {
+		it('deve bloquear acesso quando usuário tem accountStatus diferente de ACTIVE', async () => {
 			const user = UserFactory.createInactive({
 				email: 'inactive@example.com',
 			});
@@ -202,11 +202,7 @@ describe('GET /auth/me - Integração', () => {
 				},
 			});
 
-			// GET /auth/me não valida accountStatus, apenas retorna os dados
-			expect(response.statusCode).toBe(200);
-			expect((response.body as { accountStatus: string }).accountStatus).toBe(
-				AccountStatus.INACTIVE,
-			);
+			expect(response.statusCode).toBe(401);
 		});
 
 		it('deve tratar caso onde user não está definido após autenticação (edge case)', async () => {

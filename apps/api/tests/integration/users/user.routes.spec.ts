@@ -16,18 +16,18 @@ describe('Users - Integração', () => {
 	beforeEach(async () => {
 		repository = new InMemoryUserRepository();
 		admin = await createUser(repository, {
-			email: 'admin@thalya.test',
-			name: 'Admin Thalya',
+			email: 'admin@storeflow.test',
+			name: 'Admin storeflow',
 			role: UserRole.SUPER_ADMIN,
 		});
 		customer = await createUser(repository, {
-			email: 'cliente@thalya.test',
-			name: 'Cliente Thalya',
+			email: 'cliente@storeflow.test',
+			name: 'Cliente storeflow',
 			role: UserRole.CUSTOMER,
 		});
 		employee = await createUser(repository, {
-			email: 'colaborador@thalya.test',
-			name: 'Colaborador Thalya',
+			email: 'colaborador@storeflow.test',
+			name: 'Colaborador storeflow',
 			role: UserRole.EMPLOYEE,
 		});
 		server = await createTestServer(repository);
@@ -40,11 +40,11 @@ describe('Users - Integração', () => {
 	it('verifica a disponibilidade de email sem expor outros dados', async () => {
 		const existing = await makeRequest(server, {
 			method: 'GET',
-			url: '/users/check-email?email=cliente@thalya.test',
+			url: '/users/check-email?email=cliente@storeflow.test',
 		});
 		const available = await makeRequest(server, {
 			method: 'GET',
-			url: '/users/check-email?email=novo@thalya.test',
+			url: '/users/check-email?email=novo@storeflow.test',
 		});
 
 		expect(existing.statusCode).toBe(200);
@@ -121,7 +121,7 @@ describe('Users - Integração', () => {
 			url: `/users/${customer.id}`,
 		});
 		const forbidden = await makeRequest(server, {
-			body: { email: 'outro@thalya.test' },
+			body: { email: 'outro@storeflow.test' },
 			headers: { authorization },
 			method: 'PATCH',
 			url: `/users/${customer.id}`,
@@ -136,7 +136,7 @@ describe('Users - Integração', () => {
 		const response = await makeRequest(server, {
 			body: {
 				accountStatus: AccountStatus.SUSPENDED,
-				role: UserRole.COMPANY,
+				role: UserRole.ADMIN,
 			},
 			headers: { authorization: `Bearer ${tokenFor(admin)}` },
 			method: 'PATCH',
@@ -146,7 +146,7 @@ describe('Users - Integração', () => {
 		expect(response.statusCode).toBe(200);
 		expect(response.body).toMatchObject({
 			accountStatus: AccountStatus.SUSPENDED,
-			role: UserRole.COMPANY,
+			role: UserRole.ADMIN,
 		});
 	});
 

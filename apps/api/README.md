@@ -1,6 +1,6 @@
-# Thalya Modas API
+# Store Flow API
 
-API operacional da plataforma Thalya Modas, construída com Fastify 5,
+API operacional da plataforma Store Flow, construída com Fastify 5,
 TypeScript, Zod, Prisma e PostgreSQL.
 
 ## Responsabilidades atuais
@@ -48,7 +48,7 @@ HOST="0.0.0.0"
 PORT="3333"
 JWT_SECRET="uma-chave-local-com-pelo-menos-32-caracteres"
 PERSISTENCE_DRIVER="postgres"
-DATABASE_URL="postgresql://thalya:thalya_dev_password@localhost:5432/thalya_modas?schema=public"
+DATABASE_URL="postgresql://storeflow:storeflow_dev_password@localhost:5432/store_flow?schema=public"
 CORS_ORIGINS="http://localhost:3000"
 ```
 
@@ -75,18 +75,18 @@ Swagger: `http://localhost:3333/docs`
 ## Qualidade
 
 ```bash
-pnpm --filter @thalya-modas/api lint
-pnpm --filter @thalya-modas/api typecheck
-pnpm --filter @thalya-modas/api exec vitest run
-pnpm --filter @thalya-modas/api test:coverage
-pnpm --filter @thalya-modas/api build
+pnpm --filter @store-flow/api lint
+pnpm --filter @store-flow/api typecheck
+pnpm --filter @store-flow/api exec vitest run
+pnpm --filter @store-flow/api test:coverage
+pnpm --filter @store-flow/api build
 ```
 
 Para incluir os testes reais de PostgreSQL:
 
 ```bash
 RUN_PRISMA_INTEGRATION_TESTS=true \
-pnpm --filter @thalya-modas/api exec vitest run --fileParallelism=false
+pnpm --filter @store-flow/api exec vitest run --fileParallelism=false
 ```
 
 Os testes Prisma criam e removem apenas registros identificados para teste. O
@@ -126,7 +126,7 @@ A assinatura possui teste unitário. A permissão real de escrita do token e do
 bucket deve ser validada com:
 
 ```bash
-pnpm --filter @thalya-modas/api r2:validate
+pnpm --filter @store-flow/api r2:validate
 ```
 
 Cada loja recebe no onboarding um `slug` imutável e um `bucket_key` persistido

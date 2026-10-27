@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { DomainError } from '../../../../app/http/errors/domain-error';
+import { ForbiddenError } from '../../../../app/http/errors/forbidden-error';
 import { NotFoundError } from '../../../../app/http/errors/not-found-error';
 import type {
 	CatalogListQuery,
@@ -27,6 +28,7 @@ import type {
 	UpdateSupplierResponsibleInput,
 } from '../../../domain/entities/catalog';
 import type { CatalogRepository } from '../../../domain/repositories/catalog-repository';
+import type { StoreRepository } from '../../../domain/repositories/store-repository';
 import { createProductSku } from '../../../domain/value-objects/product-sku';
 import {
 	createR2PresignedUpload,
@@ -34,6 +36,17 @@ import {
 } from '../../storage/r2-presigned-upload';
 
 export class InMemoryCatalogRepository implements CatalogRepository {
+	private async assertScope(scope: CatalogScope) {
+		if (!scope.tenantId || !scope.storeId || !scope.userId)
+			throw new ForbiddenError('Contexto de empresa e filial obrigatório.');
+		const store = await this.stores.findById(scope.storeId);
+		if (!store || store.tenantId !== scope.tenantId)
+			throw new ForbiddenError('Filial fora da empresa autorizada.');
+		if ('storeBucketKey' in scope && scope.storeBucketKey !== store.bucketKey)
+			throw new ForbiddenError(
+				'Destino de arquivos fora da filial autorizada.',
+			);
+	}
 	private readonly movements = new Map<string, InventoryMovement>();
 	private readonly products = new Map<string, Product>();
 	private readonly purchaseOrders = new Map<string, PurchaseOrder>();
@@ -41,9 +54,13 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	private readonly responsibles = new Map<string, SupplierResponsible>();
 	private readonly suppliers = new Map<string, Supplier>();
 
-	constructor(private readonly r2StorageConfig?: R2StorageConfig) {}
+	constructor(
+		private readonly stores: Pick<StoreRepository, 'findById'>,
+		private readonly r2StorageConfig?: R2StorageConfig,
+	) {}
 
 	async createSupplier(input: CreateSupplierInput): Promise<Supplier> {
+		await this.assertScope(input);
 		if (input.document) {
 			const existing = await this.findSupplierByDocument(input, input.document);
 			if (existing) {
@@ -91,6 +108,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		supplierId: string,
 	): Promise<Supplier | null> {
+		await this.assertScope(scope);
 		const supplier = this.suppliers.get(supplierId);
 		return supplier?.userId === scope.userId &&
 			supplier.storeId === scope.storeId
@@ -102,6 +120,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		document: string,
 	): Promise<Supplier | null> {
+		await this.assertScope(scope);
 		const supplier = Array.from(this.suppliers.values()).find(
 			(item) => item.storeId === scope.storeId && item.document === document,
 		);
@@ -112,10 +131,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Supplier[]> {
+		await this.assertScope(scope);
 		return filterAndPaginate(
 			Array.from(this.suppliers.values()).filter(
-				(item) =>
-					item.userId === scope.userId && item.storeId === scope.storeId,
+				(item) => item.storeId === scope.storeId,
 			),
 			query,
 			(item) => [
@@ -131,27 +150,20 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	async getSupplierOperationalSummary(
 		scope: CatalogScope,
 	): Promise<SupplierOperationalSummary> {
+		await this.assertScope(scope);
 		const suppliers = Array.from(this.suppliers.values()).filter(
-			(supplier) =>
-				supplier.userId === scope.userId && supplier.storeId === scope.storeId,
+			(supplier) => supplier.storeId === scope.storeId,
 		);
 		const supplierIdsWithResponsible = new Set(
 			Array.from(this.responsibles.values())
-				.filter(
-					(responsible) =>
-						responsible.userId === scope.userId &&
-						responsible.storeId === scope.storeId,
-				)
+				.filter((responsible) => responsible.storeId === scope.storeId)
 				.map((responsible) => responsible.supplierId),
 		);
 		const orders = Array.from(this.purchaseOrders.values()).filter(
-			(order) =>
-				order.userId === scope.userId && order.storeId === scope.storeId,
+			(order) => order.storeId === scope.storeId,
 		);
 		const receivings = Array.from(this.receivings.values()).filter(
-			(receiving) =>
-				receiving.userId === scope.userId &&
-				receiving.storeId === scope.storeId,
+			(receiving) => receiving.storeId === scope.storeId,
 		);
 		const openOrders = orders.filter(
 			(order) => !['completed', 'cancelled'].includes(order.status),
@@ -182,12 +194,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	}
 
 	async updateSupplier(input: UpdateSupplierInput): Promise<Supplier> {
+		await this.assertScope(input);
 		const supplier = this.suppliers.get(input.id);
-		if (
-			!supplier ||
-			supplier.userId !== input.userId ||
-			supplier.storeId !== input.storeId
-		) {
+		if (!supplier || supplier.storeId !== input.storeId) {
 			throw new NotFoundError('Fornecedor não encontrado.');
 		}
 
@@ -218,24 +227,18 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	}
 
 	async deleteSupplier(scope: CatalogScope, supplierId: string): Promise<void> {
+		await this.assertScope(scope);
 		const supplier = this.suppliers.get(supplierId);
-		if (
-			!supplier ||
-			supplier.userId !== scope.userId ||
-			supplier.storeId !== scope.storeId
-		) {
+		if (!supplier || supplier.storeId !== scope.storeId) {
 			throw new NotFoundError('Fornecedor não encontrado.');
 		}
 		const hasPurchaseOrder = Array.from(this.purchaseOrders.values()).some(
 			(order) =>
-				order.supplierId === supplierId &&
-				order.userId === scope.userId &&
-				order.storeId === scope.storeId,
+				order.supplierId === supplierId && order.storeId === scope.storeId,
 		);
 		const hasReceiving = Array.from(this.receivings.values()).some(
 			(receiving) =>
 				receiving.supplierId === supplierId &&
-				receiving.userId === scope.userId &&
 				receiving.storeId === scope.storeId,
 		);
 		if (hasPurchaseOrder || hasReceiving) {
@@ -248,7 +251,6 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		for (const responsible of this.responsibles.values()) {
 			if (
 				responsible.supplierId === supplierId &&
-				responsible.userId === scope.userId &&
 				responsible.storeId === scope.storeId
 			) {
 				this.responsibles.delete(responsible.id);
@@ -259,6 +261,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	async createSupplierResponsible(
 		input: CreateSupplierResponsibleInput,
 	): Promise<SupplierResponsible> {
+		await this.assertScope(input);
 		await this.ensureSupplier(input, input.supplierId);
 		const now = new Date().toISOString();
 		const responsible: SupplierResponsible = {
@@ -286,11 +289,11 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		supplierId: string,
 		responsibleId: string,
 	): Promise<void> {
+		await this.assertScope(scope);
 		await this.ensureSupplier(scope, supplierId);
 		const responsible = this.responsibles.get(responsibleId);
 		if (
 			!responsible ||
-			responsible.userId !== scope.userId ||
 			responsible.storeId !== scope.storeId ||
 			responsible.supplierId !== supplierId
 		) {
@@ -304,13 +307,12 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		supplierId: string,
 	): Promise<SupplierResponsible[]> {
+		await this.assertScope(scope);
 		await this.ensureSupplier(scope, supplierId);
 		return Array.from(this.responsibles.values())
 			.filter(
 				(item) =>
-					item.userId === scope.userId &&
-					item.storeId === scope.storeId &&
-					item.supplierId === supplierId,
+					item.storeId === scope.storeId && item.supplierId === supplierId,
 			)
 			.map(clone);
 	}
@@ -318,11 +320,11 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	async updateSupplierResponsible(
 		input: UpdateSupplierResponsibleInput,
 	): Promise<SupplierResponsible> {
+		await this.assertScope(input);
 		await this.ensureSupplier(input, input.supplierId);
 		const responsible = this.responsibles.get(input.id);
 		if (
 			!responsible ||
-			responsible.userId !== input.userId ||
 			responsible.storeId !== input.storeId ||
 			responsible.supplierId !== input.supplierId
 		) {
@@ -346,6 +348,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	}
 
 	async createProduct(input: CreateProductInput): Promise<Product> {
+		await this.assertScope(input);
 		const id = randomUUID();
 		if (input.barcode) {
 			const productWithBarcode = await this.findProductByBarcode(
@@ -395,6 +398,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		productId: string,
 	): Promise<Product | null> {
+		await this.assertScope(scope);
 		const product = this.products.get(productId);
 		return product?.userId === scope.userId && product.storeId === scope.storeId
 			? clone(product)
@@ -405,6 +409,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		sku: string,
 	): Promise<Product | null> {
+		await this.assertScope(scope);
 		const product = Array.from(this.products.values()).find(
 			(item) => item.storeId === scope.storeId && item.sku === sku,
 		);
@@ -415,20 +420,57 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		barcode: string,
 	): Promise<Product | null> {
+		await this.assertScope(scope);
 		const product = Array.from(this.products.values()).find(
 			(item) => item.storeId === scope.storeId && item.barcode === barcode,
 		);
 		return product ? clone(product) : null;
 	}
 
+	async listProductsPage(scope: CatalogScope, query: CatalogListQuery = {}) {
+		await this.assertScope(scope);
+		const rows = [...this.products.values()]
+			.filter(
+				(row) =>
+					row.storeId === scope.storeId &&
+					(!query.q ||
+						`${row.name} ${row.sku} ${row.barcode ?? ''}`
+							.toLocaleLowerCase()
+							.includes(query.q.toLocaleLowerCase())) &&
+					(!query.status ||
+						query.status === 'all' ||
+						(query.status === 'inactive'
+							? row.status === 'inactive'
+							: row.status === 'active' &&
+								(query.status === 'low'
+									? row.inventoryControl === 'tracked' &&
+										row.currentStock <= row.minimumStock
+									: row.inventoryControl === query.status))),
+			)
+			.sort(
+				(a, b) =>
+					new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ||
+					b.id.localeCompare(a.id),
+			);
+		const page = query.page ?? 1,
+			perPage = query.perPage ?? 20;
+		return {
+			items: rows.slice((page - 1) * perPage, page * perPage).map(clone),
+			total: rows.length,
+			page,
+			perPage,
+			totalPages: Math.ceil(rows.length / perPage),
+		};
+	}
+
 	async listProducts(
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Product[]> {
+		await this.assertScope(scope);
 		return filterAndPaginate(
 			Array.from(this.products.values()).filter(
-				(item) =>
-					item.userId === scope.userId && item.storeId === scope.storeId,
+				(item) => item.storeId === scope.storeId,
 			),
 			query,
 			(item) => [item.name, item.sku, item.barcode, item.description],
@@ -436,12 +478,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	}
 
 	async updateProduct(input: UpdateProductInput): Promise<Product> {
+		await this.assertScope(input);
 		const product = this.products.get(input.id);
-		if (
-			!product ||
-			product.userId !== input.userId ||
-			product.storeId !== input.storeId
-		) {
+		if (!product || product.storeId !== input.storeId) {
 			throw new NotFoundError('Produto não encontrado.');
 		}
 
@@ -499,12 +538,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	async createInventoryAdjustment(
 		input: CreateInventoryAdjustmentInput,
 	): Promise<InventoryMovement> {
+		await this.assertScope(input);
 		const product = this.products.get(input.productId);
-		if (
-			!product ||
-			product.userId !== input.userId ||
-			product.storeId !== input.storeId
-		) {
+		if (!product || product.storeId !== input.storeId) {
 			throw new NotFoundError('Produto não encontrado.');
 		}
 		if (product.inventoryControl === 'untracked') {
@@ -552,10 +588,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		productId?: string,
 	): Promise<InventoryMovement[]> {
+		await this.assertScope(scope);
 		return Array.from(this.movements.values())
 			.filter(
 				(item) =>
-					item.userId === scope.userId &&
 					item.storeId === scope.storeId &&
 					(!productId || item.productId === productId),
 			)
@@ -565,6 +601,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	async createPurchaseOrder(
 		input: CreatePurchaseOrderInput,
 	): Promise<PurchaseOrder> {
+		await this.assertScope(input);
 		await this.ensureSupplier(input, input.supplierId);
 
 		for (const item of input.items) {
@@ -617,10 +654,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<PurchaseOrder[]> {
+		await this.assertScope(scope);
 		return filterAndPaginate(
 			Array.from(this.purchaseOrders.values()).filter(
 				(item) =>
-					item.userId === scope.userId &&
 					item.storeId === scope.storeId &&
 					(!query.supplierId || item.supplierId === query.supplierId),
 			),
@@ -632,12 +669,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	async updatePurchaseOrder(
 		input: UpdatePurchaseOrderInput,
 	): Promise<PurchaseOrder> {
+		await this.assertScope(input);
 		const order = this.purchaseOrders.get(input.id);
-		if (
-			!order ||
-			order.userId !== input.userId ||
-			order.storeId !== input.storeId
-		) {
+		if (!order || order.storeId !== input.storeId) {
 			throw new NotFoundError('Pedido de compra não encontrado.');
 		}
 
@@ -656,6 +690,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	}
 
 	async createReceiving(input: CreateReceivingInput): Promise<Receiving> {
+		await this.assertScope(input);
 		await this.ensureSupplier(input, input.supplierId);
 
 		let itemsCount = 0;
@@ -663,8 +698,8 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 			const order = this.purchaseOrders.get(input.purchaseOrderId);
 			if (
 				!order ||
-				order.userId !== input.userId ||
-				order.storeId !== input.storeId
+				order.storeId !== input.storeId ||
+				order.supplierId !== input.supplierId
 			) {
 				throw new NotFoundError('Pedido de compra não encontrado.');
 			}
@@ -699,10 +734,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		scope: CatalogScope,
 		query: CatalogListQuery = {},
 	): Promise<Receiving[]> {
+		await this.assertScope(scope);
 		return filterAndPaginate(
 			Array.from(this.receivings.values()).filter(
 				(item) =>
-					item.userId === scope.userId &&
 					item.storeId === scope.storeId &&
 					(!query.supplierId || item.supplierId === query.supplierId),
 			),
@@ -712,12 +747,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	}
 
 	async updateReceiving(input: UpdateReceivingInput): Promise<Receiving> {
+		await this.assertScope(input);
 		const receiving = this.receivings.get(input.id);
-		if (
-			!receiving ||
-			receiving.userId !== input.userId ||
-			receiving.storeId !== input.storeId
-		) {
+		if (!receiving || receiving.storeId !== input.storeId) {
 			throw new NotFoundError('Recebimento não encontrado.');
 		}
 
@@ -741,12 +773,9 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 	async prepareProductImageUpload(
 		input: PrepareProductImageUploadInput,
 	): Promise<PreparedProductImageUpload> {
+		await this.assertScope(input);
 		const product = this.products.get(input.productId);
-		if (
-			!product ||
-			product.userId !== input.userId ||
-			product.storeId !== input.storeId
-		) {
+		if (!product || product.storeId !== input.storeId) {
 			throw new NotFoundError('Produto não encontrado.');
 		}
 
@@ -794,6 +823,7 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 		productId: string,
 		assetId: string,
 	): Promise<void> {
+		await this.assertScope(scope);
 		const product = this.products.get(productId);
 		const asset = product?.images.find((image) => image.id === assetId);
 		if (

@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { createPage } from '../../../../shared/pagination';
 import type {
 	AccountStatus,
@@ -25,7 +25,7 @@ export class PrismaUserRepository implements UserRepository {
 	}
 
 	async findMany(params: FindManyUsersParams): Promise<FindManyUsersResult> {
-		const where = params.filter?.trim()
+		const filterWhere = params.filter?.trim()
 			? {
 					OR: [
 						{
@@ -43,6 +43,11 @@ export class PrismaUserRepository implements UserRepository {
 					],
 				}
 			: undefined;
+
+		const where: Prisma.UserWhereInput = {
+			...filterWhere,
+			...(params.userIds ? { id: { in: params.userIds } } : {}),
+		};
 
 		const [data, total] = await Promise.all([
 			this.prisma.user.findMany({
@@ -59,8 +64,8 @@ export class PrismaUserRepository implements UserRepository {
 		return createPage(data.map(toDomainUser), total, params);
 	}
 
-	async count(filter?: string): Promise<number> {
-		const where = filter?.trim()
+	async count(filter?: string, userIds?: string[]): Promise<number> {
+		const filterWhere = filter?.trim()
 			? {
 					OR: [
 						{
@@ -79,7 +84,9 @@ export class PrismaUserRepository implements UserRepository {
 				}
 			: undefined;
 
-		return this.prisma.user.count({ where });
+		return this.prisma.user.count({
+			where: { ...filterWhere, ...(userIds ? { id: { in: userIds } } : {}) },
+		});
 	}
 
 	async create(
@@ -109,7 +116,39 @@ export class PrismaUserRepository implements UserRepository {
 
 		const updated = await this.prisma.user.update({
 			where: { id },
-			data: user,
+			data: {
+				...user,
+				...(user.role
+					? {
+							tenantMemberships: {
+								updateMany: {
+									where: {},
+									data: {
+										role:
+											user.role === 'ROLE_SUPER_ADMIN'
+												? 'ADMIN'
+												: user.role.replace('ROLE_', ''),
+									},
+								},
+							},
+						}
+					: {}),
+				...(user.role
+					? {
+							storeMemberships: {
+								updateMany: {
+									where: {},
+									data: {
+										role:
+											user.role === 'ROLE_SUPER_ADMIN'
+												? 'ADMIN'
+												: user.role.replace('ROLE_', ''),
+									},
+								},
+							},
+						}
+					: {}),
+			},
 		});
 
 		return toDomainUser(updated);

@@ -7,7 +7,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 const meta = {
   title: "Components/Navigation/Pagination",

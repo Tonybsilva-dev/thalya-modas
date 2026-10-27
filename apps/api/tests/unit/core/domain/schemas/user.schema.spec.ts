@@ -10,6 +10,22 @@ import {
 } from '../../../../../src/core/domain/schemas/user.schema';
 
 describe('userSchema', () => {
+	it.each(Object.values(UserRole))('accepts the supported role %s', (role) => {
+		const now = new Date();
+		expect(
+			userSchema.safeParse({
+				id: '1e02e2b8-8ab8-4aa0-9a46-3c2b0bbf5b1b',
+				name: 'John Doe',
+				email: 'john@example.com',
+				passwordHash: 'hashed',
+				role,
+				accountStatus: AccountStatus.ACTIVE,
+				createdAt: now,
+				updatedAt: now,
+			}).success,
+		).toBe(true);
+	});
+
 	it('should validate a valid user object', () => {
 		const now = new Date();
 
@@ -53,7 +69,7 @@ describe('userSchema', () => {
 			name: 'John Doe',
 			email: 'john@example.com',
 			passwordHash: 'hashed:super-secret',
-			role: 'ROLE_MANAGER',
+			role: 'ROLE_UNKNOWN',
 			accountStatus: AccountStatus.ACTIVE,
 			createdAt: now,
 			updatedAt: now,

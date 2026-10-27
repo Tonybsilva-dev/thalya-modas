@@ -14,7 +14,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-none border border-input bg-card px-3 py-2 text-sm text-foreground shadow-none outline-none transition-[border-color,box-shadow] duration-base ease-nitro placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "flex h-10 w-full items-center justify-between gap-2 rounded-none border border-input bg-card px-3 py-2 text-left text-sm text-foreground shadow-none outline-none transition-[border-color,box-shadow] duration-base ease-nitro placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:min-h-11 [&>span]:min-w-0 [&>span]:flex-1 [&>span]:truncate",
       className,
     )}
     {...props}
@@ -23,7 +23,7 @@ const SelectTrigger = React.forwardRef<
     <SelectPrimitive.Icon asChild>
       <svg
         aria-hidden="true"
-        className="size-4 opacity-70"
+        className="size-4 shrink-0 opacity-70"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"

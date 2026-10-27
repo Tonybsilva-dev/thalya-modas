@@ -28,12 +28,12 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve solicitar código para e-mail existente sem expor existência da conta', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
+		await createUser('ana@storeflow.example', 'OldPassword1');
 
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/request',
-			body: { email: 'ANA@THALYAMODAS.COM ' },
+			body: { email: 'ANA@storeflow.example ' },
 		});
 
 		expect(response.statusCode).toBe(202);
@@ -51,7 +51,7 @@ describe('Password recovery - Integração', () => {
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/request',
-			body: { email: 'missing@thalyamodas.com' },
+			body: { email: 'missing@storeflow.example' },
 		});
 
 		expect(response.statusCode).toBe(202);
@@ -75,11 +75,11 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve invalidar código anterior em nova solicitação', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const firstRequest = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const firstRequest = await requestRecoveryCode('ana@storeflow.example');
 		const firstCode = (firstRequest.body as { debugCode: string }).debugCode;
 
-		const secondRequest = await requestRecoveryCode('ana@thalyamodas.com');
+		const secondRequest = await requestRecoveryCode('ana@storeflow.example');
 		const secondCode = (secondRequest.body as { debugCode: string }).debugCode;
 
 		expect(secondCode).toMatch(/^\d{6}$/);
@@ -87,23 +87,23 @@ describe('Password recovery - Integração', () => {
 		const oldCodeResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code: firstCode },
+			body: { email: 'ana@storeflow.example', code: firstCode },
 		});
 		expect(oldCodeResponse.statusCode).toBe(401);
 
 		const newCodeResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code: secondCode },
+			body: { email: 'ana@storeflow.example', code: secondCode },
 		});
 		expect(newCodeResponse.statusCode).toBe(200);
 	});
 
 	it('deve gerar código com expiração de 10 minutos', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const response = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const response = await requestRecoveryCode('ana@storeflow.example');
 		const request = await passwordRecoveryRepository.findActiveByEmail(
-			'ana@thalyamodas.com',
+			'ana@storeflow.example',
 		);
 
 		expect(response.statusCode).toBe(202);
@@ -116,14 +116,14 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve validar código e redefinir senha', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const requestResponse = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const requestResponse = await requestRecoveryCode('ana@storeflow.example');
 		const code = (requestResponse.body as { debugCode: string }).debugCode;
 
 		const verifyResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code },
+			body: { email: 'ana@storeflow.example', code },
 		});
 
 		expect(verifyResponse.statusCode).toBe(200);
@@ -148,7 +148,7 @@ describe('Password recovery - Integração', () => {
 			method: 'POST',
 			url: '/auth/login',
 			body: {
-				email: 'ana@thalyamodas.com',
+				email: 'ana@storeflow.example',
 				password: 'OldPassword1',
 			},
 		});
@@ -158,7 +158,7 @@ describe('Password recovery - Integração', () => {
 			method: 'POST',
 			url: '/auth/login',
 			body: {
-				email: 'ana@thalyamodas.com',
+				email: 'ana@storeflow.example',
 				password: 'NewPassword1',
 			},
 		});
@@ -166,14 +166,14 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve rejeitar código inválido', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		await requestRecoveryCode('ana@storeflow.example');
 
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
 			body: {
-				email: 'ana@thalyamodas.com',
+				email: 'ana@storeflow.example',
 				code: '000000',
 			},
 		});
@@ -185,11 +185,11 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve rejeitar código expirado', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const requestResponse = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const requestResponse = await requestRecoveryCode('ana@storeflow.example');
 		const code = (requestResponse.body as { debugCode: string }).debugCode;
 		const request = await passwordRecoveryRepository.findActiveByEmail(
-			'ana@thalyamodas.com',
+			'ana@storeflow.example',
 		);
 		if (!request) throw new Error('Recovery request not found');
 		await passwordRecoveryRepository.update(request.id, {
@@ -199,7 +199,7 @@ describe('Password recovery - Integração', () => {
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code },
+			body: { email: 'ana@storeflow.example', code },
 		});
 
 		expect(response.statusCode).toBe(401);
@@ -209,35 +209,35 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve impedir reutilização de código já usado', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const requestResponse = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const requestResponse = await requestRecoveryCode('ana@storeflow.example');
 		const code = (requestResponse.body as { debugCode: string }).debugCode;
 
 		const firstResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code },
+			body: { email: 'ana@storeflow.example', code },
 		});
 		expect(firstResponse.statusCode).toBe(200);
 
 		const secondResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code },
+			body: { email: 'ana@storeflow.example', code },
 		});
 		expect(secondResponse.statusCode).toBe(401);
 	});
 
 	it('deve bloquear fluxo após muitas tentativas inválidas', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const requestResponse = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const requestResponse = await requestRecoveryCode('ana@storeflow.example');
 		const code = (requestResponse.body as { debugCode: string }).debugCode;
 
 		for (let attempt = 0; attempt < 5; attempt += 1) {
 			const response = await makeRequest(server, {
 				method: 'POST',
 				url: '/auth/password-recovery/verify-code',
-				body: { email: 'ana@thalyamodas.com', code: '000000' },
+				body: { email: 'ana@storeflow.example', code: '000000' },
 			});
 			expect(response.statusCode).toBe(401);
 		}
@@ -245,19 +245,19 @@ describe('Password recovery - Integração', () => {
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code },
+			body: { email: 'ana@storeflow.example', code },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
 	it('deve impedir reenvio antes do cooldown', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		await requestRecoveryCode('ana@storeflow.example');
 
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/resend-code',
-			body: { email: 'ana@thalyamodas.com' },
+			body: { email: 'ana@storeflow.example' },
 		});
 
 		expect(response.statusCode).toBe(400);
@@ -268,11 +268,11 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve reenviar após cooldown, criar novo código e invalidar anterior', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const firstRequest = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const firstRequest = await requestRecoveryCode('ana@storeflow.example');
 		const firstCode = (firstRequest.body as { debugCode: string }).debugCode;
 		const request = await passwordRecoveryRepository.findActiveByEmail(
-			'ana@thalyamodas.com',
+			'ana@storeflow.example',
 		);
 		if (!request) throw new Error('Recovery request not found');
 		await passwordRecoveryRepository.update(request.id, {
@@ -282,7 +282,7 @@ describe('Password recovery - Integração', () => {
 		const resendResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/resend-code',
-			body: { email: 'ana@thalyamodas.com' },
+			body: { email: 'ana@storeflow.example' },
 		});
 		expect(resendResponse.statusCode).toBe(202);
 		const secondCode = (resendResponse.body as { debugCode: string }).debugCode;
@@ -291,14 +291,14 @@ describe('Password recovery - Integração', () => {
 		const oldCodeResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code: firstCode },
+			body: { email: 'ana@storeflow.example', code: firstCode },
 		});
 		expect(oldCodeResponse.statusCode).toBe(401);
 
 		const newCodeResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code: secondCode },
+			body: { email: 'ana@storeflow.example', code: secondCode },
 		});
 		expect(newCodeResponse.statusCode).toBe(200);
 	});
@@ -351,13 +351,13 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve rejeitar token expirado no reset', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const requestResponse = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const requestResponse = await requestRecoveryCode('ana@storeflow.example');
 		const code = (requestResponse.body as { debugCode: string }).debugCode;
 		const verifyResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code },
+			body: { email: 'ana@storeflow.example', code },
 		});
 		const resetToken = (verifyResponse.body as { resetToken: string })
 			.resetToken;
@@ -382,13 +382,13 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve impedir reutilização de token já usado', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const requestResponse = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const requestResponse = await requestRecoveryCode('ana@storeflow.example');
 		const code = (requestResponse.body as { debugCode: string }).debugCode;
 		const verifyResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code },
+			body: { email: 'ana@storeflow.example', code },
 		});
 		const resetToken = (verifyResponse.body as { resetToken: string })
 			.resetToken;
@@ -425,7 +425,7 @@ describe('Password recovery - Integração', () => {
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/request',
-			body: { email: 'ana@thalyamodas.com' },
+			body: { email: 'ana@storeflow.example' },
 		});
 
 		expect(response.statusCode).toBe(403);
@@ -438,13 +438,13 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve bloquear request pelo kill switch específico sem criar código', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
+		await createUser('ana@storeflow.example', 'OldPassword1');
 		await recreateServerWithFlags({ 'passwordRecovery.request': false });
 
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/request',
-			body: { email: 'ana@thalyamodas.com' },
+			body: { email: 'ana@storeflow.example' },
 		});
 
 		expect(response.statusCode).toBe(403);
@@ -452,22 +452,24 @@ describe('Password recovery - Integração', () => {
 			(response.body as { details: { feature: string } }).details.feature,
 		).toBe('passwordRecovery.request');
 		expect(
-			await passwordRecoveryRepository.findActiveByEmail('ana@thalyamodas.com'),
+			await passwordRecoveryRepository.findActiveByEmail(
+				'ana@storeflow.example',
+			),
 		).toBeNull();
 	});
 
 	it('deve bloquear verify-code pelo kill switch específico sem consumir tentativa', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		await requestRecoveryCode('ana@storeflow.example');
 		await recreateServerWithFlags({ 'passwordRecovery.verifyCode': false });
 
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code: '000000' },
+			body: { email: 'ana@storeflow.example', code: '000000' },
 		});
 		const activeRequest = await passwordRecoveryRepository.findActiveByEmail(
-			'ana@thalyamodas.com',
+			'ana@storeflow.example',
 		);
 
 		expect(response.statusCode).toBe(403);
@@ -478,18 +480,18 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve bloquear resend-code pelo kill switch específico sem invalidar código atual', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const requestResponse = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const requestResponse = await requestRecoveryCode('ana@storeflow.example');
 		const code = (requestResponse.body as { debugCode: string }).debugCode;
 		await recreateServerWithFlags({ 'passwordRecovery.resendCode': false });
 
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/resend-code',
-			body: { email: 'ana@thalyamodas.com' },
+			body: { email: 'ana@storeflow.example' },
 		});
 		const activeRequest = await passwordRecoveryRepository.findActiveByEmail(
-			'ana@thalyamodas.com',
+			'ana@storeflow.example',
 		);
 
 		expect(response.statusCode).toBe(403);
@@ -501,13 +503,13 @@ describe('Password recovery - Integração', () => {
 	});
 
 	it('deve bloquear reset pelo kill switch específico sem alterar senha nem consumir token', async () => {
-		await createUser('ana@thalyamodas.com', 'OldPassword1');
-		const requestResponse = await requestRecoveryCode('ana@thalyamodas.com');
+		await createUser('ana@storeflow.example', 'OldPassword1');
+		const requestResponse = await requestRecoveryCode('ana@storeflow.example');
 		const code = (requestResponse.body as { debugCode: string }).debugCode;
 		const verifyResponse = await makeRequest(server, {
 			method: 'POST',
 			url: '/auth/password-recovery/verify-code',
-			body: { email: 'ana@thalyamodas.com', code },
+			body: { email: 'ana@storeflow.example', code },
 		});
 		const resetToken = (verifyResponse.body as { resetToken: string })
 			.resetToken;
@@ -523,7 +525,7 @@ describe('Password recovery - Integração', () => {
 			},
 		});
 		const activeRequest = await passwordRecoveryRepository.findActiveByEmail(
-			'ana@thalyamodas.com',
+			'ana@storeflow.example',
 		);
 
 		expect(response.statusCode).toBe(403);
@@ -536,7 +538,7 @@ describe('Password recovery - Integração', () => {
 			method: 'POST',
 			url: '/auth/login',
 			body: {
-				email: 'ana@thalyamodas.com',
+				email: 'ana@storeflow.example',
 				password: 'OldPassword1',
 			},
 		});

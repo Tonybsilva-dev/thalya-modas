@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { SupplierPanelLink as Link, SupplierPanelContext } from "./supplier-panel-link";
+import { useSupplierFlowStore } from "../application/supplier-flow-store";
+import { SupplierPanel } from "./supplier-panel";
+import { useAppUiStore } from "@/src/shared/state/app-ui-store";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -21,6 +24,7 @@ import {
 import {
   Badge,
   Button,
+  PageHeader,
   Card,
   CardContent,
   Checkbox,
@@ -38,9 +42,9 @@ import {
   TableHeader,
   TableRow,
   cn,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import { useLocale } from "next-intl";
-import { parseAsString, useQueryState } from "nuqs";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { ApiRequestError } from "@/src/shared/api/http-client";
 import { normalizeLocale } from "@/src/shared/i18n/locales";
@@ -60,23 +64,12 @@ import {
 } from "../application/suppliers-api";
 import {
   BoxIcon,
-  ChartIcon,
   CheckIcon,
-  ClockIcon,
   PlusIcon,
   SearchIcon,
 } from "../../overview/presentation/dashboard-icons";
 import { DashboardShell } from "../../shared/presentation/dashboard-shell";
 import { suppliersContentByLocale } from "../domain/suppliers-content";
-
-const toneStyles: Record<string, string> = {
-  success: "bg-success text-success-foreground",
-  info: "bg-info text-info-foreground",
-  warning: "bg-warning text-warning-foreground",
-  muted: "bg-muted text-muted-foreground",
-};
-
-const metricIcons = [BoxIcon, CheckIcon, ClockIcon, ChartIcon];
 
 type Locale = "en" | "es" | "pt-BR";
 
@@ -88,6 +81,7 @@ function useSuppliersBasePath() {
 }
 
 function useSuppliersWorkspace() {
+  const activeStoreId = useAppUiStore(state => state.activeStore?.id);
   const locale = normalizeLocale(useLocale());
   const filters = useSuppliersFilters();
   const [selectedId, setSelectedId] = useQueryState("supplier", parseAsString);
@@ -98,7 +92,7 @@ function useSuppliersWorkspace() {
     status: filters.status,
   };
   const suppliersQuery = useQuery({
-    queryKey: ["suppliers", "list", listQuery],
+    queryKey: ["suppliers", activeStoreId, "list", listQuery],
     queryFn: () => listSuppliers(listQuery),
   });
   const suppliers = suppliersQuery.data ?? [];
@@ -107,6 +101,7 @@ function useSuppliersWorkspace() {
       suppliersQuery.isSuccess && suppliers.length === filters.perPage,
     queryKey: [
       "suppliers",
+      activeStoreId,
       "next-page",
       filters.page,
       filters.perPage,
@@ -116,18 +111,18 @@ function useSuppliersWorkspace() {
     queryFn: () =>
       listSuppliers({
         page: filters.page + 1,
-        perPage: 1,
+        perPage: filters.perPage,
         q: filters.q,
         status: filters.status,
       }),
   });
   const summaryQuery = useQuery({
-    queryKey: ["suppliers", "operational-summary"],
+    queryKey: ["suppliers", activeStoreId, "operational-summary"],
     queryFn: getSupplierOperationalSummary,
   });
   const selectedSupplierQuery = useQuery({
     enabled: Boolean(selectedId),
-    queryKey: ["suppliers", "detail", selectedId],
+    queryKey: ["suppliers", activeStoreId, "detail", selectedId],
     queryFn: () => getSupplier(selectedId as string),
   });
   const selectedSupplier =
@@ -136,7 +131,7 @@ function useSuppliersWorkspace() {
     suppliers[0];
   const ordersQuery = useQuery({
     enabled: Boolean(selectedSupplier?.id),
-    queryKey: ["purchase-orders", "supplier", selectedSupplier?.id],
+    queryKey: ["purchase-orders", activeStoreId, "supplier", selectedSupplier?.id],
     queryFn: () =>
       listPurchaseOrders({
         page: 1,
@@ -146,7 +141,7 @@ function useSuppliersWorkspace() {
   });
   const receivingsQuery = useQuery({
     enabled: Boolean(selectedSupplier?.id),
-    queryKey: ["receivings", "supplier", selectedSupplier?.id],
+    queryKey: ["receivings", activeStoreId, "supplier", selectedSupplier?.id],
     queryFn: () =>
       listReceivings({
         page: 1,
@@ -192,33 +187,9 @@ function SuppliersHeader({
   const { header } = suppliersContentByLocale[locale];
   const basePath = useSuppliersBasePath();
 
-  return (
-    <header className="grid min-w-0 max-w-full gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-      <div className="grid min-w-0 gap-1.5">
-        <h1 className="text-2xl font-semibold leading-tight text-foreground md:text-[28px]">
-          {header.title}
-        </h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {header.description}
-        </p>
-      </div>
-
-      <div className="flex min-w-0 flex-wrap gap-3">
-        <Button asChild className="h-11 justify-center px-4" variant="outline">
-          <Link href={`${basePath}/purchase-orders/create`}>
-            <PlusIcon className="size-4" />
-            {getText(locale, "newOrder")}
-          </Link>
-        </Button>
-        <Button asChild className="h-11 justify-center px-4">
-          <Link href={`${basePath}/create`}>
-            <PlusIcon className="size-4" />
-            {header.actionLabel}
-          </Link>
-        </Button>
-      </div>
-    </header>
-  );
+  return <PageHeader title={header.title} description={header.description}
+    actions={<Button asChild variant="outline"><Link href={`${basePath}/purchase-orders/create`}><PlusIcon aria-hidden="true" className="size-4" />{getText(locale, "newOrder")}</Link></Button>}
+    primaryAction={<Button asChild><Link href={`${basePath}/create`}><PlusIcon aria-hidden="true" className="size-4" />{header.actionLabel}</Link></Button>} />;
 }
 
 function SupplierSearch({
@@ -304,44 +275,7 @@ function SupplierMetrics({
     ],
   ];
 
-  return (
-    <section className="grid min-w-0 max-w-full gap-4 sm:grid-cols-2 2xl:grid-cols-4">
-      {metrics.map(([label, value, description, tone], index) => {
-        const Icon = metricIcons[index] ?? ChartIcon;
-
-        return (
-          <Card key={label} className="min-w-0 max-w-full animate-nitro-scale-in">
-            <CardContent className="grid min-w-0 gap-3 p-4">
-              <div className="flex items-center gap-3">
-                <p className="flex-1 text-sm text-muted-foreground">{label}</p>
-                <div
-                  className={cn(
-                    "flex size-8 items-center justify-center",
-                    toneStyles[tone],
-                  )}
-                >
-                  <Icon className="size-4" />
-                </div>
-              </div>
-              {isLoading ? (
-                <>
-                  <div className="h-7 w-16 animate-pulse bg-muted" />
-                  <div className="h-3 w-28 animate-pulse bg-muted" />
-                </>
-              ) : (
-                <>
-                  <strong className="text-[26px] font-semibold leading-none text-foreground">
-                    {value}
-                  </strong>
-                  <p className="text-xs text-muted-foreground">{description}</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </section>
-  );
+  return <dl className="flex flex-wrap gap-x-6 gap-y-2 border-y py-3">{metrics.map(([label, value, description]) => <div key={label} className="flex items-baseline gap-2" title={description}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="text-base font-semibold tabular-nums">{isLoading ? '…' : value}</dd></div>)}</dl>;
 }
 
 function SupplierFilterBar({
@@ -1135,7 +1069,11 @@ function NoticeBanner({ locale, notice }: { locale: Locale; notice?: string | nu
 export function SuppliersRoute() {
   const queryClient = useQueryClient();
   const workspace = useSuppliersWorkspace();
-  const [notice] = useQueryState("notice", parseAsString);
+  const [notice, setNotice] = useQueryState("notice", parseAsString);
+  const [panelAction, setPanelAction] = useQueryState("supplierAction", parseAsStringLiteral(["create", "edit", "contacts", "delete"] as const));
+  const storeId = useAppUiStore(state => state.activeStore?.id);
+  const resetSupplierFlow = useSupplierFlowStore(state => state.resetFlow);
+  function closePanel() { resetSupplierFlow(); void setPanelAction(null); void queryClient.invalidateQueries({ queryKey: ["suppliers"] }); }
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [bulkNotice, setBulkNotice] = useState<string | null>(null);
@@ -1212,6 +1150,7 @@ export function SuppliersRoute() {
   }
 
   return (
+    <SupplierPanelContext.Provider value={(action, id) => { if (action === "create") resetSupplierFlow(); if (id) void workspace.setSelectedId(id); void setPanelAction(action); }}>
     <DashboardShell
       activeItem="Suppliers"
       operatorRole={content.sidebar.operatorRole}
@@ -1253,7 +1192,7 @@ export function SuppliersRoute() {
         className={cn(
           "grid min-h-0 min-w-0 max-w-full gap-5",
           selectedSuppliers.length === 0 &&
-            "2xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]",
+            "grid-cols-1",
         )}
       >
         <div className="grid min-w-0 max-w-full content-start gap-3">
@@ -1303,16 +1242,26 @@ export function SuppliersRoute() {
           ) : null}
         </div>
         {selectedSuppliers.length === 0 ? (
-          <SupplierDetailRail
+          <details className="min-w-0"><summary className="cursor-pointer py-2 text-sm font-medium">Detalhes do fornecedor selecionado</summary><SupplierDetailRail
             isLoading={workspace.isOperationalLoading}
             locale={workspace.locale}
             orders={workspace.orders}
             receivings={workspace.receivings}
             supplier={workspace.selectedSupplier}
-          />
+          /></details>
         ) : null}
       </div>
+      {panelAction && <SupplierPanel key={`${storeId}:${panelAction}:${workspace.selectedId ?? "new"}`} action={panelAction} supplierId={panelAction === "create" ? undefined : workspace.selectedId ?? undefined} onClose={closePanel} onSaved={(notice, id) => {
+        void setNotice(notice);
+        if (notice === "deleted") {
+          const removedId = workspace.selectedId;
+          setSelectedRows(current => { const next = new Set(current); if (removedId) next.delete(removedId); return next; });
+          void workspace.setSelectedId(null);
+        } else if (id) void workspace.setSelectedId(id);
+        closePanel();
+      }} />}
     </DashboardShell>
+    </SupplierPanelContext.Provider>
   );
 }
 
@@ -1360,7 +1309,8 @@ function downloadSuppliersCsv(suppliers: Supplier[], locale: Locale) {
 function formatMoney(locale: Locale, value: number) {
   return new Intl.NumberFormat(locale, {
     currency: "BRL",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
     style: "currency",
   }).format(value);
 }

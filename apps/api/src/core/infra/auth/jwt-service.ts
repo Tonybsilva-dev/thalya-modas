@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import type { UserRole } from '../../domain/entities/user';
+import type { AccessSecurity } from './access-security';
 
 /**
  * Payload do token JWT
@@ -9,6 +11,9 @@ export interface JWTPayload {
 	email: string;
 	role: UserRole;
 	iat?: number;
+	jti?: string;
+	issuedAt?: number;
+	sessionVersion?: string;
 	exp?: number;
 }
 
@@ -32,6 +37,7 @@ export interface JWTValidationResult {
  * Serviço para geração e validação de tokens JWT
  */
 export class JWTService {
+	public security?: AccessSecurity;
 	constructor(
 		private readonly secret: string,
 		private readonly defaultExpiresIn: string = '7d',
@@ -61,6 +67,9 @@ export class JWTService {
 			userId: payload.userId,
 			email: payload.email,
 			role: payload.role,
+			jti: randomUUID(),
+			issuedAt: Date.now(),
+			sessionVersion: payload.sessionVersion,
 		};
 
 		const expiresIn = options?.expiresIn || this.defaultExpiresIn;
@@ -74,7 +83,14 @@ export class JWTService {
 			signOptions.expiresIn = expiresIn;
 		}
 
-		return jwt.sign(tokenPayload, this.secret, signOptions);
+		const token = jwt.sign(tokenPayload, this.secret, signOptions);
+		const decoded = jwt.decode(token) as JWTPayload;
+		if ((decoded.exp ?? 0) - (decoded.iat ?? 0) > 30 * 24 * 3600)
+			return jwt.sign(tokenPayload, this.secret, {
+				...signOptions,
+				expiresIn: 30 * 24 * 3600,
+			});
+		return token;
 	}
 
 	/**
@@ -109,6 +125,11 @@ export class JWTService {
 					userId: decoded.userId,
 					email: decoded.email,
 					role: decoded.role,
+					jti: decoded.jti,
+					issuedAt: decoded.issuedAt,
+					sessionVersion: decoded.sessionVersion,
+					exp: decoded.exp,
+					iat: decoded.iat,
 				},
 			};
 		} catch (error) {

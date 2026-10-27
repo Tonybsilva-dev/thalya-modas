@@ -1,5 +1,7 @@
 import type { FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
+import { AccountStatus } from '../../../core/domain/entities/user';
+import type { UserRepository } from '../../../core/domain/repositories/user-repository';
 import type { JWTService } from '../../../core/infra/auth/jwt-service';
 import { getAuthSessionTokenFromCookieHeader } from '../auth-session-cookie';
 import { AuthError } from '../errors/auth-error';
@@ -26,6 +28,7 @@ export async function authMiddleware(
 	request: FastifyRequest,
 	_reply: unknown,
 	jwtService: JWTService,
+	userRepository?: UserRepository,
 ) {
 	const requestHeaders = (
 		request as { headers?: Record<string, string | string[] | undefined> }
@@ -48,6 +51,16 @@ export async function authMiddleware(
 
 	if (!validation.valid || !validation.payload) {
 		throw new AuthError(validation.error || 'Token inválido');
+	}
+
+	await jwtService.security?.assertSession(token, validation.payload);
+
+	if (userRepository) {
+		const current = await userRepository.findById(validation.payload.userId);
+		if (!current || current.accountStatus !== AccountStatus.ACTIVE)
+			throw new AuthError('Conta inativa ou inexistente.');
+		validation.payload.role = current.role;
+		validation.payload.email = current.email;
 	}
 
 	// Adiciona dados do usuário ao request

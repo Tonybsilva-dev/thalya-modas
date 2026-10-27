@@ -6,6 +6,7 @@ import {
 } from "../i18n/locale-cookie";
 import { defaultLocale, type AppLocale } from "../i18n/locales";
 import {
+  clearLastStoreCookie,
   getLastStoreFromCookie,
   saveLastStoreCookie,
   type LastStore,
@@ -61,6 +62,7 @@ export const useAppUiStore = create<AppUiState>((set) => ({
   openMobileNavigation: () => set({ isMobileNavigationOpen: true }),
   setActiveStore: (store) => {
     if (store) saveLastStoreCookie(store);
+    else clearLastStoreCookie();
     set({
       activeStore: store,
       locale: store?.language ?? getInitialLocale(),

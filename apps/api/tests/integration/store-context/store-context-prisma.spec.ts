@@ -85,7 +85,7 @@ describe.skipIf(!runPrismaTests)(
 			const denied = await getOverview(member.token, store.id);
 			expect(denied.statusCode).toBe(403);
 			expect(denied.body).toMatchObject({
-				code: 'TM-AUTHZ-403',
+				code: 'SF-AUTHZ-403',
 				error: 'ForbiddenError',
 			});
 		});
@@ -93,7 +93,7 @@ describe.skipIf(!runPrismaTests)(
 		async function register(label: string) {
 			const response = await makeRequest(server, {
 				body: {
-					email: `${testEmailPrefix}-${label}-${randomUUID()}@thalya.test`,
+					email: `${testEmailPrefix}-${label}-${randomUUID()}@storeflow.test`,
 					name: `Prisma ${label}`,
 					password: 'Secure123',
 				},

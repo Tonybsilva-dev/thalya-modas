@@ -7,7 +7,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 export function SupplierBreadcrumb({
   basePath,

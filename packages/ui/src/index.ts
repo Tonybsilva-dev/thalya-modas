@@ -4,6 +4,8 @@ export {
   AccordionItem,
   AccordionTrigger,
 } from "./components/accordion";
+export { PageLayout, PageHeader, PageToolbar, PageSection, FormActions } from "./components/page-layout";
+export type { PageHeaderProps } from "./components/page-layout";
 export {
   Alert,
   AlertDescription,
@@ -121,7 +123,7 @@ export {
 } from "./components/empty-state";
 export { IconButton } from "./components/icon-button";
 export type { IconButtonProps } from "./components/icon-button";
-export { Input } from "./components/input";
+export { Input, CurrencyInput } from "./components/input";
 export {
   InputOTP,
   InputOTPGroup,
@@ -195,3 +197,9 @@ export {
 } from "./components/toggle-button";
 export type { ToggleButtonProps } from "./components/toggle-button";
 export { cn } from "./lib/utils";
+export { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetBody, SheetFooter, SheetTitle, SheetDescription } from "./components/sheet";
+export { ConfirmDialog } from "@trinketos/ui/confirm-dialog";
+export { StatCard } from "./components/stat-card";
+export type { StatCardProps } from "./components/stat-card";
+export { DistributionChart } from "./components/distribution-chart";
+export type { DistributionSlice } from "./components/distribution-chart";

@@ -8,10 +8,13 @@ import {
 	createRequestSchema,
 	createResponseSchema,
 } from '../../../shared/utils/zod-to-json-schema';
+import { administrativeOperation } from '../administrative-operation';
 import type { AppContainer } from '../container';
 import { ForbiddenError } from '../errors/forbidden-error';
 import { NotFoundError } from '../errors/not-found-error';
 import { authMiddleware } from '../middlewares/auth';
+import { storeContextMiddleware } from '../middlewares/store-context';
+import { pageSchema, paginationQuery } from '../pagination';
 
 const checkEmailQuerySchema = z.object({
 	email: z.string().email('Email inválido'),
@@ -158,11 +161,11 @@ function toUserResponse(user: {
 }
 
 function canListUsers(role: string): boolean {
-	return role === UserRole.SUPER_ADMIN || role === UserRole.COMPANY;
+	return role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN;
 }
 
 function canManageUser(role: string): boolean {
-	return role === UserRole.SUPER_ADMIN || role === UserRole.COMPANY;
+	return role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN;
 }
 
 export async function userRoutes(
@@ -177,6 +180,73 @@ export async function userRoutes(
 	}
 
 	const repo = container.userRepository;
+
+	async function scopedUserIds(
+		request: FastifyRequest,
+	): Promise<string[] | undefined> {
+		if (request.user?.role === UserRole.SUPER_ADMIN) return undefined;
+		if (request.user?.role !== UserRole.ADMIN || !container.storeRepository)
+			throw new ForbiddenError('Acesso administrativo negado.');
+		await storeContextMiddleware(request, {}, container.storeRepository);
+		if (
+			!request.storeContext ||
+			!['OWNER', 'ADMIN'].includes(request.storeContext.role)
+		)
+			throw new ForbiddenError('Administracao da loja negada.');
+		return container.storeRepository.findTenantUserIds(
+			request.storeContext.tenantId,
+		);
+	}
+	async function assertTargetAccess(
+		request: FastifyRequest,
+		id: string,
+		mutation = false,
+	) {
+		if (request.user?.role === UserRole.SUPER_ADMIN) return;
+		if (id === request.user?.userId && !mutation) return;
+		const ids = await scopedUserIds(request);
+		if (!ids?.includes(id))
+			throw new ForbiddenError('Usuario fora da loja ativa.');
+		if (mutation) {
+			const target = await repo.findById(id);
+			if (
+				!target ||
+				![UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.CUSTOMER].includes(
+					target.role,
+				)
+			)
+				throw new ForbiddenError(
+					'Admin gerencia apenas funcionarios e clientes.',
+				);
+			const stores =
+				await container.storeRepository?.findAssociatedTenantIds(id);
+			if (stores?.length !== 1)
+				throw new ForbiddenError(
+					'Conta compartilhada: alteracao global exige Super Admin.',
+				);
+		}
+	}
+
+	fastify.get(
+		'/admin/stores',
+		{
+			schema: { ...pageSchema, tags: ['platform'] },
+			preHandler: async (request: FastifyRequest, reply: unknown) => {
+				await authMiddleware(
+					request,
+					reply,
+					container.jwtService,
+					container.userRepository,
+				);
+				if (request.user?.role !== UserRole.SUPER_ADMIN)
+					throw new ForbiddenError('Administracao global exige Super Admin.');
+			},
+		},
+		async (request: FastifyRequest & { query: unknown }) => {
+			const query = paginationQuery.parse(request.query);
+			return container.storeRepository!.findStoresPage(query);
+		},
+	);
 
 	fastify.get(
 		'/users/check-email',
@@ -210,7 +280,7 @@ export async function userRoutes(
 		{
 			schema: {
 				description:
-					'Lista usuários com paginação. Apenas Super Admin e Company.',
+					'Lista usuários com paginação. Apenas Super Admin e Admin.',
 				tags: ['users'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				querystring: listUsersQuerystringJsonSchema,
@@ -241,13 +311,18 @@ export async function userRoutes(
 						...forbiddenResponseJsonSchema,
 						example: {
 							error: 'ForbiddenError',
-							message: 'Apenas Super Admin e Company podem listar usuários.',
+							message: 'Apenas Super Admin e Admin podem listar usuários.',
 						},
 					},
 				},
 			},
 			preHandler: async (req: FastifyRequest, _reply: unknown) => {
-				await authMiddleware(req, _reply, container.jwtService);
+				await authMiddleware(
+					req,
+					_reply,
+					container.jwtService,
+					container.userRepository,
+				);
 			},
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tipos
@@ -255,11 +330,14 @@ export async function userRoutes(
 			const user = request.user as { userId: string; role: string };
 			if (!canListUsers(user.role)) {
 				throw new ForbiddenError(
-					'Apenas Super Admin e Company podem listar usuários.',
+					'Apenas Super Admin e Admin podem listar usuários.',
 				);
 			}
 			const pageRequest = parsePageRequest(request.query || {});
-			const params: FindManyUsersParams = pageRequest;
+			const params: FindManyUsersParams = {
+				...pageRequest,
+				userIds: await scopedUserIds(request),
+			};
 			const usersPage = await repo.findMany(params);
 
 			return {
@@ -278,7 +356,7 @@ export async function userRoutes(
 		{
 			schema: {
 				description:
-					'Retorna o total de usuários (com filtro opcional em nome/email). Apenas Super Admin e Company.',
+					'Retorna o total de usuários (com filtro opcional em nome/email). Apenas Super Admin e Admin.',
 				tags: ['users'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				querystring: createRequestSchema({
@@ -301,7 +379,12 @@ export async function userRoutes(
 				},
 			},
 			preHandler: async (req: FastifyRequest, _reply: unknown) => {
-				await authMiddleware(req, _reply, container.jwtService);
+				await authMiddleware(
+					req,
+					_reply,
+					container.jwtService,
+					container.userRepository,
+				);
 			},
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tipos
@@ -309,11 +392,11 @@ export async function userRoutes(
 			const user = request.user as { userId: string; role: string };
 			if (!canListUsers(user.role)) {
 				throw new ForbiddenError(
-					'Apenas Super Admin e Company podem consultar a contagem de usuários.',
+					'Apenas Super Admin e Admin podem consultar a contagem de usuários.',
 				);
 			}
 			const { filter } = countUsersQuerySchema.parse(request.query || {});
-			const count = await repo.count(filter);
+			const count = await repo.count(filter, await scopedUserIds(request));
 			return { count };
 		},
 	);
@@ -323,7 +406,7 @@ export async function userRoutes(
 		{
 			schema: {
 				description:
-					'Obtém um usuário por ID. Próprio perfil ou Super Admin/Company.',
+					'Obtém um usuário por ID. Próprio perfil ou Super Admin/Admin.',
 				tags: ['users'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				params: paramsIdJsonSchema,
@@ -360,7 +443,12 @@ export async function userRoutes(
 				},
 			},
 			preHandler: async (req: FastifyRequest, _reply: unknown) => {
-				await authMiddleware(req, _reply, container.jwtService);
+				await authMiddleware(
+					req,
+					_reply,
+					container.jwtService,
+					container.userRepository,
+				);
 			},
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tipos
@@ -370,6 +458,7 @@ export async function userRoutes(
 			if (id !== authUser.userId && !canManageUser(authUser.role)) {
 				throw new ForbiddenError('Você só pode visualizar seu próprio perfil.');
 			}
+			await assertTargetAccess(request, id);
 			const user = await repo.findById(id);
 			if (!user) {
 				throw new NotFoundError('Usuário não encontrado');
@@ -383,7 +472,7 @@ export async function userRoutes(
 		{
 			schema: {
 				description:
-					'Atualiza parcialmente um usuário. Próprio perfil (nome) ou Super Admin/Company.',
+					'Atualiza parcialmente um usuário. Próprio perfil (nome) ou Super Admin/Admin.',
 				tags: ['users'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				params: paramsIdJsonSchema,
@@ -427,7 +516,12 @@ export async function userRoutes(
 				},
 			},
 			preHandler: async (req: FastifyRequest, _reply: unknown) => {
-				await authMiddleware(req, _reply, container.jwtService);
+				await authMiddleware(
+					req,
+					_reply,
+					container.jwtService,
+					container.userRepository,
+				);
 			},
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tipos
@@ -452,20 +546,80 @@ export async function userRoutes(
 				}
 			}
 
+			if (authUser.role !== UserRole.SUPER_ADMIN) {
+				if (id === authUser.userId) {
+					if (Object.keys(body).some((key) => key !== 'name'))
+						throw new ForbiddenError(
+							'O proprio perfil permite alterar apenas o nome.',
+						);
+				} else {
+					await assertTargetAccess(request, id, true);
+					if (
+						body.role &&
+						![UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.CUSTOMER].includes(
+							body.role,
+						)
+					)
+						throw new ForbiddenError(
+							'Promocao administrativa exige Super Admin.',
+						);
+				}
+			}
 			const existing = await repo.findById(id);
 			if (!existing) {
 				throw new NotFoundError('Usuário não encontrado');
 			}
 
 			const toUpdate = { ...body };
+			if (
+				(body.role && body.role !== existing.role) ||
+				(body.accountStatus && body.accountStatus !== existing.accountStatus) ||
+				(body.email && body.email !== existing.email)
+			)
+				await container.security.revokeAll(id);
 			if (typeof body.name === 'string' && body.name.length > 0) {
 				toUpdate.name = Name.fromRaw(body.name).value;
 			}
 
+			if (authUser.role === UserRole.SUPER_ADMIN && container.planAccess) {
+				return administrativeOperation(
+					container,
+					async ({ users, stores, audit }) => {
+						const prior = await users.findById(id);
+						const updated = await users.update(id, toUpdate);
+						if (!updated || !prior)
+							throw new NotFoundError('Usuário não encontrado');
+						if (body.role)
+							await stores.updateMemberRoles(
+								id,
+								body.role.replace('ROLE_', ''),
+							);
+						const snapshot = (user: typeof updated) => ({
+							name: user.name,
+							email: user.email,
+							role: user.role,
+							accountStatus: user.accountStatus,
+						});
+						await audit.recordAudit({
+							actorId: authUser.userId,
+							action: 'USER_UPDATED',
+							targetId: id,
+							reason: 'Atualização administrativa de usuário',
+							changes: { before: snapshot(prior), after: snapshot(updated) },
+						});
+						return toUserResponse(updated);
+					},
+				);
+			}
 			const updated = await repo.update(id, toUpdate);
 			if (!updated) {
 				throw new NotFoundError('Usuário não encontrado');
 			}
+			if (body.role)
+				await container.storeRepository?.updateMemberRoles(
+					id,
+					body.role.replace('ROLE_', ''),
+				);
 			return toUserResponse(updated);
 		},
 	);
@@ -475,7 +629,7 @@ export async function userRoutes(
 		{
 			schema: {
 				description:
-					'Remove um usuário. Apenas Super Admin e Company (ou próprio usuário).',
+					'Remove um usuário. Apenas Super Admin e Admin (ou próprio usuário).',
 				tags: ['users'],
 				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
 				params: paramsIdJsonSchema,
@@ -486,7 +640,7 @@ export async function userRoutes(
 						...forbiddenResponseJsonSchema,
 						example: {
 							error: 'ForbiddenError',
-							message: 'Apenas Super Admin e Company podem excluir usuários.',
+							message: 'Apenas Super Admin e Admin podem excluir usuários.',
 						},
 					},
 					404: {
@@ -500,7 +654,12 @@ export async function userRoutes(
 				},
 			},
 			preHandler: async (req: FastifyRequest, _reply: unknown) => {
-				await authMiddleware(req, _reply, container.jwtService);
+				await authMiddleware(
+					req,
+					_reply,
+					container.jwtService,
+					container.userRepository,
+				);
 			},
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tipos
@@ -509,9 +668,24 @@ export async function userRoutes(
 			const authUser = request.user as { userId: string; role: string };
 			if (id !== authUser.userId && !canManageUser(authUser.role)) {
 				throw new ForbiddenError(
-					'Apenas Super Admin e Company podem excluir usuários.',
+					'Apenas Super Admin e Admin podem excluir usuários.',
 				);
 			}
+			if (authUser.role !== UserRole.SUPER_ADMIN) {
+				if (id === authUser.userId)
+					throw new ForbiddenError(
+						'Exclusao da propria conta exige administracao global.',
+					);
+				await assertTargetAccess(request, id, true);
+			}
+			if (
+				(await container.storeRepository?.findAllTenants())?.some(
+					(tenant) => tenant.ownerId === id,
+				)
+			)
+				throw new ForbiddenError(
+					'Proprietario de empresa nao pode ser excluido; suspenda a conta.',
+				);
 			const existed = await repo.delete(id);
 			if (!existed) {
 				throw new NotFoundError('Usuário não encontrado');

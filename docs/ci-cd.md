@@ -43,8 +43,8 @@ branch padrão e impeça autoaprovação quando houver outro mantenedor.
 O workflow publica:
 
 ```text
-ghcr.io/tonybsilva-dev/thalya-modas-api:<image_tag>
-ghcr.io/tonybsilva-dev/thalya-modas-api:sha-<commit>
+ghcr.io/tonybsilva-dev/store-flow-api:<image_tag>
+ghcr.io/tonybsilva-dev/store-flow-api:sha-<commit>
 ```
 
 O `image_tag` deve ser imutável, preferencialmente uma versão SemVer como

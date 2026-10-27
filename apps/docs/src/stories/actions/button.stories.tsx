@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button } from "@thalya-modas/ui";
+import { Button } from "@store-flow/ui";
 import { Plus, ShoppingBag } from "lucide-react";
 
 const meta = {

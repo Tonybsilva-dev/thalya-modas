@@ -29,6 +29,7 @@ export class RequestPasswordRecoveryUseCase {
 	constructor(
 		private readonly userRepository: UserRepository,
 		private readonly passwordRecoveryRepository: PasswordRecoveryRepository,
+		private readonly sendCode?: (email: string, code: string) => Promise<void>,
 	) {}
 
 	async execute(input: {
@@ -63,6 +64,7 @@ export class RequestPasswordRecoveryUseCase {
 			status: 'PENDING',
 		});
 
+		await this.sendCode?.(email, code);
 		return {
 			...output,
 			debugCode: input.includeDebugCode ? code : undefined,
@@ -123,6 +125,7 @@ export class ResendPasswordRecoveryCodeUseCase {
 	constructor(
 		private readonly userRepository: UserRepository,
 		private readonly passwordRecoveryRepository: PasswordRecoveryRepository,
+		private readonly sendCode?: (email: string, code: string) => Promise<void>,
 	) {}
 
 	async execute(input: {
@@ -171,6 +174,7 @@ export class ResendPasswordRecoveryCodeUseCase {
 			status: 'PENDING',
 		});
 
+		await this.sendCode?.(email, code);
 		return {
 			...output,
 			debugCode: input.includeDebugCode ? code : undefined,
@@ -183,6 +187,7 @@ export class ResetPasswordUseCase {
 		private readonly userRepository: UserRepository,
 		private readonly passwordRecoveryRepository: PasswordRecoveryRepository,
 		private readonly passwordHasher: PasswordHasher,
+		private readonly revokeSessions?: (userId: string) => Promise<void>,
 	) {}
 
 	async execute(input: {
@@ -214,6 +219,14 @@ export class ResetPasswordUseCase {
 			input.password,
 			this.passwordHasher,
 		);
+		await this.revokeSessions?.(request.userId);
+		if (
+			!(await this.passwordRecoveryRepository.consumeResetToken(
+				request.id,
+				input.resetToken,
+			))
+		)
+			throw new AuthError('Token de recuperação inválido ou expirado');
 		const user = await this.userRepository.update(request.userId, {
 			passwordHash: password.hash,
 		});

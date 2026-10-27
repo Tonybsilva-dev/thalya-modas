@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Check, Circle, Grid2X2, List, Calendar as CalendarIcon } from "lucide-react";
-import { Calendar, Card, CardContent, ToggleButton, ToggleButtonGroup } from "@thalya-modas/ui";
+import { Calendar, Card, CardContent, ToggleButton, ToggleButtonGroup } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Actions/Toggle Button",

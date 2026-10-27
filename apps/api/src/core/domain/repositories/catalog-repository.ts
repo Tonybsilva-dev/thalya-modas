@@ -22,8 +22,13 @@ import type {
 	UpdateSupplierInput,
 	UpdateSupplierResponsibleInput,
 } from '../entities/catalog';
+import type { Page } from './page';
 
 export interface CatalogRepository {
+	listProductsPage(
+		scope: CatalogScope,
+		query?: CatalogListQuery,
+	): Promise<Page<Product>>;
 	createSupplier(input: CreateSupplierInput): Promise<Supplier>;
 	findSupplierById(
 		scope: CatalogScope,

@@ -1,4 +1,5 @@
 "use client";
+import { CustomerRegisterRoute } from "./customer-register-route";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -7,7 +8,7 @@ import {
   Button,
   Card,
   CardContent,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import { useLocale } from "next-intl";
 
 import { normalizeLocale } from "@/src/shared/i18n/locales";
@@ -242,7 +243,7 @@ function DetailRail() {
   );
 }
 
-export function CustomerDetailRoute() {
+export function LegacyCustomerDetailRoute() {
   const { sidebar } = useCustomersContent();
 
   return (
@@ -266,3 +267,5 @@ export function CustomerDetailRoute() {
     </DashboardShell>
   );
 }
+
+export function CustomerDetailRoute() { return <CustomerRegisterRoute detail />; }

@@ -27,6 +27,7 @@ export enum StoreTimezone {
 }
 
 export interface Store {
+	tenantId: string;
 	id: string;
 	ownerId: string;
 	name: string;

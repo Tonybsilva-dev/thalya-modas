@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Progress } from "@thalya-modas/ui";
+import { Progress } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Feedback/Progress & Loading",

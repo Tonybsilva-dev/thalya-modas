@@ -2,7 +2,7 @@
 
 import type { ComponentType, InputHTMLAttributes } from "react";
 import { IMaskInput } from "react-imask";
-import { cn } from "@thalya-modas/ui";
+import { cn } from "@store-flow/ui";
 
 type MaskedInputMask = string | { mask: string }[];
 

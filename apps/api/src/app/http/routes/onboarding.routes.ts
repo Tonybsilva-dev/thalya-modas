@@ -15,11 +15,15 @@ import {
 	StoreSegment,
 	StoreTimezone,
 } from '../../../core/domain';
+import { UserRole } from '../../../core/domain/entities/user';
+import { DEFAULT_PLAN_ID } from '../../../core/domain/feature-catalog';
 import {
 	createRequestSchema,
 	createResponseSchema,
 } from '../../../shared/utils/zod-to-json-schema';
 import type { AppContainer } from '../container';
+import { DomainError } from '../errors/domain-error';
+import { ForbiddenError } from '../errors/forbidden-error';
 import { authMiddleware } from '../middlewares/auth';
 
 const storeProfileRequestSchema = z.object({
@@ -63,6 +67,7 @@ const onboardingResponseSchema = z.object({
 	completedSteps: z.array(z.nativeEnum(OnboardingStep)),
 	store: z
 		.object({
+			tenantId: z.string().uuid(),
 			id: z.string().uuid(),
 			ownerId: z.string().uuid(),
 			name: z.string(),
@@ -119,9 +124,9 @@ const onboardingResponseExample = {
 	store: {
 		id: '123e4567-e89b-12d3-a456-426614174000',
 		ownerId: '123e4567-e89b-12d3-a456-426614174001',
-		name: 'Thalya Modas',
-		slug: 'thalya-modas',
-		bucketKey: 'stores/thalya-modas',
+		name: 'Store Flow',
+		slug: 'store-flow',
+		bucketKey: 'stores/store-flow',
 		phone: '85999998888',
 		document: '12345678000199',
 		segment: 'fashion',
@@ -167,9 +172,91 @@ export async function onboardingRoutes(
 
 	const preHandler = async (request: FastifyRequest, reply: unknown) => {
 		container.featureFlags.assertEnabled('onboarding');
-		await authMiddleware(request, reply, container.jwtService);
+		await authMiddleware(
+			request,
+			reply,
+			container.jwtService,
+			container.userRepository,
+		);
+		if (request.user?.role !== UserRole.ADMIN)
+			throw new ForbiddenError('Apenas Admin pode abrir sua loja.');
 	};
 
+	fastify.get(
+		'/onboarding/plans',
+		{
+			preHandler,
+			schema: {
+				tags: ['onboarding'],
+				description: 'Planos disponíveis para ativação inicial',
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+			},
+		},
+		async () => ({
+			plans: [
+				{ id: 'STARTER', name: 'Starter', available: true },
+				{ id: 'PROFESSIONAL', name: 'Professional', available: false },
+				{ id: 'BUSINESS', name: 'Business', available: false },
+			],
+		}),
+	);
+	fastify.post(
+		'/onboarding/plan',
+		{
+			preHandler,
+			schema: {
+				tags: ['onboarding'],
+				description: 'Confirma o Starter após concluir o onboarding',
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+				body: createRequestSchema({
+					body: z.object({ plan: z.literal('STARTER') }),
+				}).body,
+			},
+		},
+		async (request: FastifyRequest) => {
+			z.object({ plan: z.literal('STARTER') }).parse(
+				(request as FastifyRequest & { body: unknown }).body,
+			);
+			const onboarding = await container.onboardingRepository!.findByUserId(
+				request.user!.userId,
+			);
+			if (
+				!onboarding ||
+				onboarding.status !== OnboardingStatus.COMPLETED ||
+				!onboarding.storeId
+			)
+				throw new DomainError(
+					'Conclua os dados da loja antes de escolher o plano.',
+				);
+			const store = await container.storeRepository!.findById(
+				onboarding.storeId,
+			);
+			if (!store || store.ownerId !== request.user!.userId)
+				throw new ForbiddenError('Loja não autorizada.');
+			if (!onboarding.completedSteps.includes(OnboardingStep.PLAN_SELECTION)) {
+				const repo = container.planAccess?.repository;
+				const plan = await repo?.findPlan(DEFAULT_PLAN_ID);
+				if (!repo || plan?.status !== 'PUBLISHED')
+					throw new DomainError('Starter indisponível no momento.');
+				const current = await repo.getTenantPlan(store.tenantId);
+				if (current.planId !== DEFAULT_PLAN_ID)
+					throw new DomainError(
+						'A empresa já possui outro plano. Entre em contato com o suporte.',
+					);
+				await container.onboardingRepository!.update(onboarding.id, {
+					completedSteps: [
+						...onboarding.completedSteps,
+						OnboardingStep.PLAN_SELECTION,
+					],
+				});
+			}
+			return {
+				success: true,
+				destination: '/admin/dashboard',
+				storeId: store.id,
+			};
+		},
+	);
 	// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
 	(fastify as any).get(
 		'/onboarding/me',
@@ -355,7 +442,7 @@ export async function onboardingRoutes(
 						body: storeProfileRequestSchema,
 					}).body as Record<string, unknown>),
 					example: {
-						storeName: 'Thalya Modas',
+						storeName: 'Store Flow',
 						phone: '(85) 99999-8888',
 						document: '12.345.678/0001-99',
 						segment: 'fashion',

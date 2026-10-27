@@ -8,7 +8,7 @@ export const loginRouteContent = {
     title: "Welcome back",
     description: "Sign in to continue to the store command center.",
     emailLabel: "Email",
-    emailPlaceholder: "ana@thalyamodas.com",
+    emailPlaceholder: "ana@storeflow.example",
     passwordLabel: "Password",
     passwordPlaceholder: "Enter your password",
     rememberLabel: "Remember me",

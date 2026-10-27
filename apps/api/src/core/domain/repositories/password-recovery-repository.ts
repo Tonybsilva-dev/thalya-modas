@@ -1,6 +1,7 @@
 import type { PasswordRecoveryRequest } from '../entities/password-recovery';
 
 export interface PasswordRecoveryRepository {
+	consumeResetToken(id: string, resetToken: string): Promise<boolean>;
 	create(
 		request: Omit<PasswordRecoveryRequest, 'id' | 'createdAt' | 'updatedAt'>,
 	): Promise<PasswordRecoveryRequest>;

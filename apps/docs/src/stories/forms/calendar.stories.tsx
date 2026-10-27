@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Calendar } from "@thalya-modas/ui";
+import { Calendar } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Forms/Calendar",
@@ -17,6 +17,15 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+export const Portuguese: Story = {
+  args: {
+    locale: "pt-BR",
+    subtitle: "Selecione o dia",
+    previousMonthLabel: "Mês anterior",
+    nextMonthLabel: "Próximo mês",
+    footerLabel: undefined,
+  },
+};
 
 export const Interactive: Story = {
   render: () => {

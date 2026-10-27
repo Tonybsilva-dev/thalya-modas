@@ -4,7 +4,7 @@ services:
       context: ../..
       target: development
       dockerfile: apps/api/Dockerfile
-    container_name: thalya-api-dev
+    container_name: storeflow-api-dev
     working_dir: /workspace/apps/api
     volumes:
       - ./src:/workspace/apps/api/src

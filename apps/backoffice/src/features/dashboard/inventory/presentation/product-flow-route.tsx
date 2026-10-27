@@ -28,9 +28,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
   Button,
+  PageHeader,
+  FormActions,
   Card,
   CardContent,
   Input,
+  CurrencyInput,
   Label,
   Select,
   SelectContent,
@@ -39,7 +42,7 @@ import {
   SelectValue,
   Switch,
   Textarea,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 import { ApiRequestError } from "@/src/shared/api/http-client";
 import {
@@ -320,22 +323,7 @@ function ProductFlow({
     <DashboardShell activeItem="Inventory" operatorRole="Gestão de catálogo" status="Produtos e estoque">
       <ProductBreadcrumb basePath={basePath} isEdit={isEdit} />
 
-      <header className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="grid min-w-0 gap-1.5">
-          <h1 className="text-2xl font-semibold leading-tight text-foreground md:text-[28px]">
-            {isEdit ? "Editar produto" : "Cadastrar produto"}
-          </h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Identifique o item, defina como o estoque será tratado e associe suas fotos e fornecedor.
-          </p>
-        </div>
-        <Button asChild className="h-10 self-start" variant="outline">
-          <Link href={basePath}>
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Voltar ao estoque
-          </Link>
-        </Button>
-      </header>
+      <PageHeader title={isEdit ? "Editar produto" : "Cadastrar produto"} description="Identificação, preços e controle de estoque." actions={<Button asChild variant="outline"><Link href={basePath}><ArrowLeft aria-hidden="true" className="size-4" />Voltar ao estoque</Link></Button>} />
 
       {formError && (
         <Alert role="alert" variant={savedWithPhotoError ? "warning" : "destructive"}>
@@ -350,13 +338,13 @@ function ProductFlow({
       {isLoading ? (
         <Card><CardContent className="p-6 text-sm text-muted-foreground">Carregando produto…</CardContent></Card>
       ) : (
-        <form className="grid min-w-0 gap-5" onSubmit={handleSubmit}>
-          <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="grid min-w-0 gap-5">
+        <form className="grid min-w-0 gap-4" onSubmit={handleSubmit}>
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="grid min-w-0 gap-4">
               <Card>
-                <CardContent className="grid gap-5 p-4 sm:p-6">
+                <CardContent className="grid gap-4 p-4 sm:p-5">
                   <div className="grid gap-1">
-                    <h2 className="text-lg font-semibold text-foreground">Identificação</h2>
+                    <h2 className="text-base font-semibold text-foreground">Identificação</h2>
                     <p className="text-sm text-muted-foreground">Dados usados na busca, etiqueta e venda.</p>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -441,9 +429,9 @@ function ProductFlow({
               </Card>
 
               <Card>
-                <CardContent className="grid gap-5 p-4 sm:p-6">
+                <CardContent className="grid gap-4 p-4 sm:p-5">
                   <div className="grid gap-1">
-                    <h2 className="text-lg font-semibold text-foreground">Compra e venda</h2>
+                    <h2 className="text-base font-semibold text-foreground">Compra e venda</h2>
                     <p className="text-sm text-muted-foreground">Vincule o fornecedor e registre os valores de referência.</p>
                   </div>
                   <Field id="product-supplier" label="Fornecedor">
@@ -459,20 +447,20 @@ function ProductFlow({
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field id="product-cost" label="Custo de referência">
-                      <Input id="product-cost" min="0" onChange={(event) => setValue("costPrice", event.target.value)} placeholder="0,00" step="0.01" type="number" value={values.costPrice} />
+                      <CurrencyInput id="product-cost" min="0" onChange={(event) => setValue("costPrice", event.target.value)} placeholder="0,00" step="0.01" type="number" value={values.costPrice} />
                     </Field>
                     <Field id="product-sale" label="Preço de venda">
-                      <Input id="product-sale" min="0" onChange={(event) => setValue("salePrice", event.target.value)} placeholder="0,00" step="0.01" type="number" value={values.salePrice} />
+                      <CurrencyInput id="product-sale" min="0" onChange={(event) => setValue("salePrice", event.target.value)} placeholder="0,00" step="0.01" type="number" value={values.salePrice} />
                     </Field>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="grid gap-5 p-4 sm:p-6">
+                <CardContent className="grid gap-4 p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="grid gap-1">
-                      <h2 className="text-lg font-semibold text-foreground">Controle de estoque</h2>
+                      <h2 className="text-base font-semibold text-foreground">Controle de estoque</h2>
                       <p className="text-sm leading-6 text-muted-foreground">
                         Desative para itens avulsos que podem ser vendidos sem limite de saldo.
                       </p>
@@ -515,7 +503,7 @@ function ProductFlow({
               <Card>
                 <CardContent className="grid gap-4 p-4 sm:p-5">
                   <div className="grid gap-1">
-                    <h2 className="text-lg font-semibold text-foreground">Fotos</h2>
+                    <h2 className="text-base font-semibold text-foreground">Fotos</h2>
                     <p className="text-sm leading-6 text-muted-foreground">Até 5 imagens. Elas serão otimizadas em WebP.</p>
                   </div>
                   <label className="grid min-h-36 cursor-pointer place-items-center border border-dashed border-border bg-muted/30 p-5 text-center transition-colors hover:border-primary hover:bg-primary/5 focus-within:ring-2 focus-within:ring-ring">
@@ -584,12 +572,12 @@ function ProductFlow({
             </aside>
           </div>
 
-          <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-border bg-background/95 p-4 backdrop-blur sm:mx-0 sm:flex-row sm:justify-end">
+          <FormActions>
             <Button asChild className="h-11" variant="outline"><Link href={basePath}>Cancelar</Link></Button>
             <Button className="h-11" disabled={mutation.isPending || Boolean(existingProduct)} type="submit">
               {mutation.isPending ? <span>Salvando…</span> : <><FloppyDisk aria-hidden="true" className="size-4" />{isEdit ? "Salvar alterações" : "Cadastrar produto"}</>}
             </Button>
-          </div>
+          </FormActions>
         </form>
       )}
 

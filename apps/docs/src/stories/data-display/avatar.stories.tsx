@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Avatar, AvatarFallback } from "@thalya-modas/ui";
+import { Avatar, AvatarFallback } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Data Display/Avatar",

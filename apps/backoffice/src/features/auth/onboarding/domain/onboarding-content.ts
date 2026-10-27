@@ -11,8 +11,8 @@ export const onboardingRoutes = {
   profile: "/onboarding",
   address: "/onboarding/address",
   preferences: "/onboarding/preferences",
-  completed: "/onboarding/completed",
-  dashboard: "/manager/dashboard",
+  completed: "/onboarding/plan",
+  dashboard: "/admin/dashboard",
 } as const;
 
 export const onboardingContent = {

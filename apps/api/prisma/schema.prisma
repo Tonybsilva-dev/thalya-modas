@@ -17,6 +17,8 @@ model User {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
+  ownedTenants             Tenant[]
+  tenantMemberships        TenantMembership[]
   stores                   Store[]
   onboardings              Onboarding[]
   passwordRecoveryRequests PasswordRecoveryRequest[]
@@ -33,7 +35,80 @@ model User {
   @@map("users")
 }
 
+model Tenant {
+  planId           String             @default("00000000-0000-4000-8000-000000000001") @map("plan_id")
+  plan             Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  featureOverrides Json               @default("{}") @map("feature_overrides")
+  id               String             @id @default(uuid())
+  ownerId          String             @map("owner_id")
+  name             String
+  slug             String             @unique
+  status           String             @default("ACTIVE")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  owner            User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  stores           Store[]
+  memberships      TenantMembership[]
+
+  @@index([ownerId])
+  @@map("tenants")
+}
+
+model Plan {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @default("")
+  status      String   @default("DRAFT")
+  priceCents  Int?     @map("price_cents")
+  flags       Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tenants     Tenant[]
+
+  @@map("plans")
+}
+
+model PlatformControls {
+  id           String   @id @default("global")
+  disabledKeys String[] @default([]) @map("disabled_keys")
+  maintenance  Boolean  @default(false)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_controls")
+}
+
+model PlanAudit {
+  id        String   @id @default(uuid())
+  actorId   String   @map("actor_id")
+  action    String
+  targetId  String   @map("target_id")
+  reason    String
+  changes   Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("plan_audit")
+}
+
+model TenantMembership {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  role      String
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId, status])
+  @@map("tenant_memberships")
+}
+
 model Store {
+  tenantId    String   @map("tenant_id")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   id          String   @id @default(uuid())
   ownerId     String   @map("owner_id")
   name        String
@@ -48,6 +123,9 @@ model Store {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  customers            Customer[]
+  sales                SaleOrder[]
+  cashSessions         CashSession[]
   owner                User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   onboardings          Onboarding[]
   memberships          StoreMembership[]
@@ -60,6 +138,7 @@ model Store {
   purchaseOrderItems   PurchaseOrderItem[]
   receivings           Receiving[]
 
+  @@index([tenantId])
   @@index([ownerId])
   @@map("stores")
 }
@@ -176,22 +255,22 @@ model SupplierResponsible {
 }
 
 model Product {
-  id           String   @id @default(uuid())
-  userId       String   @map("user_id")
-  storeId      String   @map("store_id")
-  supplierId   String?  @map("supplier_id")
-  name         String
-  sku          String
-  barcode      String?
-  description  String?
-  inventoryControl String @default("tracked") @map("inventory_control")
-  costPrice    Decimal? @map("cost_price") @db.Decimal(12, 2)
-  salePrice    Decimal? @map("sale_price") @db.Decimal(12, 2)
-  currentStock Int      @default(0) @map("current_stock")
-  minimumStock Int      @default(0) @map("minimum_stock")
-  status       String
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  storeId          String   @map("store_id")
+  supplierId       String?  @map("supplier_id")
+  name             String
+  sku              String
+  barcode          String?
+  description      String?
+  inventoryControl String   @default("tracked") @map("inventory_control")
+  costPrice        Decimal? @map("cost_price") @db.Decimal(12, 2)
+  salePrice        Decimal? @map("sale_price") @db.Decimal(12, 2)
+  currentStock     Int      @default(0) @map("current_stock")
+  minimumStock     Int      @default(0) @map("minimum_stock")
+  status           String
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -270,7 +349,7 @@ model PurchaseOrder {
 
   user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   store      Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   items      PurchaseOrderItem[]
   receivings Receiving[]
 
@@ -325,7 +404,7 @@ model Receiving {
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
 
   @@index([userId])
@@ -333,4 +412,119 @@ model Receiving {
   @@index([supplierId])
   @@index([purchaseOrderId])
   @@map("receivings")
+}
+
+model Customer {
+  id String @id @default(uuid())
+  storeId String @map("store_id")
+  name String
+  email String?
+  phone String?
+  document String?
+  notes String?
+  status String @default("ACTIVE")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  @@unique([storeId, document])
+  @@index([storeId, name])
+  @@map("customers")
+}
+
+model SaleOrder {
+  id String @id @default(uuid())
+  storeId String @map("store_id")
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade, map: "sale_orders_store_fk")
+  customerId String? @map("customer_id")
+  customerName String? @map("customer_name")
+  userId String @map("user_id")
+  requestKey String @map("request_key")
+  requestHash String @map("request_hash")
+  totalCents Int @map("total_cents")
+  status String @default("COMPLETED")
+  notes String?
+  cancelledBy String? @map("cancelled_by")
+  cancelledAt DateTime? @map("cancelled_at")
+  cancellationReason String? @map("cancellation_reason")
+  createdAt DateTime @default(now()) @map("created_at")
+  items SaleItem[]
+  installments SaleInstallment[]
+  @@unique([storeId, requestKey])
+  @@index([storeId, createdAt])
+  @@index([storeId, customerId])
+  @@map("sale_orders")
+}
+
+model SaleItem {
+  id String @id @default(uuid())
+  orderId String @map("order_id")
+  productId String @map("product_id")
+  name String
+  sku String
+  quantity Int
+  unitPriceCents Int @map("unit_price_cents")
+  tracked Boolean
+  order SaleOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@index([orderId])
+  @@map("sale_items")
+}
+
+model SaleInstallment {
+  id String @id @default(uuid())
+  orderId String @map("order_id")
+  number Int
+  dueDate String @map("due_date")
+  amountCents Int @map("amount_cents")
+  paidCents Int @default(0) @map("paid_cents")
+  order SaleOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payments SalePayment[]
+  @@unique([orderId, number])
+  @@map("sale_installments")
+}
+
+model SalePayment {
+  id String @id @default(uuid())
+  installmentId String @map("installment_id")
+  cashSessionId String @map("cash_session_id")
+  userId String @map("user_id")
+  requestKey String @map("request_key")
+  amountCents Int @map("amount_cents")
+  method String
+  createdAt DateTime @default(now()) @map("created_at")
+  installment SaleInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+  cashSession CashSession @relation(fields: [cashSessionId], references: [id])
+  @@unique([cashSessionId, requestKey])
+  @@map("sale_payments")
+}
+
+model CashSession {
+  id String @id @default(uuid())
+  storeId String @map("store_id")
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade, map: "cash_sessions_store_fk")
+  openedBy String @map("opened_by")
+  closedBy String? @map("closed_by")
+  openingCents Int @map("opening_cents")
+  countedCents Int? @map("counted_cents")
+  expectedCents Int? @map("expected_cents")
+  notes String?
+  openedAt DateTime @default(now()) @map("opened_at")
+  closedAt DateTime? @map("closed_at")
+  movements CashMovement[]
+  payments SalePayment[]
+  @@index([storeId, openedAt])
+  @@map("cash_sessions")
+}
+
+model CashMovement {
+  id String @id @default(uuid())
+  cashSessionId String @map("cash_session_id")
+  userId String @map("user_id")
+  requestKey String @map("request_key")
+  amountCents Int @map("amount_cents")
+  kind String
+  reason String
+  createdAt DateTime @default(now()) @map("created_at")
+  cashSession CashSession @relation(fields: [cashSessionId], references: [id], onDelete: Cascade)
+  @@unique([cashSessionId, requestKey])
+  @@map("cash_movements")
 }

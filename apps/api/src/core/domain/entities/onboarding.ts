@@ -4,6 +4,7 @@ export enum OnboardingStatus {
 }
 
 export enum OnboardingStep {
+	PLAN_SELECTION = 'PLAN_SELECTION',
 	STORE_PROFILE = 'STORE_PROFILE',
 	STORE_ADDRESS = 'STORE_ADDRESS',
 	STORE_PREFERENCES = 'STORE_PREFERENCES',

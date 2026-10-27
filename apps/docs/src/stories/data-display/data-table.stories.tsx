@@ -11,7 +11,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 const meta = {
   title: "Components/Data Display/DataTable",

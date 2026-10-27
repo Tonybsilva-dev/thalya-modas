@@ -66,7 +66,12 @@ describe('authRoutes - sem UserRepository configurado', () => {
 		const body = JSON.parse(response.body as string);
 		expect(body).toHaveProperty('error');
 		expect(body.error).toBe('InternalServerError');
-		expect(body.message).toContain('UserRepository não está configurado');
+		expect(body).toMatchObject({
+			code: 'SF-SYS-500',
+			message: 'Não foi possível concluir agora. Tente novamente em instantes.',
+			traceId: expect.any(String),
+		});
+		expect(response.body).not.toMatch(/UserRepository|stack|localhost|prisma/);
 
 		await fastifyInstance.close();
 	});
@@ -97,7 +102,12 @@ describe('authRoutes - sem UserRepository configurado', () => {
 
 		expect(response.statusCode).toBe(500);
 		const body = JSON.parse(response.body as string);
-		expect(body.message).toContain('UserRepository não está configurado');
+		expect(body).toMatchObject({
+			code: 'SF-SYS-500',
+			message: 'Não foi possível concluir agora. Tente novamente em instantes.',
+			traceId: expect.any(String),
+		});
+		expect(response.body).not.toMatch(/UserRepository|stack|localhost|prisma/);
 
 		await fastifyInstance.close();
 	});

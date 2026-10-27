@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 const meta = {
   title: "Components/Overlays/Dialog",
@@ -34,6 +34,25 @@ export const Default: Story = {
           <Button variant="secondary">Action</Button>
           <Button>Action</Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  ),
+};
+
+export const Wide: Story = {
+  render: () => (
+    <Dialog>
+      <DialogTrigger asChild><Button>Abrir formulário extenso</Button></DialogTrigger>
+      <DialogContent size="wide" closeLabel="Fechar">
+        <DialogHeader>
+          <DialogTitle>Configurar plano</DialogTitle>
+          <DialogDescription>A variante ampla acomoda formulários com múltiplas colunas.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="h-32 border border-border" />
+          <div className="h-32 border border-border" />
+        </div>
+        <DialogFooter><Button>Salvar</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   ),

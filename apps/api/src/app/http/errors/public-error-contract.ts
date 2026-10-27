@@ -18,10 +18,10 @@ export type ApiProblemDetails = {
 };
 
 export type ApiErrorCode =
-	| 'TM-AUTH-401'
-	| 'TM-VAL-400'
-	| 'TM-DOM-400'
-	| 'TM-AUTHZ-403'
-	| 'TM-FEAT-403'
-	| 'TM-RES-404'
-	| 'TM-SYS-500';
+	| 'SF-AUTH-401'
+	| 'SF-VAL-400'
+	| 'SF-DOM-400'
+	| 'SF-AUTHZ-403'
+	| 'SF-FEAT-403'
+	| 'SF-RES-404'
+	| 'SF-SYS-500';

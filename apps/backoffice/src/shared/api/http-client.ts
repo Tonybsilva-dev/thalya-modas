@@ -36,7 +36,7 @@ export async function apiRequest<TResponse>(
     headers.set(activeStoreHeaderName, activeStore.id);
   }
 
-  let response = await fetch(`${apiBaseUrl}${path}`, {
+  let response = await fetchApi(`${apiBaseUrl}${path}`, {
     ...init,
     credentials: "include",
     headers,
@@ -50,7 +50,7 @@ export async function apiRequest<TResponse>(
   ) {
     const retryHeaders = new Headers(headers);
     retryHeaders.delete(activeStoreHeaderName);
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    response = await fetchApi(`${apiBaseUrl}${path}`, {
       ...init,
       credentials: "include",
       headers: retryHeaders,
@@ -69,6 +69,14 @@ export async function apiRequest<TResponse>(
   }
 
   return payload as TResponse;
+}
+
+async function fetchApi(url: string, init: RequestInit) {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new ApiRequestError(0, normalizeApiErrorPayload(0, undefined));
+  }
 }
 
 async function readResponsePayload(response: Response) {

@@ -14,7 +14,7 @@ export const corsMethods = [
 export function getCorsConfig(): FastifyCorsOptions {
 	return {
 		credentials: true,
-		exposedHeaders: ['X-Store-Id'],
+		exposedHeaders: ['X-Store-Id', 'X-Trace-Id', 'Retry-After'],
 		methods: [...corsMethods],
 		origin:
 			env.CORS_ORIGINS.length > 0

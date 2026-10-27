@@ -19,11 +19,29 @@ export type ErrorDescriptor = {
 	type: string;
 };
 
-const problemTypeBaseUrl = 'https://thalya-modas.local/problems';
+const problemTypeBaseUrl = 'https://store-flow.local/problems';
 
 export const errorCatalog = {
+	SecurityUnavailableError: {
+		code: 'SF-SYS-503',
+		acronym: 'SECURITY_UNAVAILABLE',
+		title: 'Acesso temporariamente indisponível',
+		status: 503,
+		level: 'error',
+		category: 'internal',
+		type: `${problemTypeBaseUrl}/security/unavailable`,
+	},
+	LoginBlockedError: {
+		code: 'SF-AUTH-429',
+		acronym: 'LOGIN_BLOCKED',
+		title: 'Aguarde para tentar novamente',
+		status: 429,
+		level: 'warning',
+		category: 'auth',
+		type: `${problemTypeBaseUrl}/auth/blocked`,
+	},
 	AuthError: {
-		code: 'TM-AUTH-401',
+		code: 'SF-AUTH-401',
 		acronym: 'AUTH_UNAUTHORIZED',
 		title: 'Autenticação necessária',
 		status: 401,
@@ -32,7 +50,7 @@ export const errorCatalog = {
 		type: `${problemTypeBaseUrl}/auth/unauthorized`,
 	},
 	UnauthorizedError: {
-		code: 'TM-AUTH-401',
+		code: 'SF-AUTH-401',
 		acronym: 'AUTH_UNAUTHORIZED',
 		title: 'Autenticação necessária',
 		status: 401,
@@ -41,7 +59,7 @@ export const errorCatalog = {
 		type: `${problemTypeBaseUrl}/auth/unauthorized`,
 	},
 	ValidationError: {
-		code: 'TM-VAL-400',
+		code: 'SF-VAL-400',
 		acronym: 'VALIDATION_FAILED',
 		title: 'Dados inválidos',
 		status: 400,
@@ -50,7 +68,7 @@ export const errorCatalog = {
 		type: `${problemTypeBaseUrl}/validation/failed`,
 	},
 	DomainError: {
-		code: 'TM-DOM-400',
+		code: 'SF-DOM-400',
 		acronym: 'DOMAIN_RULE_FAILED',
 		title: 'Regra de negócio não atendida',
 		status: 400,
@@ -59,7 +77,7 @@ export const errorCatalog = {
 		type: `${problemTypeBaseUrl}/domain/rule-failed`,
 	},
 	ForbiddenError: {
-		code: 'TM-AUTHZ-403',
+		code: 'SF-AUTHZ-403',
 		acronym: 'ACCESS_FORBIDDEN',
 		title: 'Acesso negado',
 		status: 403,
@@ -68,7 +86,7 @@ export const errorCatalog = {
 		type: `${problemTypeBaseUrl}/authz/forbidden`,
 	},
 	FeatureDisabledError: {
-		code: 'TM-FEAT-403',
+		code: 'SF-FEAT-403',
 		acronym: 'FEATURE_DISABLED',
 		title: 'Funcionalidade indisponível',
 		status: 403,
@@ -77,7 +95,7 @@ export const errorCatalog = {
 		type: `${problemTypeBaseUrl}/feature/disabled`,
 	},
 	NotFoundError: {
-		code: 'TM-RES-404',
+		code: 'SF-RES-404',
 		acronym: 'RESOURCE_NOT_FOUND',
 		title: 'Recurso não encontrado',
 		status: 404,
@@ -86,7 +104,7 @@ export const errorCatalog = {
 		type: `${problemTypeBaseUrl}/resource/not-found`,
 	},
 	InternalServerError: {
-		code: 'TM-SYS-500',
+		code: 'SF-SYS-500',
 		acronym: 'INTERNAL_SERVER_ERROR',
 		title: 'Erro interno',
 		status: 500,

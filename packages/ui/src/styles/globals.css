@@ -1,3 +1,4 @@
+@import "@trinketos/ui/foundation/theme.css";
 @import "tailwindcss";
 @import "../tokens/colors.css";
 @import "../tokens/typography.css";
@@ -90,4 +91,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-primary);
+}
+
+/* The published Sheet owns its overlay. Preserve list context without its default blur. */
+body:has([data-store-flow-sheet]) > .backdrop-blur-sm {
+  backdrop-filter: none;
+  background: rgb(0 0 0 / 20%);
 }

@@ -8,7 +8,7 @@ import {
   SidebarHeader,
   SidebarItem,
   SidebarSectionTitle,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 const meta = {
   title: "Components/Layout/Sidebar",

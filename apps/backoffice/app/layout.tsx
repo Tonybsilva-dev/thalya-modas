@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Space_Grotesk } from "next/font/google";
+import { Inter } from "next/font/google";
 import { cookies } from "next/headers";
 
 import { isThemeMode, themeCookieName } from "@/src/shared/theme/theme-cookie";
@@ -13,15 +13,15 @@ import { getLastStoreFromCookie } from "@/src/shared/store/last-store-cookie";
 import { AppProviders } from "./providers";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: `${appConfig.name} Backoffice`,
-  description: "Area de trabalho para gestao de loja local.",
+  description: "Administração da plataforma SaaS Store Flow, suas empresas e filiais.",
 };
 
 export default async function RootLayout({
@@ -42,7 +42,7 @@ export default async function RootLayout({
   return (
     <html
       lang={getDocumentLang(locale)}
-      className={`${spaceGrotesk.variable} h-full antialiased${themeClassName}`}
+      className={`${inter.variable} h-full antialiased${themeClassName}`}
       data-theme={themeMode}
       suppressHydrationWarning
     >

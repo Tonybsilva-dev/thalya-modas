@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@thalya-modas/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Data Display/Table",

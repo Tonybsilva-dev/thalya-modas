@@ -341,7 +341,7 @@
       "title": "Boas-vindas",
       "description": "Entre para continuar no centro de comando da loja.",
       "emailLabel": "E-mail",
-      "emailPlaceholder": "ana@thalyamodas.com",
+      "emailPlaceholder": "ana@storeflow.example",
       "passwordLabel": "Senha",
       "passwordPlaceholder": "Digite sua senha",
       "rememberLabel": "Lembrar de mim",
@@ -486,5 +486,19 @@
       "en": "Ingles",
       "es": "Espanhol"
     }
+  },
+  "activation": {
+    "title": "Escolha seu plano",
+    "description": "Sua loja está pronta. Confirme o Starter para começar.",
+    "loading": "Carregando planos…",
+    "retry": "Tentar novamente",
+    "starterDescription": "Acesso às funcionalidades disponíveis do Store Flow.",
+    "soon": "Em breve",
+    "select": "Começar com Starter",
+    "activating": "Ativando…",
+    "checking": "Verificando serviços…",
+    "online": "Serviços disponíveis",
+    "degraded": "Alguns serviços ainda não estão configurados",
+    "offline": "Serviço temporariamente indisponível"
   }
 }

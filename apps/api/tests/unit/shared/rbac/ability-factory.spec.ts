@@ -147,17 +147,17 @@ describe('createAbilityForUser', () => {
 		});
 	});
 
-	describe('ROLE_COMPANY (full access)', () => {
+	describe('ROLE_ADMIN (sem acesso global)', () => {
 		it('deve permitir que company gerencie todos os recursos', () => {
 			const company: AuthenticatedUser = {
 				id: 'company-123',
 				email: 'company@example.com',
-				role: UserRole.COMPANY,
+				role: UserRole.ADMIN,
 			};
 
 			const ability = createAbilityForUser(company);
 
-			expect(ability.can(Action.MANAGE, Subject.ALL)).toBe(true);
+			expect(ability.can(Action.MANAGE, Subject.ALL)).toBe(false);
 		});
 	});
 
@@ -179,12 +179,12 @@ describe('createAbilityForUser', () => {
 		});
 	});
 
-	describe('ROLE_DELIVERY_MAN (self-only)', () => {
+	describe('ROLE_CUSTOMER (self-only)', () => {
 		it('deve permitir apenas leitura e atualização dos próprios dados', () => {
 			const delivery: AuthenticatedUser = {
 				id: 'delivery-123',
 				email: 'delivery@example.com',
-				role: UserRole.DELIVERY_MAN,
+				role: UserRole.CUSTOMER,
 			};
 
 			const ability = createAbilityForUser(delivery);

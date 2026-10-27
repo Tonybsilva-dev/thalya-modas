@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type * as React from "react";
-import { Alert, AlertDescription, AlertTitle } from "@thalya-modas/ui";
+import { Alert, AlertDescription, AlertTitle } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Feedback/Alert",

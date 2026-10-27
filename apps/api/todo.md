@@ -124,7 +124,7 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 ### Estratégia inicial
 
 - [x] Criar read model in-memory para o dashboard antes de persistência transacional.
-- [x] Proteger todas as rotas com autenticação por `Authorization: Bearer <token>` ou cookie `@thalya-modas:session`.
+- [x] Proteger todas as rotas com autenticação por `Authorization: Bearer <token>` ou cookie `@store-flow:session`.
 - [x] Documentar contratos no Swagger.
 - [x] Adicionar kill switch global e individual por módulo.
 - [x] Adicionar testes de integração para autenticação, resposta feliz e kill switch.
@@ -157,7 +157,7 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 
 - [x] Implementar primeiro in-memory com testes antes de Prisma/Postgres.
 - [x] Criar módulo protegido separado do read model de dashboard.
-- [x] Validar autenticação por `Authorization: Bearer <token>` ou cookie `@thalya-modas:session`.
+- [x] Validar autenticação por `Authorization: Bearer <token>` ou cookie `@store-flow:session`.
 - [x] Criar kill switch global `FEATURE_CATALOG_ENABLED`.
 - [x] Documentar contratos no Swagger via schemas das rotas.
 - [x] Preparar contrato de upload direto para R2 exigindo `image/webp`.
@@ -253,7 +253,7 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 #### API validada
 
 - [x] Autenticação obrigatória nas rotas de catálogo.
-- [x] Cookie `@thalya-modas:session` ou `Authorization: Bearer` aceitos pelo middleware.
+- [x] Cookie `@store-flow:session` ou `Authorization: Bearer` aceitos pelo middleware.
 - [x] Kill switch `FEATURE_CATALOG_ENABLED` bloqueia catálogo com `403`.
 - [x] Swagger documenta fornecedores, responsáveis, produtos, upload e estoque.
 - [x] Testes de integração cobrem criação de fornecedor, produto, ajuste de estoque, responsáveis, upload WebP e kill switch.
@@ -263,19 +263,19 @@ Não retornar `404`, porque a rota existe; o problema é operacional/configuraci
 
 #### Validação executada
 
-- [x] `pnpm --filter @thalya-modas/api test -- tests/integration/catalog/catalog.routes.spec.ts`
+- [x] `pnpm --filter @store-flow/api test -- tests/integration/catalog/catalog.routes.spec.ts`
   - Resultado observado: suíte da API executada com 34 arquivos passando, 356 testes passando e 2 testes Prisma opt-in pulados.
-- [x] `pnpm --filter @thalya-modas/api exec biome check src/app/http/server.ts src/core/infra/persistence/in-memory/in-memory-catalog-repository.ts src/core/infra/storage/r2-presigned-upload.ts src/shared/env/env.ts scripts/validate-r2-upload.ts tests/unit/core/infra/storage/r2-presigned-upload.spec.ts tests/unit/shared/env/env.spec.ts package.json`
+- [x] `pnpm --filter @store-flow/api exec biome check src/app/http/server.ts src/core/infra/persistence/in-memory/in-memory-catalog-repository.ts src/core/infra/storage/r2-presigned-upload.ts src/shared/env/env.ts scripts/validate-r2-upload.ts tests/unit/core/infra/storage/r2-presigned-upload.spec.ts tests/unit/shared/env/env.spec.ts package.json`
   - Resultado observado: passou.
-- [x] `pnpm --filter @thalya-modas/api build:check`
+- [x] `pnpm --filter @store-flow/api build:check`
   - Resultado observado: passou.
-- [x] `pnpm --filter @thalya-modas/api db:deploy`
+- [x] `pnpm --filter @store-flow/api db:deploy`
   - Resultado observado: passou com Postgres local; 2 migrations registradas e nenhuma migration pendente.
-- [x] `RUN_PRISMA_INTEGRATION_TESTS=true pnpm --filter @thalya-modas/api exec vitest run --fileParallelism=false tests/integration/catalog/catalog-prisma.spec.ts`
+- [x] `RUN_PRISMA_INTEGRATION_TESTS=true pnpm --filter @store-flow/api exec vitest run --fileParallelism=false tests/integration/catalog/catalog-prisma.spec.ts`
   - Resultado observado: 2 testes Prisma/Postgres de catálogo passaram contra o banco local.
-- [x] `pnpm --filter @thalya-modas/backoffice lint`
+- [x] `pnpm --filter @store-flow/backoffice lint`
   - Resultado observado: passou.
-- [ ] `pnpm --filter @thalya-modas/api r2:validate`
+- [ ] `pnpm --filter @store-flow/api r2:validate`
   - Resultado observado: `PUT` real retornou `403 AccessDenied` em 2026-06-03. O signer local está coberto por teste unitário e alinhado ao exemplo oficial do Cloudflare R2; a próxima verificação deve focar permissão do token, bucket selecionado, endpoint/account id e política de escrita do R2.
 
 #### Lacunas do fluxo de fornecedores
@@ -502,7 +502,7 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
 
 - Prefixo do produto: `TM`.
 - Categoria curta: `AUTH`, `AUTHZ`, `VAL`, `DOM`, `FEAT`, `RES`, `SYS`.
-- Status HTTP no sufixo: exemplo `TM-AUTH-401`, `TM-VAL-400`, `TM-SYS-500`.
+- Status HTTP no sufixo: exemplo `SF-AUTH-401`, `SF-VAL-400`, `SF-SYS-500`.
 
 ### Níveis
 
@@ -553,7 +553,7 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
 - [x] Endereço só pode ser salvo depois de `STORE_PROFILE`.
 - [x] Preferências só podem ser salvas depois de `STORE_ADDRESS`.
 - [x] Onboarding só pode ser concluído depois de `STORE_PROFILE`, `STORE_ADDRESS` e `STORE_PREFERENCES`.
-- [x] Rotas de onboarding aceitam autenticação por `Authorization: Bearer <token>` ou cookie `@thalya-modas:session`.
+- [x] Rotas de onboarding aceitam autenticação por `Authorization: Bearer <token>` ou cookie `@store-flow:session`.
 
 ### Pendências para próxima etapa
 
@@ -585,7 +585,7 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
   - `token`
   - `expiresIn`
 - [x] Adicionar seed para usuário de preview:
-  - e-mail sugerido: `ana@thalyamodas.com`
+  - e-mail sugerido: `ana@storeflow.example`
   - senha sugerida: `Password123`
   - role de gerente/admin compatível com rotas `/manager/dashboard`.
 - [x] Definir comportamento de “Remember me”:
@@ -593,7 +593,7 @@ Não implementar Prisma/Postgres para uma funcionalidade antes de:
   - ampliar expiração do token quando verdadeiro, se aplicável.
 - [x] Decidir se o backoffice usará token em resposta JSON ou cookie httpOnly.
   - Decisão: usar cookie `httpOnly` para sessão do backoffice.
-  - Cookie padronizado: `@thalya-modas:session`.
+  - Cookie padronizado: `@store-flow:session`.
   - `POST /auth/login` seta cookie seguro e o middleware lê o mesmo padrão.
 - [x] Manter mensagens de erro genéricas para credenciais inválidas.
 

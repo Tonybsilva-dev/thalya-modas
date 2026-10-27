@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Badge } from "@thalya-modas/ui";
+import { Badge } from "@store-flow/ui";
 
 const meta = {
   title: "Components/Feedback/Badge",

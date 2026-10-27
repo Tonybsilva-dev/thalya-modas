@@ -1,5 +1,6 @@
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { entryDestination } from '../../../core/application/entry-destination';
 import {
 	GetCurrentUserUseCase,
 	LoginUseCase,
@@ -23,9 +24,14 @@ import {
 import {
 	createAuthSessionCookie,
 	createExpiredAuthSessionCookie,
+	getAuthSessionTokenFromCookieHeader,
 } from '../auth-session-cookie';
 import type { AppContainer } from '../container';
+import { AuthError } from '../errors/auth-error';
+import { DomainError } from '../errors/domain-error';
+import { ForbiddenError } from '../errors/forbidden-error';
 import { authMiddleware } from '../middlewares/auth';
+import { storeContextMiddleware } from '../middlewares/store-context';
 
 type CookieReply = {
 	header: (
@@ -131,6 +137,7 @@ const logoutResponseSchema = z.object({
 });
 
 const currentUserResponseSchema = z.object({
+	entryDestination: z.string().optional(),
 	id: z.string().uuid(),
 	name: z.string(),
 	email: z.string().email(),
@@ -170,8 +177,8 @@ const registerSuccessExample = {
 	user: {
 		id: '123e4567-e89b-12d3-a456-426614174000',
 		name: 'Ana Ribeiro',
-		email: 'ana@thalyamodas.com',
-		role: 'ROLE_COMPANY',
+		email: 'ana@storeflow.example',
+		role: 'ROLE_ADMIN',
 		accountStatus: 'ACTIVE',
 		createdAt: '2026-06-01T00:00:00.000Z',
 		updatedAt: '2026-06-01T00:00:00.000Z',
@@ -188,8 +195,8 @@ const loginSuccessExample = {
 	user: {
 		id: '123e4567-e89b-12d3-a456-426614174000',
 		name: 'Ana Ribeiro',
-		email: 'ana@thalyamodas.com',
-		role: 'ROLE_COMPANY',
+		email: 'ana@storeflow.example',
+		role: 'ROLE_ADMIN',
 		accountStatus: 'ACTIVE',
 	},
 	token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.preview-login-token',
@@ -409,6 +416,8 @@ export async function authRoutes(
 	const requestPasswordRecoveryUseCase = new RequestPasswordRecoveryUseCase(
 		container.userRepository,
 		container.passwordRecoveryRepository,
+		(email, code) =>
+			container.sendRecoveryCode?.(email, code) ?? Promise.resolve(),
 	);
 
 	const verifyPasswordRecoveryCodeUseCase =
@@ -418,12 +427,15 @@ export async function authRoutes(
 		new ResendPasswordRecoveryCodeUseCase(
 			container.userRepository,
 			container.passwordRecoveryRepository,
+			(email, code) =>
+				container.sendRecoveryCode?.(email, code) ?? Promise.resolve(),
 		);
 
 	const resetPasswordUseCase = new ResetPasswordUseCase(
 		container.userRepository,
 		container.passwordRecoveryRepository,
 		container.passwordHasher,
+		(userId) => container.security.revokeAll(userId),
 	);
 
 	// POST /auth/register
@@ -447,7 +459,7 @@ export async function authRoutes(
 					// O Fastify está configurado para ignorar propriedades desconhecidas
 					example: {
 						name: 'Ana Ribeiro',
-						email: 'ana@thalyamodas.com',
+						email: 'ana@storeflow.example',
 						password: 'SenhaSegura123',
 					},
 				},
@@ -496,19 +508,44 @@ export async function authRoutes(
 
 			const body = validationResult.data;
 			let actor: { id: string; role: UserRole } | undefined;
-			const authHeader = request.headers?.authorization;
-			if (authHeader && typeof authHeader === 'string') {
-				const parts = authHeader.split(' ');
-				if (parts.length === 2 && parts[0] === 'Bearer') {
-					const validation = container.jwtService.validate(parts[1]);
-					if (validation.valid && validation.payload) {
-						actor = {
-							id: validation.payload.userId,
-							role: validation.payload.role as UserRole,
-						};
-					}
+
+			if (
+				request.headers?.authorization ||
+				getAuthSessionTokenFromCookieHeader(request.headers?.cookie)
+			) {
+				await authMiddleware(
+					request,
+					reply,
+					container.jwtService,
+					container.userRepository,
+				);
+				actor = {
+					id: request.user.userId,
+					role: request.user.role as UserRole,
+				};
+			}
+			let memberStoreId: string | undefined;
+			if (
+				actor &&
+				(body.role === UserRole.MANAGER ||
+					body.role === UserRole.EMPLOYEE ||
+					body.role === UserRole.CUSTOMER ||
+					!body.role)
+			) {
+				if (!container.storeRepository)
+					throw new Error('StoreRepository nao configurado');
+				await storeContextMiddleware(request, reply, container.storeRepository);
+				memberStoreId = request.storeContext.storeId;
+				if (
+					actor.role === UserRole.ADMIN &&
+					!['OWNER', 'ADMIN'].includes(request.storeContext.role)
+				) {
+					throw new ForbiddenError(
+						'Apenas administrador da loja pode cadastrar membros.',
+					);
 				}
 			}
+
 			const result = await registerUseCase.execute({
 				name: body.name,
 				email: body.email,
@@ -517,8 +554,21 @@ export async function authRoutes(
 				accountStatus: body.accountStatus,
 				actor,
 			});
+
+			if (memberStoreId && container.storeRepository) {
+				try {
+					await container.storeRepository.addMember(
+						memberStoreId,
+						result.user.id,
+						result.user.role.replace('ROLE_', ''),
+					);
+				} catch (error) {
+					await container.userRepository?.delete(result.user.id);
+					throw error;
+				}
+			}
 			const onboarding =
-				!actor && container.onboardingRepository
+				result.user.role === UserRole.ADMIN && container.onboardingRepository
 					? await container.onboardingRepository.create({
 							userId: result.user.id,
 							status: OnboardingStatus.PENDING,
@@ -527,6 +577,22 @@ export async function authRoutes(
 						})
 					: undefined;
 
+			if (!actor) {
+				const payload = container.jwtService.validate(result.token).payload!;
+				result.token = container.jwtService.generate(
+					{
+						...payload,
+						sessionVersion: await container.security.sessionVersion(
+							result.user.id,
+						),
+					},
+					{ expiresIn: 7 * 24 * 3600 },
+				);
+				reply.header(
+					'Set-Cookie',
+					createAuthSessionCookie(result.token, 7 * 24 * 3600),
+				);
+			}
 			return reply.code(201).send({
 				user: {
 					...result.user,
@@ -567,7 +633,7 @@ export async function authRoutes(
 					// Adiciona exemplo para documentação Swagger
 					// O Fastify está configurado para ignorar propriedades desconhecidas
 					example: {
-						email: 'ana@thalyamodas.com',
+						email: 'ana@storeflow.example',
 						password: 'SenhaSegura123',
 						rememberMe: false,
 					},
@@ -626,7 +692,28 @@ export async function authRoutes(
 				throw validationResult.error;
 			}
 
-			const result = await loginUseCase.execute(validationResult.data);
+			const { email } = validationResult.data;
+			const ip = request.ip ?? 'unknown';
+			await container.security.assertLoginAllowed(email, ip);
+			let result: Awaited<ReturnType<LoginUseCase['execute']>>;
+			try {
+				result = await loginUseCase.execute(validationResult.data);
+			} catch (error) {
+				if (error instanceof AuthError || error instanceof DomainError)
+					await container.security.loginFailed(email, ip);
+				throw error;
+			}
+			await container.security.loginSucceeded(email);
+			const payload = container.jwtService.validate(result.token).payload!;
+			result.token = container.jwtService.generate(
+				{
+					...payload,
+					sessionVersion: await container.security.sessionVersion(
+						payload.userId,
+					),
+				},
+				{ expiresIn: result.expiresIn },
+			);
 
 			return reply
 				.header(
@@ -660,7 +747,7 @@ export async function authRoutes(
 						body: passwordRecoveryEmailRequestSchema,
 					}).body as Record<string, unknown>),
 					example: {
-						email: 'ana@thalyamodas.com',
+						email: 'ana@storeflow.example',
 					},
 				},
 				response: {
@@ -696,7 +783,7 @@ export async function authRoutes(
 
 			const result = await requestPasswordRecoveryUseCase.execute({
 				email: validationResult.data.email,
-				includeDebugCode: env.NODE_ENV !== 'production',
+				includeDebugCode: env.NODE_ENV === 'test',
 			});
 
 			return reply.code(202).send(result);
@@ -721,10 +808,42 @@ export async function authRoutes(
 			},
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
-		async (_request: any, reply: any) => {
+		async (request: any, reply: any) => {
+			const token =
+				request.headers.authorization?.replace(/^Bearer /, '') ??
+				getAuthSessionTokenFromCookieHeader(request.headers.cookie);
+			if (token) {
+				const validation = container.jwtService.validate(token);
+				if (validation.valid && validation.payload)
+					await container.security.revoke(token, validation.payload);
+			}
 			return reply
 				.header('Set-Cookie', createExpiredAuthSessionCookie())
 				.send(logoutSuccessExample);
+		},
+	);
+
+	fastify.post(
+		'/auth/logout-all',
+		{
+			schema: {
+				tags: ['auth'],
+				description: 'Encerra todas as sess?es do usu?rio',
+				security: [{ bearerAuth: [] }, { sessionCookie: [] }],
+			},
+			preHandler: async (request: FastifyRequest) =>
+				authMiddleware(
+					request,
+					undefined,
+					container.jwtService,
+					container.userRepository,
+				),
+		},
+		async (request: FastifyRequest, reply: any) => {
+			await container.security.revokeAll(request.user!.userId);
+			return reply
+				.header('Set-Cookie', createExpiredAuthSessionCookie())
+				.send({ success: true });
 		},
 	);
 
@@ -747,7 +866,7 @@ export async function authRoutes(
 						body: passwordRecoveryVerifyCodeRequestSchema,
 					}).body as Record<string, unknown>),
 					example: {
-						email: 'ana@thalyamodas.com',
+						email: 'ana@storeflow.example',
 						code: '123456',
 					},
 				},
@@ -804,7 +923,7 @@ export async function authRoutes(
 						body: passwordRecoveryEmailRequestSchema,
 					}).body as Record<string, unknown>),
 					example: {
-						email: 'ana@thalyamodas.com',
+						email: 'ana@storeflow.example',
 					},
 				},
 				response: {
@@ -840,7 +959,7 @@ export async function authRoutes(
 
 			const result = await resendPasswordRecoveryCodeUseCase.execute({
 				email: validationResult.data.email,
-				includeDebugCode: env.NODE_ENV !== 'production',
+				includeDebugCode: env.NODE_ENV === 'test',
 			});
 
 			return reply.code(202).send(result);
@@ -947,7 +1066,12 @@ export async function authRoutes(
 				},
 			},
 			preHandler: async (request: FastifyRequest, _reply: unknown) => {
-				await authMiddleware(request, _reply, container.jwtService);
+				await authMiddleware(
+					request,
+					_reply,
+					container.jwtService,
+					container.userRepository,
+				);
 			},
 		},
 		// biome-ignore lint/suspicious/noExplicitAny: Fastify 5.x tem problemas de tipos
@@ -963,6 +1087,11 @@ export async function authRoutes(
 
 			return {
 				...result,
+				entryDestination: await entryDestination(
+					container,
+					user.userId,
+					result.role,
+				),
 				createdAt: result.createdAt.toISOString(),
 				updatedAt: result.updatedAt.toISOString(),
 			};

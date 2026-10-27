@@ -1,5 +1,5 @@
 {
-  "name": "@thalya-modas/backoffice",
+  "name": "@store-flow/backoffice",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@store-flow/ui": "workspace:*",
     "@tanstack/react-query": "^5.100.14",
-    "@thalya-modas/ui": "workspace:*",
     "@zxing/browser": "0.1.4",
     "@zxing/library": "0.20.0",
     "imask": "^7.6.1",
@@ -32,6 +32,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "eslint-plugin-import": "^2.32.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

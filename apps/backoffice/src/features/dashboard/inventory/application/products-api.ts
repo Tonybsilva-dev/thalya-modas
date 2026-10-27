@@ -47,6 +47,11 @@ export type ProductInput = {
   supplierId?: string;
 };
 
+export function useProductsPageQuery(query:{q?:string;status?:string;page:number;perPage?:number}) {
+ const params=new URLSearchParams({page:String(query.page),perPage:String(query.perPage??20),q:query.q??"",status:query.status??"all"});
+ return useQuery({queryKey:["products","page",query],queryFn:()=>apiRequest<import("@/src/features/backoffice/application/backoffice-api").Page<Product>>(`/products/page?${params}`)});
+}
+
 export function useProductsQuery(query: { q?: string; page?: number; perPage?: number } = {}) {
   const params = new URLSearchParams();
   if (query.q) params.set("q", query.q);

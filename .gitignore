@@ -11,3 +11,10 @@ node_modules/
 dist/
 coverage/
 storybook-static/
+
+# Local database backups
+.local-backups/
+
+# Claude Code (local)
+.claude/settings.local.json
+.claude/handoff/

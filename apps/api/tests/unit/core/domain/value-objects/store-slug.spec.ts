@@ -7,8 +7,8 @@ import {
 
 describe('Store storage identity', () => {
 	it('deve normalizar o nome da loja para um slug seguro', () => {
-		expect(normalizeStoreSlug('  Thálya Modas & Acessórios  ')).toBe(
-			'thalya-modas-acessorios',
+		expect(normalizeStoreSlug('  Store Flow & Acessórios  ')).toBe(
+			'store-flow-acessorios',
 		);
 	});
 
@@ -26,6 +26,6 @@ describe('Store storage identity', () => {
 	});
 
 	it('deve criar o prefixo oficial do tenant no bucket', () => {
-		expect(createStoreBucketKey('thalya-modas')).toBe('stores/thalya-modas');
+		expect(createStoreBucketKey('store-flow')).toBe('stores/store-flow');
 	});
 });

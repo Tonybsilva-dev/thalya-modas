@@ -12,6 +12,7 @@ import type {
 } from '../entities/dashboard';
 
 export interface DashboardRepository {
+	withStore?(storeId: string): DashboardRepository;
 	getOverview(userId: string): Promise<DashboardOverview>;
 	getOrders(
 		userId: string,

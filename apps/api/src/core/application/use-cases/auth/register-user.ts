@@ -40,7 +40,7 @@ export class RegisterUserUseCase {
 		const email = input.email.trim().toLowerCase();
 		const isPublicRegistration = !input.actor;
 		const requestedRole = isPublicRegistration
-			? UserRole.COMPANY
+			? UserRole.ADMIN
 			: (input.role ?? UserRole.CUSTOMER);
 
 		if (isPublicRegistration && input.role) {
@@ -61,22 +61,20 @@ export class RegisterUserUseCase {
 			);
 		}
 
-		if (!isPublicRegistration && requestedRole === UserRole.COMPANY) {
+		if (!isPublicRegistration && requestedRole === UserRole.ADMIN) {
 			if (input.actor?.role !== UserRole.SUPER_ADMIN) {
 				throw new ForbiddenError(
-					'Apenas Super Admin pode cadastrar Company (estabelecimento).',
+					'Apenas Super Admin pode cadastrar Admin (estabelecimento).',
 				);
 			}
 		} else if (
 			!isPublicRegistration &&
-			(requestedRole === UserRole.EMPLOYEE ||
-				requestedRole === UserRole.DELIVERY_MAN)
+			input.actor?.role !== UserRole.SUPER_ADMIN &&
+			input.actor?.role !== UserRole.ADMIN
 		) {
-			if (input.actor?.role !== UserRole.COMPANY) {
-				throw new ForbiddenError(
-					'Apenas Company (estabelecimento) pode cadastrar empregados e entregadores.',
-				);
-			}
+			throw new ForbiddenError(
+				'Apenas administradores podem cadastrar usuarios.',
+			);
 		}
 
 		const validatedData = createUserSchema.parse({

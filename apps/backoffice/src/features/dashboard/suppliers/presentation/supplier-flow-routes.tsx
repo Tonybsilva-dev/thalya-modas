@@ -2,6 +2,7 @@
 
 import type {
   ComponentType,
+  ComponentProps,
   FocusEvent,
   FormEvent,
   KeyboardEvent as ReactKeyboardEvent,
@@ -20,11 +21,9 @@ import {
 import {
   ArrowLeft,
   CheckCircle,
-  CurrencyDollar,
   EnvelopeSimple,
   FloppyDisk,
   Hash,
-  Info,
   Phone,
   Plus,
   Storefront,
@@ -34,12 +33,21 @@ import {
   X,
 } from "@phosphor-icons/react";
 import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+  FormActions,
+  ConfirmDialog,
+  Sheet, SheetContent, SheetTitle, SheetDescription,
   Badge,
   Button,
+  PageHeader,
   Card,
   CardContent,
   Checkbox,
   Input,
+  CurrencyInput,
   Label,
   Select,
   SelectContent,
@@ -48,9 +56,10 @@ import {
   SelectValue,
   Textarea,
   cn,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 import { z } from "zod";
 
+import { useAppUiStore } from "@/src/shared/state/app-ui-store";
 import { ApiRequestError } from "@/src/shared/api/http-client";
 import { normalizeLocale } from "@/src/shared/i18n/locales";
 import { MaskedInput } from "@/src/shared/ui/masked-input";
@@ -167,7 +176,12 @@ export function SupplierEditRoute() {
   return <SupplierFormRoute mode="edit" />;
 }
 
-function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
+export function SupplierFormRoute({ mode, supplierId: providedId, onClose, onSaved, onStateChange }: {
+  mode: "create" | "edit"; supplierId?: string; onClose?: () => void;
+  onSaved?: (id: string, notice: string) => void;
+  onStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
+}) {
+  const activeStoreId = useAppUiStore(state => state.activeStore?.id);
   const router = useRouter();
   const queryClient = useQueryClient();
   const basePath = useSupplierBasePath();
@@ -179,8 +193,15 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   const supplierDraft = useSupplierFlowStore((state) => state.supplierDraft);
   const setSupplierDraft = useSupplierFlowStore((state) => state.setSupplierDraft);
   const resetFlow = useSupplierFlowStore((state) => state.resetFlow);
-  const [section, setSection] = useQueryState("section", parseAsString.withDefault("data"));
-  const [modal, setModal] = useQueryState("modal", supplierModalParser);
+  const [urlSection, setUrlSection] = useQueryState("section", parseAsString.withDefault("data"));
+  const [urlModal, setUrlModal] = useQueryState("modal", supplierModalParser);
+  const [localSection, setLocalSection] = useState("data");
+  const [localModal, setLocalModal] = useState<"delete" | "responsible" | null>(null);
+  const section = onClose ? localSection : urlSection;
+  const setSection = onClose ? setLocalSection : setUrlSection;
+  const modal = onClose ? localModal : urlModal;
+  const setModal = onClose ? setLocalModal : setUrlModal;
+  const [contactState, setContactState] = useState({ dirty: false, busy: false });
   const [categoryOverride, setCategory] = useState<SupplierCategory>();
   const [deliveryTermOverride, setDeliveryTerm] = useState<SupplierTerm>();
   const [paymentTermOverride, setPaymentTerm] = useState<SupplierTerm>();
@@ -191,27 +212,28 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   const formAlertRef = useRef<HTMLDivElement>(null);
   const [isDirty, setIsDirty] = useState(false);
   const isEdit = mode === "edit";
-  const supplierId = params.supplierId;
+  const hasUnsavedChanges = isDirty || contactState.dirty || (!isEdit && localResponsibles.length > 0);
+  const supplierId = providedId ?? params.supplierId;
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
   const supplierQuery = useQuery({
     enabled: isPersistedSupplier,
-    queryKey: ["suppliers", supplierId],
+    queryKey: ["suppliers", activeStoreId, supplierId],
     queryFn: () => getSupplier(supplierId as string),
   });
   const responsiblesQuery = useQuery({
     enabled: isPersistedSupplier,
-    queryKey: ["suppliers", supplierId, "responsibles"],
+    queryKey: ["suppliers", activeStoreId, supplierId, "responsibles"],
     queryFn: () => listSupplierResponsibles(supplierId as string),
   });
   const ordersQuery = useQuery({
     enabled: isPersistedSupplier,
-    queryKey: ["purchase-orders", "supplier", supplierId],
+    queryKey: ["purchase-orders", activeStoreId, "supplier", supplierId],
     queryFn: () =>
       listPurchaseOrders({ page: 1, perPage: 100, supplierId }),
   });
   const receivingsQuery = useQuery({
     enabled: isPersistedSupplier,
-    queryKey: ["receivings", "supplier", supplierId],
+    queryKey: ["receivings", activeStoreId, "supplier", supplierId],
     queryFn: () => listReceivings({ page: 1, perPage: 100, supplierId }),
   });
   const responsibles = isEdit
@@ -244,7 +266,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   }, [mode, resetFlow]);
 
   useEffect(() => {
-    if (!isDirty) return;
+    if (!hasUnsavedChanges) return;
 
     function preventAccidentalExit(event: BeforeUnloadEvent) {
       event.preventDefault();
@@ -253,7 +275,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
 
     window.addEventListener("beforeunload", preventAccidentalExit);
     return () => window.removeEventListener("beforeunload", preventAccidentalExit);
-  }, [isDirty]);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     if (!section || section === "data") return;
@@ -293,9 +315,11 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
       void queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       resetFlow();
       const notice = isEdit ? "updated" : "created";
-      router.push(`${basePath}?notice=${notice}&supplier=${supplier.id}`);
+      if (onSaved) onSaved(supplier.id, notice); else router.push(`${basePath}?notice=${notice}&supplier=${supplier.id}`);
     },
   });
+
+  useEffect(() => { onStateChange?.({ dirty: hasUnsavedChanges, busy: mutation.isPending || contactState.busy }); }, [hasUnsavedChanges, contactState, mutation.isPending, onStateChange]);
 
   function handleDraftChange(event: FormEvent<HTMLFormElement>) {
     const target = event.target;
@@ -348,6 +372,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
     setFormError(null);
 
     const result = supplierFormSchema.safeParse({
@@ -390,6 +415,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   }
 
   function leaveForm() {
+    if (onClose) { onClose(); return; }
     if (isDirty && !window.confirm(t("unsaved.confirm"))) return;
     setIsDirty(false);
     router.push(basePath);
@@ -398,6 +424,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   if (isEdit && !isPersistedSupplier) {
     return (
       <SupplierRouteState
+        embedded={Boolean(onClose)}
         basePath={basePath}
         content={content}
         description={t("errors.invalidId")}
@@ -409,6 +436,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   if (isEdit && supplierQuery.isPending) {
     return (
       <SupplierRouteState
+        embedded={Boolean(onClose)}
         basePath={basePath}
         content={content}
         description={t("loadingDescription")}
@@ -421,6 +449,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   if (isEdit && supplierQuery.isError) {
     return (
       <SupplierRouteState
+        embedded={Boolean(onClose)}
         basePath={basePath}
         content={content}
         description={getApiErrorMessage(supplierQuery.error, t("errors.load"))}
@@ -431,12 +460,14 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
   }
 
   return (
-    <DashboardShell
+    <SupplierSurface
+      embedded={Boolean(onClose)}
       activeItem="Suppliers"
       operatorRole={content.sidebar.operatorRole}
       status={content.sidebar.status}
     >
       <>
+        <div hidden={modal === "responsible"}>
         <form
           key={persistedSupplier?.updatedAt ?? mode}
           className="grid gap-5"
@@ -445,7 +476,8 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
           onKeyDown={handleFormKeyDown}
           onSubmit={handleSubmit}
         >
-          <SupplierFormHeader
+          <fieldset disabled={mutation.isPending} className="contents">
+          {!onClose && <SupplierFormHeader
             basePath={basePath}
             isDirty={isDirty}
             mode={mode}
@@ -453,7 +485,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
             section={section}
             setSection={setSection}
             status={status}
-          />
+          />}
 
           {formError || Object.keys(errors).length > 0 ? (
             <div
@@ -480,8 +512,8 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
             </div>
           ) : null}
 
-          <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="grid gap-5">
+          <div className="grid min-h-0 content-start gap-3">
+            <div className="grid divide-y border bg-card">
               <SupplierDataCard
                 errors={errors}
                 onCategoryChange={(value) => {
@@ -526,6 +558,7 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
             </div>
 
             {isEdit ? (
+              <Accordion type="single" collapsible><AccordionItem value="history"><AccordionTrigger>Histórico de compras e recebimentos</AccordionTrigger><AccordionContent>
               <SupplierPerformanceRail
                 orders={(ordersQuery.data ?? []).filter(
                   (order) => order.supplierId === supplierId,
@@ -535,13 +568,8 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
                 )}
                 supplier={persistedSupplier}
               />
-            ) : (
-              <SupplierCreateSummary
-                onOpenResponsible={() => void setModal("responsible")}
-                responsiblesCount={responsibles.length}
-                values={values}
-              />
-            )}
+              </AccordionContent></AccordionItem></Accordion>
+            ) : null}
           </div>
 
           {isEdit ? (
@@ -554,19 +582,25 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
             isPending={mutation.isPending}
             onCancel={leaveForm}
           />
+          </fieldset>
         </form>
 
+        </div>
         {modal === "delete" ? (
           <SupplierDeleteModal
             onClose={() => void setModal(null)}
-            onDeleted={() => router.push(basePath)}
+            onDeleted={() => onSaved ? onSaved(supplierId!, "deleted") : router.push(basePath)}
             supplier={persistedSupplier}
             supplierId={supplierId}
           />
         ) : null}
         {modal === "responsible" ? (
           <SupplierResponsibleModal
+            inline={Boolean(onClose)}
+            backToSupplier={Boolean(onClose)}
+            onStateChange={setContactState}
             onClose={() => {
+              setContactState({ dirty: false, busy: false });
               if (!isEdit && localResponsibles.length > 0) setIsDirty(true);
               void setModal(null);
             }}
@@ -575,11 +609,16 @@ function SupplierFormRoute({ mode }: { mode: "create" | "edit" }) {
           />
         ) : null}
       </>
-    </DashboardShell>
+    </SupplierSurface>
   );
 }
 
+function SupplierSurface({ embedded, ...props }: ComponentProps<typeof DashboardShell> & { embedded?: boolean }) {
+  return embedded ? <>{props.children}</> : <DashboardShell {...props} />;
+}
+
 function SupplierRouteState({
+  embedded,
   basePath,
   content,
   description,
@@ -587,6 +626,7 @@ function SupplierRouteState({
   onRetry,
   title,
 }: {
+  embedded?: boolean;
   basePath: string;
   content: ReturnType<typeof useSupplierShellContent>;
   description: string;
@@ -597,7 +637,8 @@ function SupplierRouteState({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <DashboardShell
+    <SupplierSurface
+      embedded={embedded}
       activeItem="Suppliers"
       operatorRole={content.sidebar.operatorRole}
       status={content.sidebar.status}
@@ -636,7 +677,7 @@ function SupplierRouteState({
           </div>
         </CardContent>
       </Card>
-    </DashboardShell>
+    </SupplierSurface>
   );
 }
 
@@ -661,7 +702,7 @@ function SupplierFormHeader({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <header className="grid gap-4">
+    <div className="grid gap-4">
       <div className="grid gap-1.5">
         <SupplierBreadcrumb
           basePath={basePath}
@@ -672,12 +713,7 @@ function SupplierFormHeader({
           }}
           rootLabel={t("breadcrumbRoot")}
         />
-        <h1 className="text-2xl font-bold leading-tight text-foreground md:text-[28px]">
-          {isEdit ? t("editTitle") : t("createTitle")}
-        </h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {isEdit ? t("editDescription") : t("createDescription")}
-        </p>
+        <PageHeader title={isEdit ? t("editTitle") : t("createTitle")} description={isEdit ? t("editDescription") : t("createDescription")} />
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <Badge variant={status === "active" ? "success" : "outline"}>
             {status === "active" ? t("status.active") : t("status.inactive")}
@@ -721,7 +757,7 @@ function SupplierFormHeader({
           ))}
         </nav>
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -737,8 +773,8 @@ function SupplierDataCard({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <Card id="supplier-section-data" className="scroll-mt-6">
-      <CardContent className="grid gap-4 p-5">
+    <section id="supplier-section-data" className="scroll-mt-6">
+      <div className="grid gap-3 p-4">
         <SectionHeading
           description={t("dataDescription")}
           title={t("dataTitle")}
@@ -795,8 +831,8 @@ function SupplierDataCard({
             value={values.category}
           />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -818,8 +854,8 @@ function SupplierContactsCard({
     responsibles.find((responsible) => responsible.isPrimary) ?? responsibles[0];
 
   return (
-    <Card id="supplier-section-contacts" className="scroll-mt-6">
-      <CardContent className="grid gap-4 p-5">
+    <section id="supplier-section-contacts" className="scroll-mt-6">
+      <div className="grid gap-3 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <SectionHeading
             description={t("contacts.description")}
@@ -921,8 +957,8 @@ function SupplierContactsCard({
             </Button>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -946,8 +982,8 @@ function SupplierCommercialCard({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <Card id="supplier-section-commercial" className="scroll-mt-6">
-      <CardContent className="grid gap-4 p-5">
+    <section id="supplier-section-commercial" className="scroll-mt-6">
+      <div className="grid gap-3 p-4">
         <SectionHeading
           description={t("commercialDescription")}
           title={t("commercialTitle")}
@@ -977,15 +1013,13 @@ function SupplierCommercialCard({
             required
             value={values.paymentTerm}
           />
-          <FormField
-            defaultValue={values.minimumOrder}
-            error={errors.minimumOrder}
-            icon={CurrencyDollar}
-            label={t("fields.minimumOrder")}
-            name="minimumOrder"
-            placeholder={t("placeholders.minimumOrder")}
-            required
-          />
+          <div className="grid gap-1.5">
+            <Label htmlFor="minimumOrder">{t("fields.minimumOrder")} (R$) *</Label>
+            <CurrencyInput id="minimumOrder" name="minimumOrder" defaultValue={values.minimumOrder}
+              placeholder="1.500,00" required
+              aria-invalid={Boolean(errors.minimumOrder)} aria-describedby={errors.minimumOrder ? 'minimumOrder-error' : undefined} />
+            {errors.minimumOrder && <p role="alert" id="minimumOrder-error" className="text-xs text-destructive">{errors.minimumOrder}</p>}
+          </div>
           <SelectField
             error={errors.status}
             label={isEdit ? t("fields.status") : t("fields.initialStatus")}
@@ -1004,8 +1038,8 @@ function SupplierCommercialCard({
               : t("status.activeDescription")}
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -1019,8 +1053,8 @@ function SupplierNotesCard({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <Card id="supplier-section-notes" className="scroll-mt-6">
-      <CardContent className="grid gap-4 p-5">
+    <section id="supplier-section-notes" className="scroll-mt-6">
+      <div className="grid gap-3 p-4">
         <SectionHeading
           description={t("notesDescription")}
           title={t("notesTitle")}
@@ -1035,7 +1069,7 @@ function SupplierNotesCard({
           <Textarea
             aria-describedby={errors.notes ? "notes-error" : undefined}
             aria-invalid={Boolean(errors.notes)}
-            className="min-h-36 bg-card"
+            className="min-h-24 bg-card"
             defaultValue={values.notes}
             id="notes"
             name="notes"
@@ -1047,92 +1081,8 @@ function SupplierNotesCard({
             </p>
           ) : null}
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SupplierCreateSummary({
-  onOpenResponsible,
-  responsiblesCount,
-  values,
-}: {
-  onOpenResponsible: () => void;
-  responsiblesCount: number;
-  values: SupplierFormInput;
-}) {
-  const t = useTranslations("dashboard.suppliers.flow");
-  const checklist = [
-    {
-      completed: Boolean(values.name.trim() && values.document.trim()),
-      label: t("summary.fiscal"),
-    },
-    {
-      completed: responsiblesCount > 0,
-      label: t("summary.contact"),
-    },
-    {
-      completed: Boolean(values.deliveryTerm && values.paymentTerm),
-      label: t("summary.terms"),
-    },
-  ];
-
-  return (
-    <aside className="grid content-start gap-4">
-      <Card>
-        <CardContent className="grid gap-4 p-5">
-          <Badge className="w-fit" variant="success">
-            {t("summary.badge")}
-          </Badge>
-          <h2 className="text-base font-bold text-foreground">
-            {t("summary.checklist")}
-          </h2>
-          {checklist.map((item) => (
-            <div key={item.label} className="flex items-center gap-2">
-              {item.completed ? (
-                <CheckCircle className="size-4 text-success" weight="fill" />
-              ) : (
-                <Info className="size-4 text-muted-foreground" />
-              )}
-              <span
-                className={cn(
-                  "text-sm",
-                  item.completed ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {item.label}
-              </span>
-            </div>
-          ))}
-          <div className="grid gap-3 border border-border bg-background p-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center bg-muted">
-                <UserPlus className="size-4 text-muted-foreground" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground">
-                  {t("summary.responsibles")}
-                </p>
-                <Badge variant="secondary">
-                  {responsiblesCount > 0
-                    ? t("summary.count", { count: responsiblesCount })
-                    : t("summary.none")}
-                </Badge>
-              </div>
-            </div>
-            <Button
-              className="h-9 justify-center"
-              onClick={onOpenResponsible}
-              type="button"
-              variant="outline"
-            >
-              <UserPlus className="size-4" />
-              {t("summary.addResponsible")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </aside>
+      </div>
+    </section>
   );
 }
 
@@ -1179,7 +1129,8 @@ function SupplierPerformanceRail({
       t("performance.openValue"),
       new Intl.NumberFormat(locale, {
         currency: "BRL",
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
         style: "currency",
       }).format(openValue),
     ],
@@ -1256,16 +1207,17 @@ function SupplierFormActions({
   const t = useTranslations("dashboard.suppliers.flow");
 
   return (
-    <div className="sticky bottom-3 z-20 flex flex-col gap-3 border border-border bg-card/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center">
+    <FormActions className="flex-col gap-3 px-3 shadow-none sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-foreground">
-          {isDirty ? t("unsaved.pending") : t("unsaved.saved")}
+          {isDirty ? t("unsaved.pending") : isEdit ? t("unsaved.saved") : "Novo cadastro"}
         </p>
         <p className="text-xs text-muted-foreground">{t("unsaved.shortcut")}</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button
           className="h-10 px-4"
+          disabled={isPending}
           onClick={onCancel}
           type="button"
           variant="outline"
@@ -1282,11 +1234,12 @@ function SupplierFormActions({
           {isPending ? t("saving") : isEdit ? t("saveChanges") : t("saveSupplier")}
         </Button>
       </div>
-    </div>
+    </FormActions>
   );
 }
 
 export function SupplierDeleteModalRoute() {
+  const activeStoreId = useAppUiStore(state => state.activeStore?.id);
   const basePath = useSupplierBasePath();
   const content = useSupplierShellContent();
   const params = useParams<{ supplierId?: string }>();
@@ -1296,7 +1249,7 @@ export function SupplierDeleteModalRoute() {
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
   const supplierQuery = useQuery({
     enabled: isPersistedSupplier,
-    queryKey: ["suppliers", supplierId],
+    queryKey: ["suppliers", activeStoreId, supplierId],
     queryFn: () => getSupplier(supplierId as string),
   });
 
@@ -1347,7 +1300,7 @@ export function SupplierDeleteModalRoute() {
           currentLabel={t("deleteTitle")}
           rootLabel={t("breadcrumbRoot")}
         />
-        <h1 className="text-2xl font-bold text-foreground md:text-[28px]">
+        <h1 className="text-2xl font-semibold text-foreground">
           {t("deleteTitle")}
         </h1>
         <Card>
@@ -1371,7 +1324,7 @@ export function SupplierDeleteModalRoute() {
   );
 }
 
-function SupplierDeleteModal({
+export function SupplierDeleteModal({
   onClose,
   onDeleted,
   supplier,
@@ -1406,54 +1359,13 @@ function SupplierDeleteModal({
     },
   });
 
-  return (
-    <ModalOverlay onClose={onClose}>
-      <Card className="w-full max-w-[520px] animate-nitro-scale-in">
-        <CardContent className="grid gap-5 p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex size-11 items-center justify-center bg-destructive text-destructive-foreground">
-              <WarningCircle className="size-5" />
-            </div>
-            <div className="grid flex-1 gap-1">
-              <h2 className="text-[22px] font-bold text-foreground">
-                {t("deleteModal.title")}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {t("deleteModal.description")}
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-2 border border-border bg-muted p-4">
-            <p className="text-sm font-bold text-foreground">
-              {supplier?.name ?? t("deleteModal.unknownSupplier")}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {t("deleteModal.warning")}
-            </p>
-          </div>
-          {deleteError ? <FormError>{deleteError}</FormError> : null}
-          <div className="flex justify-end gap-3">
-            <Button className="h-10 px-4" onClick={onClose} type="button" variant="outline">
-              {t("cancel")}
-            </Button>
-            <Button
-              className="h-10 px-4"
-              disabled={mutation.isPending}
-              onClick={() => mutation.mutate()}
-              type="button"
-              variant="destructive"
-            >
-              <Trash className="size-4" />
-              {t("deleteModal.confirm")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </ModalOverlay>
-  );
+  return <ConfirmDialog open onOpenChange={open => { if (!open && !mutation.isPending) onClose(); }}
+    title={t("deleteModal.title")} description={<span className="grid gap-3"><span>{supplier?.name ?? t("deleteModal.description")}</span><span>{t("deleteModal.warning")}</span>{deleteError && <span role="alert" className="text-destructive">{deleteError}</span>}</span>}
+    confirmLabel={t("deleteModal.confirm")} cancelLabel={t("cancel")} isPending={mutation.isPending} pendingLabel="Excluindo…" destructive onConfirm={() => mutation.mutate()} />;
 }
 
 export function SupplierResponsibleModalRoute() {
+  const activeStoreId = useAppUiStore(state => state.activeStore?.id);
   const basePath = useSupplierBasePath();
   const content = useSupplierShellContent();
   const params = useParams<{ supplierId?: string }>();
@@ -1463,7 +1375,7 @@ export function SupplierResponsibleModalRoute() {
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
   const supplierQuery = useQuery({
     enabled: isPersistedSupplier,
-    queryKey: ["suppliers", supplierId],
+    queryKey: ["suppliers", activeStoreId, supplierId],
     queryFn: () => getSupplier(supplierId as string),
   });
 
@@ -1517,15 +1429,22 @@ export function SupplierResponsibleModalRoute() {
   );
 }
 
-function SupplierResponsibleModal({
+export function SupplierResponsibleModal({
+  inline = false,
+  backToSupplier = false,
+  onStateChange,
   onClose,
   supplier,
   supplierId,
 }: {
+  inline?: boolean;
+  backToSupplier?: boolean;
+  onStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
   onClose: () => void;
   supplier?: Supplier;
   supplierId?: string;
 }) {
+  const activeStoreId = useAppUiStore(state => state.activeStore?.id);
   const t = useTranslations("dashboard.suppliers.flow");
   const queryClient = useQueryClient();
   const assignedResponsibleId = useSupplierFlowStore((state) => state.assignedResponsibleId);
@@ -1551,7 +1470,7 @@ function SupplierResponsibleModal({
   const isPersistedSupplier = Boolean(supplierId && isUuid(supplierId));
   const responsiblesQuery = useQuery({
     enabled: isPersistedSupplier,
-    queryKey: ["suppliers", supplierId, "responsibles"],
+    queryKey: ["suppliers", activeStoreId, supplierId, "responsibles"],
     queryFn: () => listSupplierResponsibles(supplierId as string),
   });
   const responsibles = isPersistedSupplier
@@ -1584,7 +1503,7 @@ function SupplierResponsibleModal({
       setMutationNotice(t("responsibleModal.saved"));
       if (isPersistedSupplier) {
         void queryClient.invalidateQueries({
-          queryKey: ["suppliers", supplierId, "responsibles"],
+          queryKey: ["suppliers", activeStoreId, supplierId, "responsibles"],
         });
       }
       resetResponsibleDraft();
@@ -1608,13 +1527,20 @@ function SupplierResponsibleModal({
       setResponsibleToDelete(null);
       if (isPersistedSupplier) {
         void queryClient.invalidateQueries({
-          queryKey: ["suppliers", supplierId, "responsibles"],
+          queryKey: ["suppliers", activeStoreId, supplierId, "responsibles"],
         });
       }
     },
   });
 
+  const [discardContact, setDiscardContact] = useState(false);
+  useEffect(() => { onStateChange?.({ dirty: isEditing, busy: saveMutation.isPending || deleteMutation.isPending }); }, [isEditing, saveMutation.isPending, deleteMutation.isPending, onStateChange]);
   function closeModal() {
+    if (saveMutation.isPending || deleteMutation.isPending) return;
+    if (isEditing) { setDiscardContact(true); return; }
+    finishClose();
+  }
+  function finishClose() {
     resetResponsibleDraft();
     setResponsibleId(null);
     setResponsibleToDelete(null);
@@ -1650,6 +1576,7 @@ function SupplierResponsibleModal({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saveMutation.isPending || deleteMutation.isPending) return;
     setMutationError(null);
     const result = supplierResponsibleSchema.safeParse({
       ...getFormData(event.currentTarget),
@@ -1678,7 +1605,8 @@ function SupplierResponsibleModal({
   }
 
   return (
-    <ModalOverlay onClose={closeModal}>
+    <>
+    <ModalOverlay inline={inline} onClose={closeModal}>
       <Card className="w-full max-w-[640px] animate-nitro-scale-in">
         {isEditing ? (
           <form
@@ -1686,8 +1614,10 @@ function SupplierResponsibleModal({
             onChange={handleDraftChange}
             onSubmit={handleSubmit}
           >
+            <fieldset disabled={saveMutation.isPending || deleteMutation.isPending} className="contents">
             <CardContent className="grid gap-5 p-6">
               <SupplierResponsibleModalHeader
+                backToSupplier={backToSupplier}
                 description={t("responsibleModal.description")}
                 onClose={closeModal}
                 title={
@@ -1735,10 +1665,12 @@ function SupplierResponsibleModal({
                 </Button>
               </div>
             </CardContent>
+            </fieldset>
           </form>
         ) : (
           <CardContent className="grid gap-5 p-6">
             <SupplierResponsibleModalHeader
+                backToSupplier={backToSupplier}
               description={t("responsibleModal.listDescription")}
               onClose={closeModal}
               title={t("responsibleModal.listTitle")}
@@ -1827,14 +1759,18 @@ function SupplierResponsibleModal({
         )}
       </Card>
     </ModalOverlay>
+    <ConfirmDialog open={discardContact} onOpenChange={setDiscardContact} title="Descartar edição do contato?" description="O contato em edição ainda não foi salvo." confirmLabel="Descartar e voltar" cancelLabel="Continuar editando" destructive onConfirm={finishClose} />
+    </>
   );
 }
 
 function SupplierResponsibleModalHeader({
+  backToSupplier = false,
   description,
   onClose,
   title,
 }: {
+  backToSupplier?: boolean;
   description: string;
   onClose: () => void;
   title: string;
@@ -1844,17 +1780,17 @@ function SupplierResponsibleModalHeader({
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="grid gap-1">
-        <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <Button
-        aria-label={t("responsibleModal.close")}
-        className="size-8 p-0"
+        aria-label={backToSupplier ? "Voltar ao fornecedor" : t("responsibleModal.close")}
+        className={backToSupplier ? "shrink-0" : "size-8 p-0"}
         onClick={onClose}
         type="button"
         variant="ghost"
       >
-        <X className="size-4" />
+        {backToSupplier ? <><ArrowLeft aria-hidden="true" className="size-4" />Voltar ao fornecedor</> : <X aria-hidden="true" className="size-4" />}
       </Button>
     </div>
   );
@@ -2287,102 +2223,7 @@ function FormError({ children }: { children: string }) {
   );
 }
 
-function ModalOverlay({
-  children,
-  onClose,
-}: {
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    const previouslyFocused =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-    const previousOverflow = document.body.style.overflow;
-    const focusableSelector = [
-      "a[href]",
-      "button:not([disabled])",
-      "input:not([disabled])",
-      "select:not([disabled])",
-      "textarea:not([disabled])",
-      "[tabindex]:not([tabindex='-1'])",
-    ].join(",");
-
-    document.body.style.overflow = "hidden";
-    const focusableElements = dialog?.querySelectorAll<HTMLElement>(
-      focusableSelector,
-    );
-    focusableElements?.[0]?.focus();
-    if (!focusableElements?.length) dialog?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-
-      if (event.key !== "Tab" || !dialog) return;
-      const elements = Array.from(
-        dialog.querySelectorAll<HTMLElement>(focusableSelector),
-      );
-      if (elements.length === 0) {
-        event.preventDefault();
-        dialog.focus();
-        return;
-      }
-
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus();
-    };
-  }, []);
-
-  return (
-    <div
-      className={cn(
-        "fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-background/10 p-4 backdrop-blur-sm",
-        "animate-nitro-fade-in",
-      )}
-      onMouseDown={(event) => {
-        if (event.currentTarget === event.target) onClose();
-      }}
-    >
-      <div
-        aria-modal="true"
-        className="flex max-h-[calc(100vh-2rem)] w-full justify-center overflow-y-auto outline-none"
-        onMouseDown={(event) => {
-          if (event.currentTarget === event.target) onClose();
-        }}
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
-      >
-        {children}
-      </div>
-    </div>
-  );
+function ModalOverlay({ children, onClose, inline = false }: { children: ReactNode; onClose: () => void; inline?: boolean }) {
+  if (inline) return <div className="[&>div]:max-w-none [&>div]:border-0 [&>div]:shadow-none">{children}</div>;
+  return <Sheet open onOpenChange={open => { if (!open) onClose(); }}><SheetContent hideCloseButton onEscapeKeyDown={event => { event.preventDefault(); onClose(); }} onInteractOutside={event => event.preventDefault()}><SheetTitle className="sr-only">Contatos do fornecedor</SheetTitle><SheetDescription className="sr-only">Gerencie os contatos da filial ativa.</SheetDescription><div className="overflow-y-auto">{children}</div></SheetContent></Sheet>;
 }

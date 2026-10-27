@@ -29,7 +29,7 @@ describe('Onboarding - Integração', () => {
 			url: '/auth/register',
 			body: {
 				name: 'Ana Ribeiro',
-				email: 'ana@thalyamodas.com',
+				email: 'ana@storeflow.example',
 				password: 'Secure123',
 			},
 		});
@@ -37,7 +37,7 @@ describe('Onboarding - Integração', () => {
 		expect(registerResponse.statusCode).toBe(201);
 		expect(registerResponse.body).toMatchObject({
 			user: {
-				role: 'ROLE_COMPANY',
+				role: 'ROLE_ADMIN',
 				accountStatus: 'ACTIVE',
 			},
 			onboarding: {
@@ -65,7 +65,7 @@ describe('Onboarding - Integração', () => {
 			url: '/onboarding/store-profile',
 			headers: { authorization: `Bearer ${token}` },
 			body: {
-				storeName: 'Thalya Modas',
+				storeName: 'Store Flow',
 				phone: '(85) 99999-0000',
 				document: '12.345.678/0001-99',
 				segment: StoreSegment.FASHION,
@@ -77,12 +77,12 @@ describe('Onboarding - Integração', () => {
 			nextStep: OnboardingStep.STORE_ADDRESS,
 			completedSteps: [OnboardingStep.STORE_PROFILE],
 			store: {
-				bucketKey: 'stores/thalya-modas',
-				name: 'Thalya Modas',
+				bucketKey: 'stores/store-flow',
+				name: 'Store Flow',
 				phone: '85999990000',
 				document: '12345678000199',
 				segment: StoreSegment.FASHION,
-				slug: 'thalya-modas',
+				slug: 'store-flow',
 				status: StoreStatus.PENDING_ONBOARDING,
 			},
 		});
@@ -152,11 +152,11 @@ describe('Onboarding - Integração', () => {
 	});
 
 	it('deve manter slug e bucketKey após renomear a loja', async () => {
-		const token = await registerAndGetToken('slug-imutavel@thalyamodas.com');
+		const token = await registerAndGetToken('slug-imutavel@storeflow.example');
 		const firstProfile = await saveProfile(
 			token,
 			'12.345.678/0001-99',
-			'Thálya Modas',
+			'Store Flow',
 		);
 		const firstStore = (
 			firstProfile.body as {
@@ -179,36 +179,36 @@ describe('Onboarding - Integração', () => {
 			},
 		});
 		expect(firstStore).toMatchObject({
-			bucketKey: 'stores/thalya-modas',
-			slug: 'thalya-modas',
+			bucketKey: 'stores/store-flow',
+			slug: 'store-flow',
 		});
 	});
 
 	it('deve gerar slugs únicos para lojas com o mesmo nome', async () => {
-		const firstToken = await registerAndGetToken('slug-1@thalyamodas.com');
+		const firstToken = await registerAndGetToken('slug-1@storeflow.example');
 		const firstProfile = await saveProfile(firstToken, '12.345.678/0001-99');
-		const secondToken = await registerAndGetToken('slug-2@thalyamodas.com');
+		const secondToken = await registerAndGetToken('slug-2@storeflow.example');
 		const secondProfile = await saveProfile(secondToken, '98.765.432/0001-11');
 
 		expect(firstProfile.body).toMatchObject({
 			store: {
-				bucketKey: 'stores/thalya-modas',
-				slug: 'thalya-modas',
+				bucketKey: 'stores/store-flow',
+				slug: 'store-flow',
 			},
 		});
 		expect(secondProfile.body).toMatchObject({
 			store: {
-				bucketKey: 'stores/thalya-modas-2',
-				slug: 'thalya-modas-2',
+				bucketKey: 'stores/store-flow-2',
+				slug: 'store-flow-2',
 			},
 		});
 	});
 
 	it('deve rejeitar documento duplicado em outra loja', async () => {
-		const firstToken = await registerAndGetToken('ana@thalyamodas.com');
+		const firstToken = await registerAndGetToken('ana@storeflow.example');
 		await saveProfile(firstToken, '12.345.678/0001-99');
 
-		const secondToken = await registerAndGetToken('bia@thalyamodas.com');
+		const secondToken = await registerAndGetToken('bia@storeflow.example');
 		const response = await saveProfile(secondToken, '12.345.678/0001-99');
 
 		expect(response.statusCode).toBe(400);
@@ -221,7 +221,7 @@ describe('Onboarding - Integração', () => {
 			url: '/auth/register',
 			body: {
 				name: 'Ana Ribeiro',
-				email: 'ana@thalyamodas.com',
+				email: 'ana@storeflow.example',
 				password: 'Secure123',
 			},
 		});
@@ -230,7 +230,7 @@ describe('Onboarding - Integração', () => {
 			method: 'POST',
 			url: '/auth/login',
 			body: {
-				email: 'ana@thalyamodas.com',
+				email: 'ana@storeflow.example',
 				password: 'Secure123',
 			},
 		});
@@ -254,14 +254,14 @@ describe('Onboarding - Integração', () => {
 	});
 
 	it('deve rejeitar telefone inválido', async () => {
-		const token = await registerAndGetToken('ana@thalyamodas.com');
+		const token = await registerAndGetToken('ana@storeflow.example');
 
 		const response = await makeRequest(server, {
 			method: 'POST',
 			url: '/onboarding/store-profile',
 			headers: { authorization: `Bearer ${token}` },
 			body: {
-				storeName: 'Thalya Modas',
+				storeName: 'Store Flow',
 				phone: '123',
 				document: '12.345.678/0001-99',
 				segment: StoreSegment.FASHION,
@@ -272,7 +272,7 @@ describe('Onboarding - Integração', () => {
 	});
 
 	it('deve rejeitar conclusão sem perfil, endereço e preferências', async () => {
-		const token = await registerAndGetToken('ana@thalyamodas.com');
+		const token = await registerAndGetToken('ana@storeflow.example');
 
 		const response = await makeRequest(server, {
 			method: 'POST',
@@ -285,7 +285,7 @@ describe('Onboarding - Integração', () => {
 	});
 
 	it('deve rejeitar conclusão sem preferências', async () => {
-		const token = await registerAndGetToken('ana@thalyamodas.com');
+		const token = await registerAndGetToken('ana@storeflow.example');
 		await saveProfile(token, '12.345.678/0001-99');
 		await saveAddress(token);
 
@@ -300,7 +300,7 @@ describe('Onboarding - Integração', () => {
 	});
 
 	it('deve rejeitar endereço antes do perfil da loja', async () => {
-		const token = await registerAndGetToken('ana@thalyamodas.com');
+		const token = await registerAndGetToken('ana@storeflow.example');
 
 		const response = await saveAddress(token);
 
@@ -309,7 +309,7 @@ describe('Onboarding - Integração', () => {
 	});
 
 	it('deve rejeitar preferências antes do endereço da loja', async () => {
-		const token = await registerAndGetToken('ana@thalyamodas.com');
+		const token = await registerAndGetToken('ana@storeflow.example');
 		await saveProfile(token, '12.345.678/0001-99');
 
 		const response = await savePreferences(token);
@@ -319,7 +319,7 @@ describe('Onboarding - Integração', () => {
 	});
 
 	it('deve rejeitar preferências com horário de abertura depois do fechamento', async () => {
-		const token = await registerAndGetToken('ana@thalyamodas.com');
+		const token = await registerAndGetToken('ana@storeflow.example');
 		await saveProfile(token, '12.345.678/0001-99');
 		await saveAddress(token);
 
@@ -333,7 +333,7 @@ describe('Onboarding - Integração', () => {
 	});
 
 	it('deve rejeitar preferências com timezone inválido', async () => {
-		const token = await registerAndGetToken('ana@thalyamodas.com');
+		const token = await registerAndGetToken('ana@storeflow.example');
 		await saveProfile(token, '12.345.678/0001-99');
 		await saveAddress(token);
 
@@ -372,7 +372,7 @@ describe('Onboarding - Integração', () => {
 			url: '/auth/register',
 			body: {
 				name: 'Ana Ribeiro',
-				email: 'ana@thalyamodas.com',
+				email: 'ana@storeflow.example',
 				password: 'Secure123',
 			},
 		});
@@ -407,7 +407,7 @@ describe('Onboarding - Integração', () => {
 	async function saveProfile(
 		token: string,
 		document: string,
-		storeName = 'Thalya Modas',
+		storeName = 'Store Flow',
 	) {
 		return makeRequest(server, {
 			method: 'POST',

@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from "@thalya-modas/ui";
+} from "@store-flow/ui";
 
 const meta = {
   title: "Components/Forms/Select & Textarea",

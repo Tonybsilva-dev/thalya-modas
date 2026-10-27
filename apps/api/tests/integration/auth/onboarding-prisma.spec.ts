@@ -22,8 +22,8 @@ const runPrismaTests =
 	Boolean(process.env.DATABASE_URL);
 
 const testEmails = [
-	'prisma-onboarding-owner@thalya.test',
-	'prisma-onboarding-duplicate@thalya.test',
+	'prisma-onboarding-owner@storeflow.test',
+	'prisma-onboarding-duplicate@storeflow.test',
 ];
 const testDocuments = ['22333444000155', '33444555000166'];
 
@@ -172,7 +172,7 @@ describe.skipIf(!runPrismaTests)('Onboarding - Prisma/Postgres', () => {
 		expect(duplicateResponse.statusCode).toBe(400);
 		expect(duplicateResponse.body).toMatchObject({
 			error: 'DomainError',
-			code: 'TM-DOM-400',
+			code: 'SF-DOM-400',
 		});
 	});
 

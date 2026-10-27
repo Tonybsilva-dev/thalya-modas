@@ -1,6 +1,5 @@
 import type { FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
-import { env } from '../../../shared/env';
 import { getOrGenerateTraceId } from '../../../shared/utils/trace-id';
 import { AppError } from '../errors/app-error';
 import { type ErrorLevel, getErrorDescriptor } from '../errors/error-catalog';
@@ -34,9 +33,9 @@ export async function errorHandler(
 	const headers = (
 		request as { headers?: Record<string, string | string[] | undefined> }
 	).headers;
-	const traceId = getOrGenerateTraceId(
-		headers?.['x-trace-id'] as string | undefined,
-	);
+	const traceId =
+		request.traceId ||
+		getOrGenerateTraceId(headers?.['x-trace-id'] as string | undefined);
 	const instance =
 		(request as { raw?: { url?: string }; routeOptions?: { url?: string } }).raw
 			?.url ??
@@ -139,9 +138,7 @@ export async function errorHandler(
 			statusCode = fastifyError.statusCode || 500;
 			const descriptor = getErrorDescriptor('InternalServerError');
 			const errorMessage =
-				env.NODE_ENV === 'production'
-					? 'Erro interno do servidor'
-					: error.message || 'Erro interno do servidor';
+				'Não foi possível concluir agora. Tente novamente em instantes.';
 
 			responseBody = {
 				type: descriptor.type,
@@ -158,20 +155,18 @@ export async function errorHandler(
 				traceId,
 				userMessage: errorMessage,
 			};
-
-			// Em desenvolvimento, inclui stack trace nos detalhes
-			if (env.NODE_ENV !== 'production' && error.stack) {
-				const details: { stack: string; cause?: unknown } = {
-					stack: error.stack,
-				};
-				if (error.cause) {
-					details.cause = error.cause;
-				}
-				responseBody.details = details;
-			}
 		}
 	}
 
+	// Server failures never expose diagnostics, including wrapped AppErrors.
+	if (statusCode >= 500) {
+		const message =
+			'Não foi possível concluir agora. Tente novamente em instantes.';
+		responseBody.message = message;
+		responseBody.detail = message;
+		responseBody.userMessage = message;
+		delete responseBody.details;
+	}
 	// Log do erro
 	const logLevel = statusCode >= 500 ? 'error' : 'warn';
 	const logger = (
@@ -186,6 +181,8 @@ export async function errorHandler(
 		logger[logLevel](
 			{
 				err: error,
+				code: responseBody.code,
+				acronym: responseBody.acronym,
 				traceId,
 				statusCode,
 				method: (request as { raw?: { method?: string; url?: string } }).raw
@@ -196,6 +193,12 @@ export async function errorHandler(
 		);
 	}
 
+	if ('retryAfter' in error && typeof error.retryAfter === 'number') {
+		(reply as unknown as { header(name: string, value: number): void }).header(
+			'Retry-After',
+			error.retryAfter,
+		);
+	}
 	// Responde com erro padronizado
 	return (
 		reply as { code: (code: number) => { send: (payload: unknown) => unknown } }

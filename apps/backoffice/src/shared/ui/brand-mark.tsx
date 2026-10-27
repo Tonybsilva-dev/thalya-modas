@@ -20,7 +20,7 @@ export function BrandMark({
 
   return (
     <div className="flex items-center gap-3">
-      <div className="relative size-10 overflow-hidden shadow-[0_18px_45px_rgba(22,95,255,0.28)]">
+      <div className="relative size-8 overflow-hidden">
         <Image
           alt={`${name} logo`}
           className="object-cover"
