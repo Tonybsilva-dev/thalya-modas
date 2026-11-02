@@ -1,6 +1,6 @@
 "use client";
 import { ListPagination, useRemotePage } from "./list-pagination";
-import { Button, Card, DialogFooter, EmptyState, EmptyStateContent, EmptyStateDescription, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@store-flow/ui";
+import { Button, Card, PageToolbar, DialogFooter, EmptyState, EmptyStateContent, EmptyStateDescription, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@store-flow/ui";
 import { SelectField, SelectFieldOption } from "./select-field";
 import { FormDialog } from "./form-dialog";
 import { useState } from "react";
@@ -134,8 +134,9 @@ export function TenantsPage() {
             ))}
         </FormDialog>
       )}
-      <Card className="mb-4 flex flex-wrap items-end justify-between gap-4 p-4">
-        <div className="w-full space-y-2 sm:max-w-md"><Label className="shrink-0" htmlFor="tenant-search">Buscar empresa</Label>
+      <Card className="overflow-hidden">
+      <PageToolbar>
+        <div className="w-full space-y-1.5 sm:max-w-sm"><Label className="shrink-0" htmlFor="tenant-search">Buscar empresa</Label>
         <Input
           id="tenant-search"
           aria-label="Buscar empresa"
@@ -159,9 +160,10 @@ export function TenantsPage() {
         </SelectField>
         </div>
         {(filter || status) && <Button variant="outline" onClick={() => { setFilter(""); setStatus(""); }}>Limpar filtros</Button>}
-      </Card>
-      {rows && <p role="status" className="mb-3 text-sm text-muted-foreground">{tenants.data?.total} empresas encontradas</p>}
+      </PageToolbar>
+      {rows && <p role="status" className="border-b px-4 py-2 text-xs text-muted-foreground">{tenants.data?.total} empresas encontradas</p>}
       <QueryState
+        inline
         loading={loading}
         error={error}
         retry={() => {
@@ -169,7 +171,8 @@ export function TenantsPage() {
         }}
       />
       {!loading && !error && (
-        <Card className="overflow-x-auto">
+        <>
+          <div className="overflow-x-auto">
           {!rows?.length ? (
             <EmptyState><EmptyStateContent><EmptyStateDescription>
               {tenants.data?.total
@@ -201,7 +204,7 @@ export function TenantsPage() {
                     </TableCell>
                     <TableCell>{new Date(t.createdAt).toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-4">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
                       <Link
                         href={`/backoffice/tenants/${t.id}`}
                         className="text-primary hover:underline"
@@ -217,9 +220,11 @@ export function TenantsPage() {
               </TableBody>
             </Table>
           )}
-          {tenants.data && <ListPagination {...tenants.data} onPageChange={pagination.onPageChange} />}
-        </Card>
+          </div>
+          {tenants.data && <ListPagination {...tenants.data} onPageChange={pagination.onPageChange} disabled={tenants.isFetching} />}
+        </>
       )}
+      </Card>
     </>
   );
 }

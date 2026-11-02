@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Button } from "./button";
 
 import { cn } from "../lib/utils";
 
@@ -132,14 +133,14 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
         {...props}
       >
         <div className="flex items-center justify-between gap-4">
-          <button
+          <Button variant="ghost"
             aria-label={previousMonthLabel}
             className="inline-flex size-8 items-center justify-center border border-border bg-background text-foreground outline-none transition-[background-color,border-color,color,transform] duration-fast ease-nitro hover:bg-muted active:scale-95 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
             onClick={() => updateMonth(addMonths(visibleMonth, -1))}
             type="button"
           >
             <ChevronLeftIcon className="size-4" />
-          </button>
+          </Button>
 
           <div className="grid justify-items-center gap-0.5">
             <h2 className="text-sm font-semibold text-foreground">
@@ -148,14 +149,14 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
             <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
 
-          <button
+          <Button variant="ghost"
             aria-label={nextMonthLabel}
             className="inline-flex size-8 items-center justify-center border border-border bg-background text-foreground outline-none transition-[background-color,border-color,color,transform] duration-fast ease-nitro hover:bg-muted active:scale-95 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
             onClick={() => updateMonth(addMonths(visibleMonth, 1))}
             type="button"
           >
             <ChevronRightIcon className="size-4" />
-          </button>
+          </Button>
         </div>
 
         <div className="grid grid-cols-7 gap-1">
@@ -175,7 +176,7 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
             const isToday = isSameDay(date, today);
 
             return (
-              <button
+              <Button variant="ghost"
                 key={date.toISOString()}
                 aria-pressed={isSelected}
                 aria-label={new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(date)}
@@ -191,7 +192,7 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
                 type="button"
               >
                 {date.getDate()}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -202,13 +203,13 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
               <p className="text-xs font-medium text-foreground">{footerLabel}</p>
             )}
             {onApply && (
-              <button
+              <Button variant="ghost"
                 className="text-xs font-semibold text-primary outline-none underline-offset-4 transition-colors duration-fast ease-nitro hover:text-primary/80 hover:underline focus-visible:ring-2 focus-visible:ring-primary/20"
                 onClick={onApply}
                 type="button"
               >
                 {applyLabel}
-              </button>
+              </Button>
             )}
           </div>
         )}

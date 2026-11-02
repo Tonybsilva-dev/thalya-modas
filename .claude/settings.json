@@ -1,0 +1,93 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "C:/Users/Antonio Silva/Desktop/Source/Source/01 - Projects/Agency/Store Flow"
+    ],
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git fetch *)",
+      "Bash(git add *)",
+      "Bash(git commit -m *)",
+      "Bash(git switch *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr list *)",
+      "Bash(gh run list *)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm check)",
+      "Bash(pnpm qa)",
+      "Bash(pnpm format)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm build *)",
+      "Bash(pnpm db:generate)",
+      "Bash(pnpm openapi:generate)",
+      "Bash(pnpm openapi:changes)",
+      "Bash(pnpm outdated *)",
+      "Bash(pnpm audit *)",
+      "Bash(pnpm --filter * exec vitest *)",
+      "Bash(pnpm --filter * exec prisma validate *)",
+      "Bash(pnpm.cmd lint)",
+      "Bash(pnpm.cmd typecheck)",
+      "Bash(pnpm.cmd test *)",
+      "Bash(pnpm.cmd --filter * exec vitest *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset *)",
+      "Bash(git commit --amend *)",
+      "Bash(gh pr create *)",
+      "Bash(pnpm db:migrate *)",
+      "Bash(pnpm db:deploy)",
+      "Bash(pnpm admin:bootstrap)",
+      "Bash(pnpm docker:postgres:*)",
+      "Read(./**/.env)",
+      "Read(./**/.env.*)"
+    ],
+    "deny": [
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(pnpm db:studio)",
+      "Read(./**/*.pem)",
+      "Read(./**/id_rsa*)",
+      "Read(./.local-backups/**)",
+      "Read(//c/Users/Antonio Silva/Desktop/Source/Source/01 - Projects/Agency/Store Flow/08 - Credenciais/**)",
+      "Read(//c/Users/Antonio Silva/Desktop/Source/Source/01 - Projects/Agency/Store Flow/07 - Infra e Ambientes/**/*.env*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-context.mjs\"" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-migrations.mjs\"" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/api-docs-guard.mjs\"" },
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/feature-catalog-guard.mjs\"" }
+        ]
+      }
+    ]
+  }
+}

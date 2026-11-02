@@ -13,12 +13,14 @@ export function FormDialog({
   onClose,
   pending,
   children,
+  className,
 }: {
   title: string;
   description: string;
   onClose: () => void;
   pending: boolean;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <Dialog
@@ -27,7 +29,7 @@ export function FormDialog({
         if (!open && !pending) onClose();
       }}
     >
-      <DialogContent size="wide" closeLabel="Fechar">
+      <DialogContent size="wide" closeLabel="Fechar" className={className}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

@@ -31,7 +31,7 @@
     "build:docs": "pnpm --filter @store-flow/docs build",
     "typecheck": "pnpm -r --if-present typecheck && pnpm -r --if-present build:check",
     "test": "pnpm -r test",
-    "test:backoffice": "pnpm --filter @store-flow/api exec tsx --tsconfig ../backoffice/tsconfig.json --import ../backoffice/tests/react-runtime.mjs --test ../backoffice/tests/proxy.test.ts ../backoffice/tests/api-error.test.ts ../backoffice/tests/overview.test.tsx ../backoffice/tests/brl.test.ts ../backoffice/tests/supplier-panel.test.ts",
+    "test:backoffice": "pnpm --filter @store-flow/api exec tsx --tsconfig ../backoffice/tsconfig.json --import ../backoffice/tests/react-runtime.mjs --test ../backoffice/tests/proxy.test.ts ../backoffice/tests/api-error.test.ts ../backoffice/tests/overview.test.tsx ../backoffice/tests/brl.test.ts ../backoffice/tests/supplier-panel.test.ts ../backoffice/tests/ui-adapters.test.tsx",
     "test:coverage": "pnpm -r test:coverage",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",

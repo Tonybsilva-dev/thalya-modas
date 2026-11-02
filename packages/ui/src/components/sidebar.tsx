@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
+import { Button } from "./button";
 
 import { cn } from "../lib/utils";
 
@@ -7,7 +7,7 @@ function Sidebar({ className, ...props }: React.ComponentProps<"aside">) {
   return (
     <aside
       className={cn(
-        "flex h-full w-[280px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
+        "flex h-full w-[var(--sf-sidebar-width)] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
         className,
       )}
       {...props}
@@ -17,12 +17,12 @@ function Sidebar({ className, ...props }: React.ComponentProps<"aside">) {
 
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div className={cn("border-b border-sidebar-border p-6", className)} {...props} />
+    <div className={cn("border-b border-sidebar-border p-4", className)} {...props} />
   );
 }
 
 function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("flex-1 p-3", className)} {...props} />;
+  return <div className={cn("min-h-0 flex-1 overflow-y-auto p-2", className)} {...props} />;
 }
 
 function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -52,12 +52,12 @@ function SidebarItem({
   asChild?: boolean;
   active?: boolean;
 }) {
-  const Comp = asChild ? Slot : "button";
-
   return (
-    <Comp
+    <Button
+      asChild={asChild}
+      variant="ghost"
       className={cn(
-        "flex h-10 w-full items-center gap-3 rounded-none px-3 text-left text-sm font-medium outline-none transition-[background-color,color,box-shadow] duration-fast ease-nitro hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        "flex h-10 w-full items-center gap-3 rounded-full px-3 text-left text-sm font-medium outline-none transition-[background-color,color,box-shadow] duration-fast ease-nitro hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
         active && "bg-sidebar-accent text-sidebar-accent-foreground",
         className,
       )}

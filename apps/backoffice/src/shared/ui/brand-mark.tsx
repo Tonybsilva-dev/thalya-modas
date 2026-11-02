@@ -7,6 +7,7 @@ type BrandMarkProps = {
   name?: string;
   showContext?: boolean;
   tone?: "light" | "dark";
+  compact?: boolean;
 };
 
 export function BrandMark({
@@ -14,12 +15,13 @@ export function BrandMark({
   name = brandConfig.name,
   showContext = true,
   tone = "dark",
+  compact = false,
 }: BrandMarkProps) {
   const textColor = tone === "light" ? "text-white" : "text-foreground";
   const mutedColor = tone === "light" ? "text-white/70" : "text-muted-foreground";
 
   return (
-    <div className="flex items-center gap-3">
+    <div className={`flex items-center gap-3 ${compact ? "justify-center" : ""}`}>
       <div className="relative size-8 overflow-hidden">
         <Image
           alt={`${name} logo`}
@@ -30,7 +32,7 @@ export function BrandMark({
           src="/logo-icon-square.png"
         />
       </div>
-      <div className="grid gap-0.5">
+      <div className={compact ? "sr-only" : "grid gap-0.5"}>
         <p className={`text-base font-semibold leading-none ${textColor}`}>
           {name}
         </p>

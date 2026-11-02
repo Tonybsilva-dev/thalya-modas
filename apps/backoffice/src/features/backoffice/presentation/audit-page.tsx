@@ -1,5 +1,6 @@
 "use client";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, EmptyState, EmptyStateContent, EmptyStateDescription, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@store-flow/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Button, Card, PageToolbar, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, EmptyState, EmptyStateContent, EmptyStateDescription, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@store-flow/ui";
+import { ListPagination } from "./list-pagination";
 import { SelectField, SelectFieldOption } from "./select-field";
 import { SlidersHorizontal, X } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -27,23 +28,22 @@ export function AuditHistory({ targetId }: { targetId?: string }) {
   const actors = useQuery({ queryKey: [...auditKeys, "actors"], queryFn: getAuditActors });
   const query = useQuery({ queryKey: [...auditKeys, { ...filters, targetId }], queryFn: () => getAuditPage({ ...filters, targetId }) });
   return <section className="space-y-4">
-    <Card>
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+    <Card className="overflow-hidden">
+      <PageToolbar className="items-center justify-between">
         <p className="text-sm text-muted-foreground" role="status">{query.data ? `${query.data.total} registros encontrados` : "Histórico de eventos"}</p>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <div className="w-full sm:w-60"><Label className="sr-only" htmlFor="audit-action">Filtrar por ação</Label><SelectField id="audit-action" value={filters.action ?? ""} onValueChange={(action) => setFilters({...filters,page:1,action:action || undefined})}><SelectFieldOption value="">Todas as ações</SelectFieldOption>{Object.entries(actions).map(([key,label])=><SelectFieldOption key={key} value={key}>{label}</SelectFieldOption>)}</SelectField></div>
           <Button variant="outline" onClick={openAdvanced}><SlidersHorizontal aria-hidden="true" />Filtros avançados{advancedCount > 0 ? ` (${advancedCount})` : ""}</Button>
           {hasFilters && <Button variant="ghost" onClick={clearFilters}>Limpar tudo</Button>}
         </div>
-      </div>
-      {hasFilters && <div className="flex flex-wrap items-center gap-2 border-t px-4 py-3" aria-label="Filtros ativos">
+      </PageToolbar>
+      {hasFilters && <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2" aria-label="Filtros ativos">
         <span className="text-xs text-muted-foreground">Filtros ativos</span>
         {filters.action && <Button variant="outline" size="sm" aria-label="Remover filtro de ação" onClick={()=>setFilters({...filters,page:1,action:undefined})}>{actions[filters.action] ?? filters.action}<X aria-hidden="true" /></Button>}
         {filters.actorId && <Button variant="outline" size="sm" aria-label="Remover filtro de responsável" onClick={()=>setFilters({...filters,page:1,actorId:undefined})}>Responsável: {actors.data?.find(actor=>actor.id===filters.actorId)?.name ?? "selecionado"}<X aria-hidden="true" /></Button>}
         {fromDate && <Button variant="outline" size="sm" aria-label="Remover data inicial" onClick={()=>{setFromDate("");setFilters({...filters,page:1,from:undefined});}}>De: {new Date(`${fromDate}T00:00:00`).toLocaleDateString("pt-BR")}<X aria-hidden="true" /></Button>}
         {toDate && <Button variant="outline" size="sm" aria-label="Remover data final" onClick={()=>{setToDate("");setFilters({...filters,page:1,to:undefined});}}>Até: {new Date(`${toDate}T00:00:00`).toLocaleDateString("pt-BR")}<X aria-hidden="true" /></Button>}
       </div>}
-    </Card>
     <Dialog open={advancedOpen} onOpenChange={setAdvancedOpen}>
       <DialogContent closeLabel="Fechar">
         <DialogHeader><DialogTitle>Filtros avançados</DialogTitle><DialogDescription>Refine os eventos por responsável e período.</DialogDescription></DialogHeader>
@@ -60,9 +60,9 @@ export function AuditHistory({ targetId }: { targetId?: string }) {
         </form>
       </DialogContent>
     </Dialog>
-    <QueryState loading={query.isPending} error={query.error} retry={() => void query.refetch()} />
+    <QueryState inline loading={query.isPending} error={query.error} retry={() => void query.refetch()} />
     {query.data && <>
-      <Card className="overflow-x-auto"><Table>
+      <div className="overflow-x-auto" aria-busy={query.isFetching}><Table>
         <TableHeader><TableRow><TableHead>Quando</TableHead><TableHead>Ação</TableHead><TableHead>Responsável</TableHead><TableHead>Motivo e alterações</TableHead></TableRow></TableHeader>
         <TableBody>{query.data.items.map((row) => <TableRow key={row.id}>
           <TableCell className="whitespace-nowrap"><time dateTime={row.createdAt}>{new Date(row.createdAt).toLocaleString("pt-BR")}</time></TableCell>
@@ -70,12 +70,10 @@ export function AuditHistory({ targetId }: { targetId?: string }) {
           <TableCell>{row.actorName ?? "Conta removida"}<p className="mt-1 break-all text-xs text-muted-foreground">{row.actorId}</p></TableCell>
           <TableCell><p>{row.reason}</p><Accordion type="single" collapsible><AccordionItem value="changes"><AccordionTrigger>Ver alterações</AccordionTrigger><AccordionContent><pre className="mt-3 max-h-72 max-w-xl overflow-auto border bg-muted p-3 text-xs">{JSON.stringify(row.changes, null, 2)}</pre></AccordionContent></AccordionItem></Accordion></TableCell>
         </TableRow>)}</TableBody>
-      </Table>{!query.data.items.length && <EmptyState><EmptyStateContent><EmptyStateDescription>Nenhum evento corresponde aos filtros.</EmptyStateDescription></EmptyStateContent></EmptyState>}</Card>
-      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm">Página {query.data.page} de {Math.max(1, query.data.totalPages)}</p><div className="flex gap-2">
-        <Button variant="outline" disabled={query.data.page <= 1 || query.isFetching} onClick={() => setFilters({ ...filters, page: query.data!.page - 1 })}>Anterior</Button>
-        <Button variant="outline" disabled={query.data.page >= query.data.totalPages || query.isFetching} onClick={() => setFilters({ ...filters, page: query.data!.page + 1 })}>Próxima</Button>
-      </div></div>
+      </Table>{!query.data.items.length && <EmptyState><EmptyStateContent><EmptyStateDescription>Nenhum evento corresponde aos filtros.</EmptyStateDescription></EmptyStateContent></EmptyState>}</div>
+      <ListPagination {...query.data} disabled={query.isFetching} onPageChange={page => setFilters({ ...filters, page })} />
     </>}
+    </Card>
   </section>;
 }
 export function AuditPage() {

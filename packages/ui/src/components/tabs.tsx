@@ -1,53 +1,13 @@
+"use client";
 import * as React from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
-
-import { cn } from "../lib/utils";
-
-const Tabs = TabsPrimitive.Root;
-
-const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      "inline-flex h-10 items-center justify-center rounded-none border border-input bg-card p-0.5 text-muted-foreground",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsList.displayName = TabsPrimitive.List.displayName;
-
-const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "inline-flex h-8 items-center justify-center rounded-none px-3 py-1 text-sm font-medium whitespace-nowrap outline-none transition-[background-color,color,box-shadow] duration-base ease-nitro focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
-
-const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={cn(
-      "mt-4 animate-nitro-slide-up rounded-none outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-      className,
-    )}
-    {...props}
-  />
-));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
-
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+import { TabsRoot, type TabsRootProps } from "@trinketos/ui/tabs";
+export { TabsList, TabsTrigger, TabsContent } from "@trinketos/ui/tabs";
+type TabsProps = Omit<TabsRootProps, "value" | "onChange"> & { value?: string; defaultValue?: string; onValueChange?: (value: string) => void };
+/** Preserve controlled URL tabs and uncontrolled examples. */
+export function Tabs({ value, defaultValue = "", onValueChange, ...props }: TabsProps) {
+  const [internalValue, setInternalValue] = React.useState(defaultValue);
+  return <TabsRoot {...props} value={value ?? internalValue} onChange={(next) => {
+    if (value === undefined) setInternalValue(next);
+    onValueChange?.(next);
+  }} />;
+}

@@ -2,7 +2,7 @@
 
 import { CaretUpDown, Plus } from "@phosphor-icons/react";
 import {
-  Avatar, AvatarFallback, AvatarImage,
+  Avatar,
   DropdownMenu, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -13,10 +13,7 @@ import type { Branch } from "@/src/features/backoffice/application/backoffice-ap
 function BranchIdentity({ branch, companyName, sidebar = false }: { branch?: Branch; companyName?: string; sidebar?: boolean }) {
   const initials = branch?.name.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join("").toUpperCase();
   return <>
-    <Avatar className="size-9 shrink-0 rounded-none">
-      {(branch?.logoUrl || sidebar) && <AvatarImage src={branch?.logoUrl || "/logo-icon-square.png"} alt="" className="object-contain" />}
-      <AvatarFallback className="bg-muted text-xs font-medium text-muted-foreground">{initials || "—"}</AvatarFallback>
-    </Avatar>
+    <Avatar className="size-9 min-h-9 min-w-9 shrink-0" aria-hidden="true" initials={initials || "SF"} src={branch?.logoUrl || (sidebar ? "/logo-icon-square.png" : undefined)} alt="" />
     <span className="grid min-w-0 flex-1 gap-0.5 text-left">
       <span className="truncate text-sm font-medium">{sidebar ? companyName ?? branch?.name ?? "Store Flow" : branch?.name ?? "Nenhuma filial"}</span>
       {sidebar ? <span className="truncate text-xs text-muted-foreground">Filial: {branch?.name ?? "nenhuma"}</span> : companyName && companyName !== branch?.name && <span className="truncate text-xs text-muted-foreground">{companyName}</span>}

@@ -1,46 +1,16 @@
 import type { MouseEventHandler } from "react";
 import Link from "next/link";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@store-flow/ui";
+import { Breadcrumb } from "@store-flow/ui";
 
-export function SupplierBreadcrumb({
-  basePath,
-  currentLabel,
-  onRootClick,
-  rootLabel,
-}: {
+export function SupplierBreadcrumb({ basePath, currentLabel, onRootClick, rootLabel }: {
   basePath: string;
   currentLabel: string;
   onRootClick?: MouseEventHandler<HTMLAnchorElement>;
   rootLabel: string;
 }) {
-  return (
-    <Breadcrumb>
-      <BreadcrumbList className="gap-1.5 text-xs font-bold">
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link
-              className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              href={basePath}
-              onClick={onRootClick}
-            >
-              {rootLabel}
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage className="text-xs font-bold">
-            {currentLabel}
-          </BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
+  return <Breadcrumb
+    aria-label="Navegação de fornecedores"
+    items={[{ label: rootLabel, href: basePath }, { label: currentLabel }]}
+    renderLink={(item, className) => <Link href={item.href!} className={className} onClick={onRootClick}>{item.label}</Link>}
+  />;
 }

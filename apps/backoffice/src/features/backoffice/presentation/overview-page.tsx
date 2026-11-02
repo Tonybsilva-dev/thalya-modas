@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { Button, Card, DistributionChart, Tabs, TabsList, TabsTrigger, TabsContent, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@store-flow/ui";
+import { Button, Card, StatCard, DistributionChart, Tabs, TabsList, TabsTrigger, TabsContent, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@store-flow/ui";
 import { analyticsKey, getAnalytics } from "../application/analytics-api";
 import { countUsers, platformKeys } from "../application/backoffice-api";
 import { PageHeading, QueryState, StatusBadge } from "./shared";
@@ -22,11 +22,11 @@ export function OverviewPage() {
     <PageHeading title="Visão geral" description="Indicadores e gestão da plataforma Store Flow." action={<div className="flex flex-wrap gap-2"><Button variant="outline" disabled={query.isFetching || users.isFetching} onClick={() => { void query.refetch(); void users.refetch(); void cache.invalidateQueries({ queryKey: [...platformKeys.tenants, "recent"] }); }}>Atualizar</Button><Button asChild><Link href="/backoffice/tenants?create=1">Nova empresa</Link></Button><Button variant="outline" asChild><Link href="/backoffice/users?create=1">Novo administrador</Link></Button></div>} />
     <QueryState loading={query.isPending} error={query.error} retry={() => void query.refetch()} />
     {data && <>
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="p-5"><p className="text-sm text-muted-foreground">Empresas</p><p className="mt-3 text-3xl font-semibold">{data.summary.tenants}</p><p className="mt-2 text-sm text-muted-foreground">{data.summary.activeTenants} ativas · {data.summary.suspendedTenants} suspensas</p></Card>
-        <Card className="p-5"><p className="text-sm text-muted-foreground">Filiais</p><p className="mt-3 text-3xl font-semibold">{data.summary.branches}</p><p className="mt-2 text-sm text-muted-foreground">{data.summary.activeBranches} ativas</p></Card>
-        <Card className="p-5"><p className="text-sm text-muted-foreground">Usuários</p>{users.data ? <p className="mt-3 text-3xl font-semibold">{users.data.count}</p> : <p className="mt-3 text-sm">{users.isPending ? "Carregando…" : "Indisponível"}</p>}<Link className="mt-2 inline-block text-sm text-primary hover:underline" href="/backoffice/users">Gerenciar usuários</Link></Card>
-        <Card className="p-5"><p className="text-sm text-muted-foreground">Empresas sem filiais</p><p className="mt-3 text-3xl font-semibold">{data.summary.tenantsWithoutBranches}</p><p className="mt-2 text-sm text-muted-foreground">Acompanhe a implantação das empresas</p></Card>
+      <div className="mb-1 grid auto-cols-[minmax(240px,80vw)] grid-flow-col gap-4 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-2 sm:overflow-visible xl:grid-cols-4">
+        <StatCard tone="brand" label="Empresas" value={data.summary.tenants.toLocaleString("pt-BR")} hint={`${data.summary.activeTenants} ativas · ${data.summary.suspendedTenants} suspensas`} />
+        <StatCard tone="mint" label="Filiais" value={data.summary.branches.toLocaleString("pt-BR")} hint={`${data.summary.activeBranches} ativas`} />
+        <StatCard tone="rose" label="Usuários" value={users.data ? users.data.count.toLocaleString("pt-BR") : "Indisponível"} loading={users.isPending && !users.data} hint={<Link className="text-primary hover:underline" href="/backoffice/users">Gerenciar usuários</Link>} />
+        <StatCard tone="amber" label="Empresas sem filiais" value={data.summary.tenantsWithoutBranches.toLocaleString("pt-BR")} hint="Acompanhe a implantação das empresas" />
       </div>
       <QueryState loading={false} error={users.error} retry={() => void users.refetch()} />
       <div className="mb-6 grid gap-4 lg:grid-cols-2">

@@ -1,6 +1,7 @@
 "use client";
+import { ListPagination } from "./list-pagination";
 import { CheckCircle } from "@phosphor-icons/react";
-import { Alert, AlertDescription, Button, Card, DialogFooter, EmptyState, EmptyStateContent, EmptyStateDescription, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@store-flow/ui";
+import { Alert, AlertDescription, Button, Card, PageToolbar, DialogFooter, EmptyState, EmptyStateContent, EmptyStateDescription, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@store-flow/ui";
 import { SelectField, SelectFieldOption } from "./select-field";
 import { FormDialog } from "./form-dialog";
 import { ActionDialog } from "./action-dialog";
@@ -268,15 +269,18 @@ export function UsersPage() {
           </form>
         </FormDialog>
       )}
+      <Card className="overflow-hidden">
+      <PageToolbar>
       <form
-        className="mb-4 flex flex-wrap items-end justify-between gap-3"
+        aria-label="Buscar usuários"
+        className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           setFilter(search);
           setPage(1);
         }}
       >
-        <div className="w-full space-y-2 sm:max-w-md"><Label htmlFor="users-search">Buscar usuário</Label>
+        <div className="w-full space-y-1.5 sm:max-w-sm"><Label htmlFor="users-search">Buscar usuário</Label>
         <Input
           id="users-search"
           aria-label="Buscar usuário"
@@ -288,14 +292,16 @@ export function UsersPage() {
         </div>
         {search && <Button variant="outline" type="button" onClick={() => { setSearch(""); setFilter(""); setPage(1); }}>Limpar busca</Button>}
       </form>
+      </PageToolbar>
       <QueryState
+        inline
         loading={users.isPending}
         error={users.error}
         retry={() => void users.refetch()}
       />
       {users.data && (
         <>
-          <Card className="overflow-x-auto">
+          <div className="overflow-x-auto" aria-busy={users.isFetching}>
             {!users.data.items.length ? (
               <EmptyState><EmptyStateContent><EmptyStateDescription>
                 Nenhum usuário encontrado.
@@ -336,7 +342,7 @@ export function UsersPage() {
                             setNotice("");
                           }}
                         >
-                          Editar
+                          Editar<span className="sr-only"> {user.name}</span>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -344,33 +350,11 @@ export function UsersPage() {
                 </TableBody>
               </Table>
             )}
-          </Card>
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              {users.data.total} usuários · Página {page} de{" "}
-              {Math.max(1, users.data.totalPages)}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-              >
-                Anterior
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page >= users.data.totalPages}
-                onClick={() => setPage(page + 1)}
-              >
-                Próxima
-              </Button>
-            </div>
           </div>
+          <ListPagination {...users.data} onPageChange={setPage} disabled={users.isFetching} />
         </>
       )}
+      </Card>
       <ActionDialog
         open={!!promotion}
         title="Conceder acesso SUPER_ADMIN?"

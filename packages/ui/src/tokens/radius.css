@@ -1,5 +1,7 @@
 :root {
-  --radius: 0rem;
-  --radius-xs: 2px;
+  --radius: 16px;
+  --radius-card: 24px;
+  --radius-control: 999px;
+  --radius-xs: 8px;
   --radius-pill: 999px;
 }

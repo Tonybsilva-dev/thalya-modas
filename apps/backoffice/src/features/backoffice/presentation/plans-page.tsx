@@ -1,7 +1,7 @@
 "use client";
 import { ListPagination, useRemotePage } from "./list-pagination";
 import { CheckCircle } from "@phosphor-icons/react";
-import { Alert, AlertDescription, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, EmptyStateContent, EmptyStateDescription, Input, Label } from "@store-flow/ui";
+import { Alert, AlertDescription, Button, Card, PageToolbar, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, EmptyStateContent, EmptyStateDescription, Input, Label } from "@store-flow/ui";
 import { SelectField, SelectFieldOption } from "./select-field";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,12 +62,14 @@ export function PlansPage() {
           {notice}
         </AlertDescription></Alert>
       )}
-      <Card className="mb-4 flex flex-wrap items-end justify-between gap-4 p-4">
-        <div className="w-full space-y-2 sm:max-w-md"><Label className="shrink-0" htmlFor="plan-search">Buscar plano</Label><Input id="plan-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome ou descrição" /></div>
+      <Card className="overflow-hidden">
+      <PageToolbar>
+        <div className="w-full space-y-1.5 sm:max-w-sm"><Label className="shrink-0" htmlFor="plan-search">Buscar plano</Label><Input id="plan-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome ou descrição" /></div>
         <div className="ml-auto w-full sm:w-52"><Label className="sr-only" htmlFor="plan-filter">Status do plano</Label><SelectField id="plan-filter" value={status} onValueChange={setStatus}><SelectFieldOption value="">Todos os status</SelectFieldOption><SelectFieldOption value="PUBLISHED">Publicados</SelectFieldOption><SelectFieldOption value="DRAFT">Rascunhos</SelectFieldOption><SelectFieldOption value="ARCHIVED">Arquivados</SelectFieldOption></SelectField></div>
         {(search || status) && <Button variant="outline" onClick={() => { setSearch(""); setStatus(""); }}>Limpar filtros</Button>}
-      </Card>
+      </PageToolbar>
       <QueryState
+        inline
         loading={plans.isPending || catalog.isPending}
         error={plans.error ?? catalog.error}
         retry={() => {
@@ -75,56 +77,21 @@ export function PlansPage() {
           void catalog.refetch();
         }}
       />
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {visiblePlans?.map((plan) => (
-          <Card
-            key={plan.id}
-            className="flex flex-col gap-5 p-6"
-          >
-            <div className="flex justify-between gap-3">
-              <h2 className="text-lg font-semibold">{plan.name}</h2>
-              <span className="text-xs text-muted-foreground">
-                {
-                  {
-                    DRAFT: "Rascunho",
-                    PUBLISHED: "Publicado",
-                    ARCHIVED: "Arquivado",
-                  }[plan.status]
-                }
-              </span>
-            </div>
-            <p className="flex-1 text-sm text-muted-foreground">
-              {plan.description || "Sem descrição."}
-            </p>
-            <p className="text-2xl font-semibold">
-              {plan.priceCents === null
-                ? "Preço não definido"
-                : (plan.priceCents / 100).toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {catalog.data?.filter((module) => plan.flags[module.key])
-                .length ?? 0}{" "}
-              módulos habilitados
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setEditing(plan);
-                setFlags({ ...plan.flags });
-                save.reset();
-                setOpen(true);
-              }}
-            >
-              Editar plano e funcionalidades
-            </Button>
-          </Card>
-        ))}
-      </div>
-      {plans.data && <ListPagination {...plans.data} onPageChange={pagination.onPageChange} />}
-      {plans.data && !visiblePlans?.length && <EmptyState><EmptyStateContent><EmptyStateDescription>Nenhum plano corresponde aos filtros.</EmptyStateDescription></EmptyStateContent></EmptyState>}
+      {plans.data && <>
+        <div className="overflow-x-auto" aria-busy={plans.isFetching}>
+          <Table><TableHeader><TableRow><TableHead>Plano</TableHead><TableHead>Situação</TableHead><TableHead className="text-right">Preço cadastral</TableHead><TableHead className="text-right">Módulos habilitados</TableHead><TableHead><span className="sr-only">Ações</span></TableHead></TableRow></TableHeader>
+          <TableBody>{visiblePlans?.map(plan => <TableRow key={plan.id}>
+            <TableCell className="min-w-48"><p className="font-medium">{plan.name}</p>{plan.description && <p className="mt-1 max-w-lg text-xs text-muted-foreground">{plan.description}</p>}</TableCell>
+            <TableCell><Badge variant={plan.status === "PUBLISHED" ? "success" : plan.status === "DRAFT" ? "warning" : "secondary"}>{({ DRAFT: "Rascunho", PUBLISHED: "Publicado", ARCHIVED: "Arquivado" })[plan.status]}</Badge></TableCell>
+            <TableCell className="whitespace-nowrap text-right">{plan.priceCents === null ? "Não informado" : (plan.priceCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
+            <TableCell className="text-right">{catalog.data ? catalog.data.filter(module => plan.flags[module.key]).length : "Indisponível"}</TableCell>
+            <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => { setEditing(plan); setFlags({ ...plan.flags }); save.reset(); setOpen(true); }}>Editar<span className="sr-only"> {plan.name}</span></Button></TableCell>
+          </TableRow>)}</TableBody></Table>
+          {!visiblePlans?.length && <EmptyState><EmptyStateContent><EmptyStateDescription>Nenhum plano corresponde aos filtros.</EmptyStateDescription></EmptyStateContent></EmptyState>}
+        </div>
+        <ListPagination {...plans.data} onPageChange={pagination.onPageChange} disabled={plans.isFetching} />
+      </>}
+      </Card>
       <Dialog
         open={open}
         onOpenChange={(value) => {
@@ -137,8 +104,8 @@ export function PlansPage() {
               {editing ? "Editar plano" : "Criar plano"}
             </DialogTitle>
             <DialogDescription>
-              As funcionalidades dependem do módulo habilitado. Kill switches e
-              exceções empresariais são resolvidos separadamente.
+              As funcionalidades dependem dos módulos habilitados. Controles
+              globais e exceções de cada empresa são configurados separadamente.
             </DialogDescription>
           </DialogHeader>
           <form

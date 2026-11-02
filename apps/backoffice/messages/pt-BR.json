@@ -31,6 +31,7 @@
     },
     "shell": {
       "accountMenu": "Abrir menu da conta e preferências",
+      "navigationTitle": "Navegação da loja",
       "openNavigation": "Abrir navegacao",
       "closeNavigation": "Fechar navegacao",
       "settingsSection": "Configurações",

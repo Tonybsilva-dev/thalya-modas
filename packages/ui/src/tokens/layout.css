@@ -1,0 +1,15 @@
+:root {
+  --sf-control-height: 40px;
+  --sf-header-height: 80px;
+  --sf-sidebar-width: 88px;
+  --sf-page-gutter: 24px;
+  --sf-region-gap: 20px;
+  --sf-table-row-height: 52px;
+  --sf-page-title-size: 1.625rem;
+}
+@media (max-width: 767px) {
+  :root { --sf-page-gutter: 16px; --sf-region-gap: 16px; --sf-header-height: 68px; }
+}
+@media (pointer: coarse) {
+  :root { --sf-control-height: 44px; --sf-table-row-height: 56px; }
+}

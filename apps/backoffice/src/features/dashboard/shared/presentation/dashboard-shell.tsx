@@ -2,8 +2,9 @@
 import { useOperationalSidebar, useOperationalToolbar } from "./operational-context";
 
 import { SidebarNavigation } from "@/src/shared/ui/sidebar-navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -13,6 +14,11 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerCloseButton,
   cn,
 } from "@store-flow/ui";
 
@@ -84,7 +90,8 @@ function StoreSidebar({
   operatorRole,
   settingsActive,
   status,
-}: Omit<DashboardShellProps, "children"> & { className?: string }) {
+  rail = false,
+}: Omit<DashboardShellProps, "children"> & { className?: string; rail?: boolean }) {
   const branchSwitcher = useOperationalSidebar();
   const basePath = useDashboardBasePath();
   const closeMobileNavigation = useAppUiStore((state) => state.closeMobileNavigation);
@@ -105,16 +112,16 @@ function StoreSidebar({
 
   return (
     <Sidebar className={cn("shrink-0", className)}>
-      <SidebarHeader className="grid gap-4">
-        {branchSwitcher ?? <BrandMark context={activeStore?.name ?? appConfig.context} name={appConfig.name} />}
-        {!branchSwitcher && <div className="flex items-center gap-2 bg-muted px-3 py-2 text-sm text-foreground">
+      <SidebarHeader className="grid gap-3">
+        {rail ? <BrandMark compact name={appConfig.name} /> : branchSwitcher ?? <BrandMark context={activeStore?.name ?? appConfig.context} name={appConfig.name} />}
+        {!rail && !branchSwitcher && <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm text-foreground">
           <ClockIcon className="size-4 text-success-foreground" />
           <span>{status}</span>
         </div>}
       </SidebarHeader>
 
       <SidebarContent className="grid content-start gap-1 p-2">
-        <SidebarNavigation label="Navegação da loja" onNavigate={closeMobileNavigation} groups={[
+        <SidebarNavigation rail={rail} label="Navegação da loja" onNavigate={closeMobileNavigation} groups={[
           { id: "operations", label: "Operação", segments: ["", "orders", "cash-register"] },
           { id: "records", label: "Cadastros", segments: ["inventory", "customers", "suppliers"] },
           { id: "management", label: "Gestão", segments: ["reports", "about"] },
@@ -126,6 +133,7 @@ function StoreSidebar({
 
       <SidebarFooter className="p-4">
         <AccountQuickMenu
+          compact={rail}
           basePath={basePath}
           operatorName={operatorName}
           operatorRole={resolvedOperatorRole}
@@ -136,19 +144,25 @@ function StoreSidebar({
   );
 }
 
-function MobileHeader() {
+function WorkspaceHeader({ navigationTrigger }: { navigationTrigger: RefObject<HTMLButtonElement | null> }) {
   const branchSwitcher = useOperationalSidebar();
   const toggleMobileNavigation = useAppUiStore((state) => state.toggleMobileNavigation);
+  const isMobileNavigationOpen = useAppUiStore((state) => state.isMobileNavigationOpen);
   const activeStore = useAppUiStore((state) => state.activeStore);
   const shell = useTranslations("dashboard.shell");
+  const basePath = useDashboardBasePath();
+  const navigation = useTranslations("dashboard.navigation");
 
   return (
-    <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 lg:hidden">
-      <div className="min-w-0 flex-1 pr-2">{branchSwitcher ?? <BrandMark context={activeStore?.name ?? appConfig.context} name={appConfig.name} />}</div>
-      <IconButton aria-label={shell("openNavigation")} onClick={toggleMobileNavigation} variant="ghost">
+    <header className="flex min-h-[var(--sf-header-height)] items-center justify-between gap-3 border-b border-border/50 bg-sidebar px-[var(--sf-page-gutter)] py-3">
+      <div className="min-w-0 w-full max-w-xs">{branchSwitcher ?? <BrandMark context={activeStore?.name ?? appConfig.context} name={appConfig.name} />}</div>
+      <nav aria-label={shell("navigationTitle")} className="hidden min-w-0 items-center gap-2 xl:flex">
+        {dashboardNavigation.filter(item => ['inventory','orders','customers'].includes(item.segment)).map(item => <Link key={item.segment} href={`${basePath}/${item.segment}`} className="rounded-full border border-border bg-background px-4 py-2 text-xs hover:bg-accent">{navigation(item.i18nKey)}</Link>)}
+      </nav>
+      <IconButton ref={navigationTrigger} className="lg:hidden" aria-label={shell("openNavigation")} aria-controls="store-navigation" aria-expanded={isMobileNavigationOpen} onClick={toggleMobileNavigation} variant="ghost">
         <MenuIcon className="size-5" />
       </IconButton>
-    </div>
+    </header>
   );
 }
 
@@ -157,31 +171,36 @@ function MobileNavigationDrawer({
   operatorRole,
   settingsActive,
   status,
-}: Omit<DashboardShellProps, "children">) {
+  navigationTrigger,
+}: Omit<DashboardShellProps, "children"> & { navigationTrigger: RefObject<HTMLButtonElement | null> }) {
   const isMobileNavigationOpen = useAppUiStore((state) => state.isMobileNavigationOpen);
   const closeMobileNavigation = useAppUiStore((state) => state.closeMobileNavigation);
   const shell = useTranslations("dashboard.shell");
 
-  if (!isMobileNavigationOpen) {
-    return null;
-  }
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) closeMobileNavigation(); };
+    closeOnDesktop();
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, [closeMobileNavigation]);
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
-      <button
-        aria-label={shell("closeNavigation")}
-        className="absolute inset-0 bg-black/40"
-        onClick={closeMobileNavigation}
-        type="button"
-      />
+    <Drawer open={isMobileNavigationOpen} onOpenChange={open => { if (!open) closeMobileNavigation(); }}>
+      <DrawerContent id="store-navigation" side="left" className="w-72 max-w-[calc(100vw-2rem)] lg:hidden" aria-describedby={undefined} onCloseAutoFocus={event => { event.preventDefault(); navigationTrigger.current?.focus(); }}>
+      <DrawerHeader className="min-h-[var(--sf-header-height)] items-center px-3 py-2">
+        <DrawerTitle className="text-sm">{shell("navigationTitle")}</DrawerTitle>
+        <DrawerCloseButton aria-label={shell("closeNavigation")} />
+      </DrawerHeader>
       <StoreSidebar
         activeItem={activeItem}
-        className="relative h-full animate-nitro-slide-right"
+        className="min-h-0 h-auto w-full flex-1 border-r-0"
         operatorRole={operatorRole}
         settingsActive={settingsActive}
         status={status}
       />
-    </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -193,26 +212,31 @@ export function DashboardShell({
   status,
 }: DashboardShellProps) {
   const contextToolbar=useOperationalToolbar();
+  const navigationTrigger = useRef<HTMLButtonElement>(null);
   return (
     <main className="min-h-screen max-w-full overflow-x-clip bg-background text-foreground">
-      <MobileHeader />
       <MobileNavigationDrawer
         activeItem={activeItem}
         operatorRole={operatorRole}
         settingsActive={settingsActive}
         status={status}
+        navigationTrigger={navigationTrigger}
       />
       <div className="flex min-h-screen min-w-0 max-w-full items-stretch overflow-x-clip">
         <StoreSidebar
+          rail
           activeItem={activeItem}
           className="sticky top-0 hidden h-screen lg:flex"
           operatorRole={operatorRole}
           settingsActive={settingsActive}
           status={status}
         />
-        <section className="grid min-w-0 max-w-full flex-1 content-start gap-4 overflow-x-clip p-4 lg:p-5">
+        <div className="min-w-0 max-w-full flex-1">
+        <WorkspaceHeader navigationTrigger={navigationTrigger} />
+        <section className="grid min-w-0 max-w-full content-start gap-3 overflow-x-clip p-[var(--sf-page-gutter)]">
           <PageLayout>{contextToolbar}{children}</PageLayout>
         </section>
+        </div>
       </div>
     </main>
   );

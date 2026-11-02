@@ -1,122 +1,35 @@
+"use client";
 import * as React from "react";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-
+import { DialogContent as TrinketDialogContent, DialogClose as TrinketDialogClose, DialogTitle as TrinketDialogTitle, DialogDescription as TrinketDialogDescription, type DialogContentProps } from "@trinketos/ui/dialog";
+import { Button } from "./button";
 import { cn } from "../lib/utils";
-
-const Dialog = DialogPrimitive.Root;
-const DialogTrigger = DialogPrimitive.Trigger;
-const DialogPortal = DialogPrimitive.Portal;
-const DialogClose = DialogPrimitive.Close;
-
-const DialogOverlay = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Overlay
-    ref={ref}
-    className={cn(
-      "fixed inset-0 z-50 bg-black/55 data-[state=closed]:animate-nitro-fade-out data-[state=open]:animate-nitro-fade-in",
-      className,
-    )}
-    {...props}
-  />
-));
-DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
-
-const DialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
-    size?: "default" | "wide";
-    closeLabel?: string;
-  }
->(({ className, children, size = "default", closeLabel = "Close", ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed top-1/2 left-1/2 z-50 grid max-h-[90dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-none border border-border bg-card p-6 text-card-foreground shadow-lg outline-none data-[state=closed]:animate-nitro-scale-out data-[state=open]:animate-nitro-scale-in",
-        size === "wide" ? "max-w-3xl" : "max-w-md",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute top-4 right-4 rounded-none text-muted-foreground opacity-80 transition-opacity duration-fast ease-nitro hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary/25 disabled:pointer-events-none">
-        <svg
-          aria-hidden="true"
-          className="size-4"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-        >
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
-        <span className="sr-only">{closeLabel}</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
-DialogContent.displayName = DialogPrimitive.Content.displayName;
-
-function DialogHeader({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn("flex flex-col gap-2 text-left", className)} {...props} />
-  );
+export { DialogTrigger, DialogClose, DialogBody } from "@trinketos/ui/dialog";
+// Compatibility exports only; published Content owns its portal and overlay.
+export { SheetPortal as DialogPortal, SheetOverlay as DialogOverlay } from "@trinketos/ui/sheet";
+export function DialogContent({ className, children, size = "default", closeLabel = "Fechar", hideCloseButton, ...props }: DialogContentProps & { size?: "default" | "wide"; closeLabel?: string }) {
+  return <TrinketDialogContent {...props} hideCloseButton data-store-flow-dialog="" className={cn("gap-4 overflow-y-auto rounded-[var(--radius-card)] bg-background p-6 text-sm text-card-foreground", size === "wide" && "sm:max-w-3xl", className)}>
+    {children}
+    {!hideCloseButton && <TrinketDialogClose asChild><Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1" aria-label={closeLabel}>
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18" /></svg>
+    </Button></TrinketDialogClose>}
+  </TrinketDialogContent>;
+}
+export function DialogTitle({ className, ...props }: React.ComponentProps<typeof TrinketDialogTitle>) {
+  return <TrinketDialogTitle className={cn("text-lg font-semibold", className)} {...props} />;
+}
+export function DialogDescription({ className, ...props }: React.ComponentProps<typeof TrinketDialogDescription>) {
+  return <TrinketDialogDescription className={cn("text-sm", className)} {...props} />;
 }
 
-function DialogFooter({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
-      {...props}
-    />
-  );
+import { DialogHeader as TrinketDialogHeader, DialogFooter as TrinketDialogFooter } from "@trinketos/ui/dialog";
+export function DialogHeader({ className, ...props }: React.ComponentProps<typeof TrinketDialogHeader>) {
+  return <TrinketDialogHeader className={cn("gap-2 border-0 p-0 pr-6", className)} {...props} />;
+}
+export function DialogFooter({ className, ...props }: React.ComponentProps<typeof TrinketDialogFooter>) {
+  return <TrinketDialogFooter className={cn("border-0 p-0", className)} {...props} />;
 }
 
-const DialogTitle = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title
-    ref={ref}
-    className={cn("text-lg leading-none font-semibold tracking-normal", className)}
-    {...props}
-  />
-));
-DialogTitle.displayName = DialogPrimitive.Title.displayName;
-
-const DialogDescription = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description
-    ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
-    {...props}
-  />
-));
-DialogDescription.displayName = DialogPrimitive.Description.displayName;
-
-export {
-  Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogTrigger,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-};
+import { DialogRoot, type DialogRootProps } from "@trinketos/ui/dialog";
+export function Dialog({ children, ...props }: Omit<DialogRootProps, "children"> & { children?: React.ReactNode }) {
+  return <DialogRoot {...props}>{children}</DialogRoot>;
+}

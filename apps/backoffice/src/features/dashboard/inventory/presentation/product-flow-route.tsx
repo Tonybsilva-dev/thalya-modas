@@ -22,11 +22,6 @@ import {
   AlertDescription,
   AlertTitle,
   Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
   Button,
   PageHeader,
   FormActions,
@@ -140,21 +135,7 @@ function getErrorMessage(error: unknown) {
 
 function ProductBreadcrumb({ basePath, isEdit }: { basePath: string; isEdit: boolean }) {
   return (
-    <Breadcrumb>
-      <BreadcrumbList className="gap-1.5 text-xs font-semibold">
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={basePath}>
-              Estoque
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>{isEdit ? "Editar produto" : "Novo produto"}</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
+    <Breadcrumb items={[{ label: "Estoque", href: basePath }, { label: isEdit ? "Editar produto" : "Novo produto" }]} renderLink={(item, className) => <Link className={className} href={item.href!}>{item.label}</Link>} />
   );
 }
 

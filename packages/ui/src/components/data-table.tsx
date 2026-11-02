@@ -1,61 +1,9 @@
+"use client";
 import * as React from "react";
-
-import { Button } from "./button";
-import { Input } from "./input";
+import { DataTable as TrinketDataTable, type DataTableProps } from "@trinketos/ui/data-table";
 import { cn } from "../lib/utils";
-
-function DataTable({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("grid gap-4 rounded-none border border-border bg-card p-4", className)}
-      {...props}
-    />
-  );
+export function DataTable<T>({ className, ...props }: DataTableProps<T>) {
+  return <TrinketDataTable {...props} className={cn("[&_table]:border-separate [&_table]:border-spacing-y-2 [&_thead]:bg-transparent [&_th]:h-9 [&_th]:px-3 [&_th]:py-2 [&_th]:text-xs [&_td]:border-0 [&_td:first-child]:rounded-l-2xl [&_td:last-child]:rounded-r-2xl [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm [&_td]:tabular-nums [&_tbody_tr]:bg-muted/50 [&_tr]:h-[var(--sf-table-row-height)]", className)} />;
 }
-
-function DataTableToolbar({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div className={cn("flex items-center justify-between gap-3", className)} {...props} />
-  );
-}
-
-function DataTableSearch({
-  className,
-  ...props
-}: React.ComponentProps<typeof Input>) {
-  return <Input className={cn("max-w-xs", className)} placeholder="Search..." {...props} />;
-}
-
-function DataTableFooter({
-  className,
-  selectedCount = 0,
-  totalCount = 0,
-  ...props
-}: React.ComponentProps<"div"> & {
-  selectedCount?: number;
-  totalCount?: number;
-}) {
-  return (
-    <div
-      className={cn("flex items-center justify-between gap-3 text-sm text-muted-foreground", className)}
-      {...props}
-    >
-      <span>
-        {selectedCount} of {totalCount} row(s) selected.
-      </span>
-      <div className="flex items-center gap-2">
-        <Button size="sm" variant="ghost">
-          Previous
-        </Button>
-        <Button size="sm" variant="ghost">
-          Next
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-export { DataTable, DataTableToolbar, DataTableSearch, DataTableFooter };
+export type { DataTableProps, DataTablePagination, DataTableToolbarSlots } from "@trinketos/ui/data-table";
+export type { ColumnDef } from "@trinketos/ui/data-table";

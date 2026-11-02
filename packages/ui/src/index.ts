@@ -13,18 +13,12 @@ export {
   alertVariants,
 } from "./components/alert";
 export type { AlertProps } from "./components/alert";
-export { Avatar, AvatarFallback, AvatarImage } from "./components/avatar";
+export { Avatar } from "./components/avatar";
+export type { AvatarProps } from "./components/avatar";
 export { Badge, badgeVariants } from "./components/badge";
 export type { BadgeProps } from "./components/badge";
-export {
-  Breadcrumb,
-  BreadcrumbEllipsis,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "./components/breadcrumb";
+export { Breadcrumb } from "./components/breadcrumb";
+export type { BreadcrumbProps, BreadcrumbItem } from "./components/breadcrumb";
 export { Button, buttonVariants } from "./components/button";
 export type { ButtonProps } from "./components/button";
 export {
@@ -62,12 +56,10 @@ export type {
   ScatterDatum,
 } from "./components/charts";
 export { Checkbox } from "./components/checkbox";
-export {
-  DataTable,
-  DataTableFooter,
-  DataTableSearch,
-  DataTableToolbar,
-} from "./components/data-table";
+export { DataTable } from "./components/data-table";
+export type { DataTableProps, ColumnDef } from "./components/data-table";
+export { MaskedInput, MASK_PRESETS } from "./components/masked-input";
+export type { MaskedInputProps } from "./components/masked-input";
 export {
   Dialog,
   DialogClose,
@@ -133,23 +125,8 @@ export {
 export type { InputProps } from "./components/input";
 export { Label } from "./components/label";
 export type { LabelProps } from "./components/label";
-export {
-  List,
-  ListDivider,
-  ListItem,
-  ListItemContent,
-  ListItemMeta,
-  ListTitle,
-} from "./components/list";
-export {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "./components/pagination";
+export { List, ListItem, ListItemMeta } from "./components/list";
+export { Pagination, PaginationInfo, PaginationNext, PaginationPrev, PaginationPageSize, PaginationPages, PaginationQuickJumper } from "./components/pagination";
 export { Progress } from "./components/progress";
 export { RadioGroup, RadioGroupItem } from "./components/radio-group";
 export {
@@ -187,7 +164,6 @@ export type { TextareaProps } from "./components/textarea";
 export {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "./components/tooltip";
 export {

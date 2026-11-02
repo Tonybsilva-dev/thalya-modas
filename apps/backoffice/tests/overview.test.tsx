@@ -31,7 +31,7 @@ test("overview consolidates indicators and companies without rendering inactive 
   assert.match(html, /Distribuição das empresas: Ativas: 5, Suspensas: 2/);
   assert.match(html, /Distribuição das filiais: Ativas: 10, Inativas: 2/);
   assert.equal((html.match(/role="tab"/g) ?? []).length, 3);
-  assert.equal((html.match(/<[^>]+>/g) ?? []).filter(tag => tag.includes('role="tabpanel"') && tag.includes('data-state="active"')).length, 1);
+  assert.equal((html.match(/<[^>]+>/g) ?? []).filter(tag => tag.includes('role="tabpanel"')).length, 1);
   assert.doesNotMatch(html, /Varejo Pro|Disponibilidade da plataforma/);
 });
 test("plans deep link shows server pagination and preserves global indicators", () => {

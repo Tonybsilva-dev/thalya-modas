@@ -1,6 +1,6 @@
 "use client";
 import { ListPagination, useRemotePage } from "./list-pagination";
-import { Avatar, AvatarFallback } from "@store-flow/ui";
+import { Avatar } from "@store-flow/ui";
 import { CheckCircle } from "@phosphor-icons/react";
 import { Alert, AlertDescription, Button, Card, DialogFooter, EmptyState, EmptyStateContent, EmptyStateDescription, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "@store-flow/ui";
 import { SelectField, SelectFieldOption } from "./select-field";
@@ -107,7 +107,7 @@ export function TenantDetailPage({ tenantId }: { tenantId: string }) {
           )}
           <Card className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm">
             <div className="flex items-center gap-3">
-              <Avatar className="size-16 rounded-none border"><AvatarFallback className="rounded-none text-lg">{tenant.data.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toUpperCase()}</AvatarFallback></Avatar>
+              <Avatar className="size-16 border text-lg" aria-hidden="true" initials={tenant.data.name} />
               <div><p className="font-semibold">{tenant.data.name}</p><p className="text-xs text-muted-foreground">Logo da empresa</p></div>
             </div>
             <StatusBadge status={tenant.data.status} />

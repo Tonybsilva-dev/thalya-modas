@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Inter } from "next/font/google";
+import { Inter, Roboto_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 
 import { isThemeMode, themeCookieName } from "@/src/shared/theme/theme-cookie";
@@ -15,6 +15,12 @@ import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const robotoMono = Roboto_Mono({
+  variable: "--font-roboto-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -42,7 +48,7 @@ export default async function RootLayout({
   return (
     <html
       lang={getDocumentLang(locale)}
-      className={`${inter.variable} h-full antialiased${themeClassName}`}
+      className={`${inter.variable} ${robotoMono.variable} h-full antialiased${themeClassName}`}
       data-theme={themeMode}
       suppressHydrationWarning
     >

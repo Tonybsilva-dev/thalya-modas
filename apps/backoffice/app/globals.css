@@ -5,8 +5,8 @@
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
 
 :root {
-  --font-primary: var(--font-inter), sans-serif;
-  --font-secondary: var(--font-inter), sans-serif;
+  --font-primary: "Hellix", var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-secondary: var(--font-roboto-mono), ui-monospace, monospace;
 }
 
 html,

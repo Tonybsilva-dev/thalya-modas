@@ -1,0 +1,206 @@
+{
+  "source": "https://opediastudio.com/projects/sneaker-inventory-pos-management-saas",
+  "behance": "https://www.behance.net/gallery/237442801/Sneaker-Inventory-POS-Management-SaaS-UX-UI-Design",
+  "creators": [
+    "Opedia Studio",
+    "Samsun Nahar"
+  ],
+  "retrieved": "2026-10-28",
+  "archived_public_source_assets": true,
+  "attachment_bytes_available": false,
+  "note": "Source JPEGs preserved unchanged. Conversation attachments are crops or resized versions; their original binary files are not exposed by the environment.",
+  "catalogue": "README.md",
+  "gallery": "gallery.html",
+  "assets": [
+    {
+      "file": "source-01.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d1e2f8a632aeff05832_1.jpg",
+      "sha256": "4422500c16d3d81fc00f57fa3237195fba3a79cb9677472081a23142001458fb",
+      "bytes": 3111981,
+      "dimensions": [
+        3840,
+        6664
+      ]
+    },
+    {
+      "file": "source-02.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d2319cc8b97ac3c0ba8_2.jpg",
+      "sha256": "3aebd586394da56e4338153d08780959eaf3a5ef84116e846ef0cea2588334ad",
+      "bytes": 1649437,
+      "dimensions": [
+        3840,
+        3946
+      ]
+    },
+    {
+      "file": "source-03.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d2645457fc67c9fd232_3.jpg",
+      "sha256": "eb2d43575269af2b12fe83b0f7713d3db138c86d5a77f0dfd283f3afc2c28ca9",
+      "bytes": 873397,
+      "dimensions": [
+        3840,
+        4204
+      ]
+    },
+    {
+      "file": "source-04.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d4c04965e459437110c_4.jpg",
+      "sha256": "daa1eadee710817fef4a3b50e9eeea17248afac0e5652a13c1b1ddc93c605deb",
+      "bytes": 3001046,
+      "dimensions": [
+        3840,
+        3840
+      ]
+    },
+    {
+      "file": "source-05.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d4cc213f44863f6fbb6_5.jpg",
+      "sha256": "300b009bdf7e462cd591e3bfa677bf68c0a6b60d2adf05d267400d31496300b3",
+      "bytes": 3125619,
+      "dimensions": [
+        2222,
+        6360
+      ]
+    },
+    {
+      "file": "source-06.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d49eb37217428cd709e_6.jpg",
+      "sha256": "87f4ada68dc7bfea70fcb865b2d43ab9a79b2003c3e9d917850ae9134d29745d",
+      "bytes": 1822390,
+      "dimensions": [
+        3840,
+        8126
+      ]
+    },
+    {
+      "file": "source-07.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d492525505262387303_7.jpg",
+      "sha256": "d8d2f509e60e8021447f4f0d880485eb3f641038d7908d854e67b2e310bdbf52",
+      "bytes": 1581505,
+      "dimensions": [
+        2222,
+        2774
+      ]
+    },
+    {
+      "file": "source-08.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d4c6704e9bc494a3841_8.jpg",
+      "sha256": "241e4a6629c79cb119e7563966648543605385ce6cce0a8486c1b9189356d076",
+      "bytes": 1922593,
+      "dimensions": [
+        2222,
+        3970
+      ]
+    },
+    {
+      "file": "source-09.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d4c8fde4b24e0a2b771_9.jpg",
+      "sha256": "b1c13ac4dd3128b55b1df5ee4565ab6edc4e5bf4d2aa5a842d0a72433c0e1f0e",
+      "bytes": 2532913,
+      "dimensions": [
+        2000,
+        8157
+      ]
+    },
+    {
+      "file": "source-10.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d4dda34fb473226f521_10.jpg",
+      "sha256": "f9390d299e363cdca2c873562df6b5daa61a165d4a82497bcb66792c887df567",
+      "bytes": 1880618,
+      "dimensions": [
+        3840,
+        8828
+      ]
+    },
+    {
+      "file": "source-11.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d78a7facef7355c2850_11.jpg",
+      "sha256": "6f2234920cc6c3ae71338923e255210d09c4c9b5aa73740a2708dd1d17adda79",
+      "bytes": 3445268,
+      "dimensions": [
+        3840,
+        5594
+      ]
+    },
+    {
+      "file": "source-12.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d7786f678134dbb6fa0_12.jpg",
+      "sha256": "dbc42481527da0ee282a3a38b321ed335e1a1e7408691706539d835fe5da04bc",
+      "bytes": 2377121,
+      "dimensions": [
+        2222,
+        6193
+      ]
+    },
+    {
+      "file": "source-13.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d8fd0f7f030976070ca_13.jpg",
+      "sha256": "6805569f63421a324a60dfbb107e58f724e54dd51026c8cee34a67f567771e50",
+      "bytes": 3614419,
+      "dimensions": [
+        2000,
+        6842
+      ]
+    },
+    {
+      "file": "source-14.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d895b4e7aeea2cf156b_14.jpg",
+      "sha256": "71c14e8bc564dcfabeae663f695ab728a6db78c99330084b7a6f2a9bc618a446",
+      "bytes": 3307013,
+      "dimensions": [
+        2222,
+        7473
+      ]
+    },
+    {
+      "file": "source-15.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116da108631aa448544bd6_15.jpg",
+      "sha256": "e7d8e7e2101f0f38a82c6c364b5a518be403901115f30a3d10a2072a06b394dc",
+      "bytes": 3711365,
+      "dimensions": [
+        2222,
+        7573
+      ]
+    },
+    {
+      "file": "source-16.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d7ad548aecb2f824048_16.jpg",
+      "sha256": "55eb7ad2880e50ec326af5b982099fd6448d6930818d922fa02ec36509e289ee",
+      "bytes": 1788504,
+      "dimensions": [
+        2222,
+        3424
+      ]
+    },
+    {
+      "file": "source-17.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d7f04965e45943718eb_17.jpg",
+      "sha256": "c7ad359ea2caa1444ccf203694a027e0c2e0095c61ceeaf7cbcbb52fc8aaad19",
+      "bytes": 2207010,
+      "dimensions": [
+        2222,
+        4615
+      ]
+    },
+    {
+      "file": "source-18.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116d94c652b2bcd57c2b41_18.jpg",
+      "sha256": "d528dff2d05be551f666084ac1490eab96e92f8ec5841cdc005e7678114b93c7",
+      "bytes": 1246762,
+      "dimensions": [
+        3840,
+        3504
+      ]
+    },
+    {
+      "file": "source-19.jpg",
+      "source_url": "https://cdn.prod.website-files.com/6957b777caded0b472e7aea2/6a116dcbed206a190cd2b385_19.jpg",
+      "sha256": "140279bc2be9b29bd768d2c351189ce17e1aef7c1549b119c51dda3398ebbe77",
+      "bytes": 1573084,
+      "dimensions": [
+        3840,
+        3522
+      ]
+    }
+  ]
+}

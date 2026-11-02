@@ -38,6 +38,7 @@ export function AccountQuickMenu({
   settingsActive,
   platform = false,
   onNavigate,
+  compact = false,
 }: {
   basePath: string;
   operatorName: string;
@@ -45,6 +46,7 @@ export function AccountQuickMenu({
   settingsActive?: boolean;
   platform?: boolean;
   onNavigate?: () => void;
+  compact?: boolean;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -106,21 +108,22 @@ export function AccountQuickMenu({
           aria-label={shell("accountMenu")}
           className={cn(
             sidebarDropdownTriggerClassName,
+            compact && "lg:mx-auto lg:w-12 lg:justify-center lg:gap-0 lg:p-1.5",
             settingsActive &&
               "border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground",
           )}
           type="button"
         >
-          <div className="flex size-9 shrink-0 items-center justify-center bg-muted text-sm font-semibold text-foreground">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
             {getInitials(operatorName)}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className={cn("min-w-0 flex-1", compact && "lg:hidden")}>
             <p className="truncate text-sm font-medium text-inherit">{operatorName}</p>
             <p className={cn("truncate text-xs group-hover:text-sidebar-accent-foreground", settingsActive ? "text-sidebar-accent-foreground" : "text-muted-foreground")}>{operatorRole}</p>
           </div>
           <CaretUpDown
             aria-hidden="true"
-            className={cn("size-4 shrink-0 transition-colors group-hover:text-sidebar-accent-foreground", settingsActive ? "text-sidebar-accent-foreground" : "text-muted-foreground")}
+            className={cn("size-4 shrink-0 transition-colors group-hover:text-sidebar-accent-foreground", compact && "lg:hidden", settingsActive ? "text-sidebar-accent-foreground" : "text-muted-foreground")}
           />
         </button>
       </DropdownMenuTrigger>
@@ -210,12 +213,9 @@ export function AccountQuickMenu({
 
         <DropdownMenuSeparator />
         {logoutMutation.isError ? (
-          <DropdownMenuLabel
-            className="whitespace-normal px-2 py-2 text-destructive"
-            role="alert"
-          >
+          <div className="whitespace-normal px-2 py-2 text-sm text-destructive" role="alert">
             {shell("signOutError")}
-          </DropdownMenuLabel>
+          </div>
         ) : null}
         <DropdownMenuItem
           className="min-h-11 cursor-pointer text-destructive focus:text-destructive"

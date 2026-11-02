@@ -13,6 +13,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "@store-flow/ui": "workspace:*",
     "@tanstack/react-query": "^5.100.14",
+    "@trinketos/ui": "0.2.0",
     "@zxing/browser": "0.1.4",
     "@zxing/library": "0.20.0",
     "imask": "^7.6.1",

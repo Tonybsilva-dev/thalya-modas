@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Button } from "./button";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../lib/utils";
@@ -26,7 +27,8 @@ type ToggleButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
 
 const ToggleButton = React.forwardRef<HTMLButtonElement, ToggleButtonProps>(
   ({ className, pressed = false, size, type, ...props }, ref) => (
-    <button
+    <Button
+      variant="ghost"
       ref={ref}
       aria-pressed={pressed}
       className={cn(toggleButtonVariants({ size, className }))}

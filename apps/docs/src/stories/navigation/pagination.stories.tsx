@@ -1,31 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@store-flow/ui";
-
-const meta = {
-  title: "Components/Navigation/Pagination",
-  parameters: { layout: "centered" },
-} satisfies Meta;
-
+import { useState } from "react";
+import { Pagination } from "@store-flow/ui";
+const meta = { title: "Components/Navigation/Pagination", parameters: { layout: "centered" } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {
-  render: () => (
-    <Pagination>
-      <PaginationContent>
-        <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
-        <PaginationItem><PaginationLink href="#" isActive>1</PaginationLink></PaginationItem>
-        <PaginationItem><PaginationEllipsis /></PaginationItem>
-        <PaginationItem><PaginationNext href="#" /></PaginationItem>
-      </PaginationContent>
-    </Pagination>
-  ),
-};
+function PaginationExample() {
+  const [page, setPage] = useState(1);
+  return <Pagination page={page} pageSize={20} total={95} onPageChange={setPage} showSizeChanger={false}>
+    <Pagination.Info />
+    <Pagination.Prev labelPrev="Anterior" />
+    <Pagination.Pages />
+    <Pagination.Next labelNext="Próxima" />
+  </Pagination>;
+}
+export const Default: Story = { render: () => <PaginationExample /> };

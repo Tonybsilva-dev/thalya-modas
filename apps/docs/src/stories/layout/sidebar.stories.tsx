@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   Avatar,
-  AvatarFallback,
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -22,8 +21,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
-    <Sidebar className="h-[420px]">
-      <SidebarHeader><div className="font-semibold text-foreground">Nitro</div></SidebarHeader>
+    <Sidebar className="h-[420px] w-64">
+      <SidebarHeader><div className="font-semibold text-foreground">Store Flow</div></SidebarHeader>
       <SidebarContent>
         <SidebarSectionTitle>Operations</SidebarSectionTitle>
         <SidebarItem active>Dashboard</SidebarItem>
@@ -32,7 +31,7 @@ export const Default: Story = {
       </SidebarContent>
       <SidebarFooter>
         <div className="flex items-center gap-3">
-          <Avatar><AvatarFallback>PJ</AvatarFallback></Avatar>
+          <Avatar initials="PJ" aria-label="Pessoa ilustrativa" />
           <div className="min-w-0 text-sm">
             <div className="font-medium text-foreground">Joe Doe</div>
             <div className="truncate text-muted-foreground">joe@acmecorp.com</div>

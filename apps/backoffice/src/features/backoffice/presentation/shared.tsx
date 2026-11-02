@@ -18,11 +18,14 @@ export function QueryState({
   loading,
   error,
   retry,
+  inline = false,
 }: {
   loading: boolean;
   error: unknown;
   retry: () => void;
+  inline?: boolean;
 }) {
+  if (loading && inline) return <div className="px-4 py-3 text-sm text-muted-foreground" role="status">Carregando dados da plataforma…</div>;
   if (loading)
     return (
       <Card role="status"><CardContent className="text-sm text-muted-foreground">

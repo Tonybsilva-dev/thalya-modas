@@ -4,6 +4,7 @@ import { AccountQuickMenu } from "@/src/shared/ui/account-quick-menu";
 import { Button, PageLayout, Drawer, DrawerCloseButton, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@store-flow/ui";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import {
   List,
@@ -39,10 +40,10 @@ export function BackofficeShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  function renderNavigation() {
+  function renderNavigation(rail = false) {
     return (
       <SidebarContent className="min-h-0 overflow-y-auto px-2 py-4">
-        <SidebarNavigation label="Administração da plataforma" onNavigate={() => setMobileOpen(false)} groups={navigationGroups.map(group => ({
+        <SidebarNavigation rail={rail} label="Administração da plataforma" onNavigate={() => setMobileOpen(false)} groups={navigationGroups.map(group => ({
           id: group.label,
           label: group.label,
           items: group.items.map(({ href, label, icon: Icon }) => ({
@@ -56,7 +57,7 @@ export function BackofficeShell({
   function renderAccount() {
     return (
       <SidebarFooter className="p-4">
-        <AccountQuickMenu basePath="/backoffice" operatorName={user.name} operatorRole="Super administrador" platform settingsActive={pathname.startsWith("/backoffice/settings")} onNavigate={() => setMobileOpen(false)} />
+        <AccountQuickMenu compact basePath="/backoffice" operatorName={user.name} operatorRole="Super administrador" platform settingsActive={pathname.startsWith("/backoffice/settings")} onNavigate={() => setMobileOpen(false)} />
       </SidebarFooter>
     );
   }
@@ -65,11 +66,11 @@ export function BackofficeShell({
       <a href="#backoffice-content" className="sr-only z-50 bg-primary p-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Pular para o conteúdo
       </a>
-      <Sidebar className="sticky top-0 hidden h-dvh w-64 shrink-0 lg:flex">
-        <SidebarHeader className="flex h-20 shrink-0 items-center px-5 py-3">
-          <BrandMark context="Administração da plataforma" />
+      <Sidebar className="sticky top-0 hidden h-dvh shrink-0 lg:flex">
+        <SidebarHeader className="flex min-h-[var(--sf-header-height)] shrink-0 items-center px-4 py-2">
+          <BrandMark compact context="Administração da plataforma" />
         </SidebarHeader>
-        {renderNavigation()}
+        {renderNavigation(true)}
         {renderAccount()}
       </Sidebar>
       <Drawer open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -86,16 +87,17 @@ export function BackofficeShell({
         </DrawerContent>
       </Drawer>
       <div className="min-w-0 flex-1">
-        <header className="flex min-h-20 items-center justify-between gap-4 border-b bg-card px-5 py-4 md:px-8">
+        <header className="flex min-h-[var(--sf-header-height)] items-center justify-between gap-3 border-b bg-card px-4 py-2">
           <Button variant="ghost" className="min-w-11 lg:hidden" aria-label="Abrir menu" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}>
             <List size={22} aria-hidden="true" />
           </Button>
           <div>
-            <p className="text-sm font-semibold">Store Flow</p>
-            <p className="text-xs text-muted-foreground">
-              Backoffice · Super administrador
-            </p>
+            <p className="text-base font-medium">Administração da plataforma</p>
+            <p className="mt-1 text-xs text-muted-foreground">Store Flow</p>
           </div>
+          <nav aria-label="Acessos da plataforma" className="hidden min-w-0 flex-1 items-center justify-center gap-2 xl:flex">
+            {[['/backoffice/tenants','Empresas'],['/backoffice/users','Usuários'],['/backoffice/plans','Planos']].map(([href,label]) => <Link key={href} href={href} className="rounded-full border border-border bg-background px-4 py-2 text-xs hover:bg-accent">{label}</Link>)}
+          </nav>
           <span className="hidden text-sm text-muted-foreground md:inline">
             {user.email}
           </span>
@@ -103,7 +105,7 @@ export function BackofficeShell({
         <main
           id="backoffice-content"
           tabIndex={-1}
-          className="w-full min-w-0 p-4 lg:p-5"
+          className="w-full min-w-0 p-[var(--sf-page-gutter)]"
         >
           <PageLayout>{children}</PageLayout>
         </main>
